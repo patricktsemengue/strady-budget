@@ -18,6 +18,9 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* gray-100 */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         .card {
             background-color: white;
@@ -85,37 +88,43 @@
             color: var(--light-blue);
             line-height: 1;
         }
-        #welcome-screen {
+        .main-screen {
             transition: opacity 0.5s ease-in-out;
+        }
+        .prose {
+            max-width: 100%;
+        }
+        .prose h1, .prose h2, .prose h3 {
+             color: #1f2937;
+        }
+        .prose p, .prose li {
+            color: #4b5563;
         }
     </style>
 </head>
 <body class="antialiased text-gray-800">
 
-    <div id="welcome-screen" class="min-h-screen flex items-center justify-center p-4">
+    <!-- Sticky Header with Logo -->
+    <header id="main-header" class="sticky top-0 z-30 bg-gray-100/90 backdrop-blur-sm shadow-sm hidden">
+        <div class="container mx-auto max-w-6xl px-4 py-3">
+             <div class="logo"><i><span class="logo-s">S</span><span class="logo-trady">trady</span><span class="logo-dot"> . </span><span class="logo-imo">budget</span></i></div>
+        </div>
+    </header>
+
+    <div id="welcome-screen" class="main-screen flex-grow overflow-y-auto flex items-center justify-center p-4">
         <div class="card text-center p-8 max-w-lg w-full">
             <div class="logo mb-6"><i><span class="logo-s">S</span><span class="logo-trady">trady</span><span class="logo-dot"> . </span><span class="logo-imo">budget</span></i></div>
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Bienvenue dans votre gestionnaire de budget</h1>
             <p class="text-gray-600 mb-6">
                 Cet outil est conçu pour vous aider à suivre vos finances familiales. Enregistrez vos revenus, vos dépenses, et suivez vos objectifs d'épargne.
             </p>
-            <p class="text-sm text-gray-500 mb-8">
-                Toutes vos données sont stockées localement dans votre navigateur. Vous pouvez les exporter et les importer via des fichiers CSV.
-            </p>
             <button id="enter-app-btn" class="bg-indigo-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
-                Commencer
+                Accéder au Dashboard
             </button>
         </div>
     </div>
 
-    <div id="app" class="hidden">
-        <!-- Sticky Header with Logo -->
-        <header class="sticky top-0 z-30 bg-gray-100/90 backdrop-blur-sm shadow-sm">
-            <div class="container mx-auto max-w-6xl px-4 py-3">
-                 <div class="logo"><i><span class="logo-s">S</span><span class="logo-trady">trady</span><span class="logo-dot"> . </span><span class="logo-imo">budget</span></i></div>
-            </div>
-        </header>
-
+    <div id="app" class="main-screen flex-grow overflow-y-auto hidden">
         <!-- Content Wrapper -->
         <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
             <!-- Page Title -->
@@ -249,9 +258,15 @@
                          <p id="no-transactions" class="text-center text-gray-500 py-8">Aucune transaction trouvée pour les filtres actuels.</p>
                     </div>
 
-                    <div class="mt-12">
-                        <h2 class="text-2xl font-semibold mb-4">Transactions Récurrentes Définies</h2>
-                         <div class="overflow-x-auto">
+                    <div class="mt-12 border-t pt-6">
+                        <div class="flex justify-between items-center mb-4 cursor-pointer" id="recurring-panel-header">
+                            <h2 class="text-2xl font-semibold">Transactions Récurrentes Définies</h2>
+                            <button id="toggle-recurring-panel-btn" class="p-2 rounded-full hover:bg-gray-200 text-gray-600">
+                                <i data-lucide="chevron-down" class="w-6 h-6 transition-transform"></i>
+                            </button>
+                        </div>
+                        <div id="recurring-transactions-panel" class="hidden">
+                            <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
@@ -267,6 +282,7 @@
                                 </tbody>
                             </table>
                             <p id="no-recurring-transactions" class="text-center text-gray-500 py-8">Aucune transaction récurrente définie.</p>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -311,6 +327,90 @@
             </main>
         </div>
     </div>
+
+    <div id="help-screen" class="main-screen flex-grow overflow-y-auto hidden">
+        <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-4xl">
+            <div class="card p-6 md:p-8 prose">
+                 <h1 class="text-4xl font-bold text-gray-800 text-center mb-8">Manuel d'Utilisation</h1>
+
+                <h2 class="text-2xl font-semibold mt-8">1. Introduction</h2>
+                <p>
+                    Bienvenue sur <strong>Strady.budget</strong>, votre assistant personnel pour la gestion des finances de votre ménage. Cette application vous permet d'enregistrer vos revenus et dépenses, de planifier votre épargne, et d'analyser vos habitudes financières pour prendre de meilleures décisions.
+                </p>
+                <p class="font-semibold text-indigo-600">
+                    Toutes les données sont stockées localement sur votre navigateur. Personne d'autre que vous n'y a accès.
+                </p>
+
+                <h2 class="text-2xl font-semibold mt-8">2. Le Dashboard (Tableau de Bord)</h2>
+                <p>
+                    C'est l'écran principal de l'application. Il vous donne une vue d'ensemble de votre situation financière pour le mois en cours :
+                </p>
+                <ul>
+                    <li><strong>Revenus :</strong> La somme de tous les revenus enregistrés ce mois-ci.</li>
+                    <li><strong>Dépenses :</strong> La somme de toutes les dépenses enregistrées ce mois-ci.</li>
+                    <li><strong>Solde :</strong> La différence entre les revenus et les dépenses.</li>
+                    <li><strong>Total Épargné :</strong> La somme totale de tous vos comptes d'épargne et provisions.</li>
+                </ul>
+
+                <h2 class="text-2xl font-semibold mt-8">3. Gérer les Transactions</h2>
+                <h3 class="text-xl font-semibold mt-4">Ajouter une transaction ponctuelle</h3>
+                <ol>
+                    <li>Cliquez sur le bouton <strong>"Ajouter Transaction"</strong>.</li>
+                    <li>Remplissez les champs : description, date, montant, type (revenu ou dépense) et catégorie.</li>
+                    <li>Si vous choisissez la catégorie "Autre", un nouveau champ apparaîtra pour nommer cette nouvelle catégorie.</li>
+                    <li>Cliquez sur "Ajouter" pour enregistrer.</li>
+                </ol>
+
+                <h3 class="text-xl font-semibold mt-4">Ajouter une transaction récurrente</h3>
+                <p>
+                    Idéal pour les salaires, loyers, abonnements... L'application les générera automatiquement pour vous, même dans le futur !
+                </p>
+                <ol>
+                    <li>Cliquez sur <strong>"Ajouter Réc."</strong>.</li>
+                    <li>Remplissez les informations de la transaction, sa fréquence (mensuelle, etc.), sa date de début et, si nécessaire, une date de fin.</li>
+                    <li>Toutes les transactions futures prévues apparaîtront en italique dans votre historique.</li>
+                </ol>
+
+                <h3 class="text-xl font-semibold mt-4">Rechercher et Filtrer</h3>
+                <p>
+                    Utilisez la zone de recherche au-dessus de la liste pour retrouver une transaction par son nom ou son montant, ou utilisez les filtres pour n'afficher que certaines catégories ou une période de temps spécifique.
+                </p>
+
+                <h2 class="text-2xl font-semibold mt-8">4. Gérer l'Épargne et les Provisions</h2>
+                <p>
+                    L'onglet <strong>"Épargne & Provisions"</strong> vous permet de créer des "cagnottes" pour vos différents projets (vacances, apport immobilier, etc.).
+                </p>
+                <ol>
+                    <li>Cliquez sur <strong>"Ajouter un objectif"</strong> pour créer une nouvelle cagnotte.</li>
+                    <li>Utilisez les boutons <strong>"Ajouter"</strong> ou <strong>"Retirer"</strong> sur une cagnotte pour y affecter des fonds.</li>
+                    <li>L'application créera automatiquement la transaction correspondante (une dépense de type "Épargne" ou un revenu de type "Retrait Épargne").</li>
+                </ol>
+                <p class="text-sm bg-amber-100 text-amber-800 p-3 rounded-lg">
+                    <strong>Astuce :</strong> Vous pouvez lier une transaction récurrente à un objectif d'épargne pour automatiser votre effort d'épargne !
+                </p>
+
+                <h2 class="text-2xl font-semibold mt-8">5. Rapports</h2>
+                <p>
+                    L'onglet <strong>"Rapports"</strong> vous aide à analyser vos finances.
+                </p>
+                <ul>
+                    <li><strong>Compte de Résultat Mensuel :</strong> Choisissez un mois pour voir le détail de vos revenus et dépenses, et le résultat net.</li>
+                    <li><strong>Bilan Patrimonial :</strong> Affiche la somme de vos actifs (votre épargne) pour vous donner une idée de votre patrimoine net.</li>
+                </ul>
+
+                <h2 class="text-2xl font-semibold mt-8">6. Importer et Exporter vos Données (CSV)</h2>
+                <p>
+                    Vos données sont précieuses. Nous vous recommandons de les exporter régulièrement comme sauvegarde.
+                </p>
+                <ol>
+                    <li>Cliquez sur l'icône avec les trois points verticaux (⋮) en haut à droite de la section des transactions.</li>
+                    <li>Choisissez <strong>"Exporter CSV"</strong> pour télécharger un fichier de toutes les transactions actuellement affichées (vous pouvez filtrer avant d'exporter).</li>
+                    <li>Choisissez <strong>"Importer CSV"</strong> pour remplacer toutes les données de l'application par celles d'un fichier. <strong>Attention, cette action est irréversible.</strong></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Add/Edit Transaction Modal -->
     <div id="transaction-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
@@ -430,27 +530,6 @@
         </div>
     </div>
 
-    <!-- Savings Action Modal (Add/Withdraw) -->
-    <div id="savings-action-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="modal card w-full max-w-sm mx-4">
-            <form id="savings-action-form" class="p-6">
-                <h3 id="savings-action-modal-title" class="text-xl font-semibold mb-4">Action d'Épargne</h3>
-                <div class="space-y-4">
-                    <p>Combien souhaitez-vous <span id="savings-action-verb"></span> ?</p>
-                    <div>
-                        <label for="savings-action-amount" class="block text-sm font-medium text-gray-700">Montant (€)</label>
-                        <input type="number" id="savings-action-amount" name="amount" min="0.01" step="0.01" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                     <p id="savings-action-info" class="text-sm text-gray-500"></p>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" id="cancel-savings-action" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Annuler</button>
-                    <button type="submit" id="confirm-savings-action-btn" class="bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-600">Confirmer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
     <!-- Add/Edit Savings Objective Modal -->
     <div id="objective-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="modal card w-full max-w-md mx-4">
@@ -488,6 +567,26 @@
         </div>
     </div>
 
+    <!-- Fixed Footer Navigation -->
+    <footer id="main-footer" class="bg-white shadow-t border-t border-gray-200 z-40 hidden">
+        <div class="container mx-auto max-w-md px-4">
+            <div class="flex justify-around items-center h-16">
+                <button id="nav-welcome" class="flex flex-col items-center text-gray-500 hover:text-indigo-600">
+                    <i data-lucide="home" class="w-6 h-6"></i>
+                    <span class="text-xs mt-1">Accueil</span>
+                </button>
+                <button id="nav-dashboard" class="flex flex-col items-center text-indigo-600 hover:text-indigo-800">
+                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                    <span class="text-xs mt-1">Dashboard</span>
+                </button>
+                <button id="nav-help" class="flex flex-col items-center text-gray-500 hover:text-indigo-600">
+                    <i data-lucide="help-circle" class="w-6 h-6"></i>
+                    <span class="text-xs mt-1">Aide</span>
+                </button>
+            </div>
+        </div>
+    </footer>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -496,29 +595,62 @@
             // --- STATE MANAGEMENT ---
             const initialState = {
                 transactions: [
-                     ],
-                recurringTransactions: [],
+                    // Manual transactions for the current month (e.g., October 2025) to show some activity
+                    { id: 1728225600000, description: "Courses de la semaine", amount: 125.50, type: "expense", category: "Alimentation", date: "2025-10-07T00:00:00.000Z", savingsObjectiveId: null, generatedFrom: null },
+                    { id: 1728657600000, description: "Plein de carburant", amount: 80, type: "expense", category: "Carburant", date: "2025-10-12T00:00:00.000Z", savingsObjectiveId: null, generatedFrom: null },
+                    { id: 1728744000000, description: "Restaurant en famille", amount: 65, type: "expense", category: "Loisirs", date: "2025-10-13T00:00:00.000Z", savingsObjectiveId: null, generatedFrom: null },
+                ],
+                recurringTransactions: [
+                    // Incomes
+                    { id: 1, description: "Salaire Papa", amount: 2500, type: "income", category: "Salaire", frequency: "monthly", startDate: "2024-01-28", endDate: null, savingsObjectiveId: null },
+                    { id: 2, description: "Salaire Maman", amount: 2200, type: "income", category: "Salaire", frequency: "monthly", startDate: "2024-01-28", endDate: null, savingsObjectiveId: null },
+                    { id: 3, description: "Allocations familiales", amount: 150, type: "income", category: "Allocation", frequency: "monthly", startDate: "2024-02-08", endDate: null, savingsObjectiveId: null },
+                    // Fixed Expenses
+                    { id: 4, description: "Loyer", amount: 1200, type: "expense", category: "Loyer", frequency: "monthly", startDate: "2024-01-05", endDate: null, savingsObjectiveId: null },
+                    { id: 5, description: "Facture Électricité", amount: 95, type: "expense", category: "Électricité", frequency: "monthly", startDate: "2024-01-15", endDate: null, savingsObjectiveId: null },
+                    { id: 6, description: "Facture Eau", amount: 40, type: "expense", category: "Eau", frequency: "monthly", startDate: "2024-01-15", endDate: null, savingsObjectiveId: null },
+                    { id: 7, description: "Abonnement Internet/TV", amount: 55, type: "expense", category: "Autre", frequency: "monthly", startDate: "2024-01-20", endDate: null, savingsObjectiveId: null },
+                    { id: 8, description: "Frais de garde enfant", amount: 450, type: "expense", category: "Autre", frequency: "monthly", startDate: "2024-01-10", endDate: null, savingsObjectiveId: null },
+                    // Annual Expenses
+                    { id: 9, description: "Assurance Habitation", amount: 240, type: "expense", category: "Assurance", frequency: "yearly", startDate: "2024-03-01", endDate: null, savingsObjectiveId: null },
+                    { id: 10, description: "Assurance Voiture", amount: 600, type: "expense", category: "Assurance", frequency: "yearly", startDate: "2024-06-15", endDate: null, savingsObjectiveId: null },
+                    // Automated Savings
+                    { id: 11, description: "Virement Épargne Vacances", amount: 150, type: "expense", category: "Épargne", frequency: "monthly", startDate: "2024-02-01", endDate: null, savingsObjectiveId: "1" },
+                    { id: 12, description: "Virement Épargne Enfant", amount: 100, type: "expense", category: "Épargne", frequency: "monthly", startDate: "2024-02-01", endDate: null, savingsObjectiveId: "2" },
+                    { id: 13, description: "Virement Apport Immobilier", amount: 400, type: "expense", category: "Épargne", frequency: "monthly", startDate: "2024-02-01", endDate: null, savingsObjectiveId: "3" },
+                ],
                 savingsObjectives: [
-                    { id: 1, name: "Projets de vacances", amount: 0, goal: null },
-                    { id: 2, name: "Petits weekends", amount: 0, goal: null },
-                    { id: 3, name: "Restos et loisirs", amount: 0, goal: null },
-                    { id: 4, name: "Épargne Aos", amount: 0, goal: null },
-                    { id: 5, name: "Épargne Enih", amount: 0, goal: null },
-                    { id: 6, name: "Épargne Ael", amount: 0, goal: null },
-                    { id: 7, name: "Apport immobilier", amount: 0, goal: null },
+                    { id: 1, name: "Vacances d'été", amount: 0, goal: 2500 },
+                    { id: 2, name: "Épargne Enfant", amount: 0, goal: null },
+                    { id: 3, name: "Apport immobilier", amount: 0, goal: 50000 },
+                    { id: 4, name: "Fonds d'urgence", amount: 0, goal: 10000 },
+                    { id: 5, name: "Provision charges", amount: 0, goal: null },
+                    { id: 6, name: "Loisirs", amount: 0, goal: null },
                 ],
                 incomeCategories: ['Salaire', 'Loyer', 'Allocation', 'Retrait Épargne', 'Autre'],
-                expenseCategories: ['Loyer', 'Électricité', 'Eau', 'Carburant', 'Taxe', 'Alimentation', 'Assurance', 'Épargne', 'Autre'],
+                expenseCategories: ['Loyer', 'Électricité', 'Eau', 'Carburant', 'Taxe', 'Alimentation', 'Assurance', 'Épargne', 'Loisirs', 'Autre'],
                 lastRecurringCheck: new Date().toISOString()
             };
 
             const loadedState = JSON.parse(localStorage.getItem('budget-data-v6'));
-            let state = { ...initialState, ...loadedState };
+            let state = {};
+            if (loadedState) {
+                state = loadedState;
+            } else {
+                state = initialState;
+            }
             
             // --- DOM SELECTORS ---
             const app = document.getElementById('app');
             const welcomeScreen = document.getElementById('welcome-screen');
+            const helpScreen = document.getElementById('help-screen');
             const enterAppBtn = document.getElementById('enter-app-btn');
+            const mainHeader = document.getElementById('main-header');
+            const mainFooter = document.getElementById('main-footer');
+
+            const navWelcomeBtn = document.getElementById('nav-welcome');
+            const navDashboardBtn = document.getElementById('nav-dashboard');
+            const navHelpBtn = document.getElementById('nav-help');
             
             const totalIncomeEl = document.getElementById('total-income');
             const totalExpensesEl = document.getElementById('total-expenses');
@@ -544,6 +676,8 @@
             const kebabMenuDropdown = document.getElementById('kebab-menu-dropdown');
             const importCsvLink = document.getElementById('import-csv-link');
             const exportCsvLink = document.getElementById('export-csv-link');
+            const recurringPanelHeader = document.getElementById('recurring-panel-header');
+            const recurringTransactionsPanel = document.getElementById('recurring-transactions-panel');
 
             // Modals
             const transactionModal = document.getElementById('transaction-modal');
@@ -554,18 +688,12 @@
             const recurringTransactionModal = document.getElementById('recurring-transaction-modal');
             const recurringTransactionForm = document.getElementById('recurring-transaction-form');
             
-            const savingsActionModal = document.getElementById('savings-action-modal');
-            const savingsActionForm = document.getElementById('savings-action-form');
-            
             const objectiveModal = document.getElementById('objective-modal');
             const objectiveForm = document.getElementById('objective-form');
             const objectiveModalTitle = document.getElementById('objective-modal-title');
             const saveObjectiveBtn = document.getElementById('save-objective-btn');
 
             const confirmImportModal = document.getElementById('confirm-import-modal');
-            
-            let currentObjectiveId = null;
-            let currentSavingsAction = null; // 'add' or 'withdraw'
             let fileToImport = null;
             let allRuntimeTransactions = [];
 
@@ -721,7 +849,9 @@
                         const objective = state.savingsObjectives.find(o => o.id === parseInt(t.savingsObjectiveId));
                         if (objective) {
                             if (t.type === 'expense' && t.category === 'Épargne') objective.amount += t.amount;
-                            else if (t.type === 'income' && t.category === 'Retrait Épargne') objective.amount -= t.amount;
+                            if (t.type === 'income' && t.category === 'Retrait Épargne') {
+                                objective.amount -= t.amount;
+                            }
                         }
                     }
                 });
@@ -814,7 +944,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">${formatDate(t.date)}</td>
                              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                ${!t.generatedFrom && t.category !== 'Retrait Épargne' ? `
+                                ${!t.generatedFrom && t.category.indexOf('Épargne') === -1 ? `
                                 <button class="edit-transaction-btn text-indigo-600 hover:text-indigo-900 mr-2" data-id="${t.id}"><i data-lucide="edit" class="w-4 h-4"></i></button>
                                 <button class="delete-transaction-btn text-red-500 hover:text-red-700" data-id="${t.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                             </td>
@@ -972,6 +1102,13 @@
                 renderFiltered();
             });
             
+            recurringPanelHeader.addEventListener('click', () => {
+                const icon = recurringPanelHeader.querySelector('i');
+                recurringTransactionsPanel.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+                lucide.createIcons(); // To ensure icon state is correct if it changes
+            });
+
             const toggleSavingsObjectiveField = (form) => {
                 const type = form.querySelector('input[name="type"]:checked').value;
                 const category = form.querySelector('[name="category"]').value;
@@ -1022,6 +1159,17 @@
                 document.getElementById('category').innerHTML = state.incomeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
                 handleCategoryChange({target: document.getElementById('category')});
                 openModal(transactionModal);
+
+                // Re-enable fields for normal transaction creation
+                transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = false);
+                document.getElementById('category').disabled = false;
+            });
+
+            document.getElementById('cancel-transaction').addEventListener('click', () => {
+                closeModal(transactionModal);
+                // Always re-enable fields on cancel, in case it was a locked savings action
+                transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = false);
+                document.getElementById('category').disabled = false;
             });
 
             document.getElementById('cancel-transaction').addEventListener('click', () => closeModal(transactionModal));
@@ -1168,21 +1316,45 @@
             savingsObjectivesListEl.addEventListener('click', (e) => {
                 const actionBtn = e.target.closest('.savings-action-btn');
                 if (actionBtn) {
-                    currentObjectiveId = parseInt(actionBtn.dataset.objectiveId);
-                    currentSavingsAction = actionBtn.dataset.action;
-                    const objective = state.savingsObjectives.find(p => p.id === currentObjectiveId);
-                    const modalTitle = document.getElementById('savings-action-modal-title');
-                    const verb = document.getElementById('savings-action-verb');
-                    const info = document.getElementById('savings-action-info');
-                    const btn = document.getElementById('confirm-savings-action-btn');
+                    const objectiveId = parseInt(actionBtn.dataset.objectiveId);
+                    const action = actionBtn.dataset.action;
+                    const objective = state.savingsObjectives.find(o => o.id === objectiveId);
 
-                    modalTitle.textContent = `${currentSavingsAction === 'add' ? 'Ajouter à' : 'Retirer de'} : ${objective.name}`;
-                    verb.textContent = currentSavingsAction === 'add' ? 'ajouter' : 'retirer';
-                    info.textContent = currentSavingsAction === 'add' ? 'Sera enregistré comme une dépense "Épargne ou Provision".' : 'Sera enregistré comme un revenu "Retrait Épargne ou Provision".';
-                    btn.className = `font-semibold py-2 px-4 rounded-lg ${currentSavingsAction === 'add' ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-gray-500 text-white hover:bg-gray-600'}`;
+                    transactionForm.reset();
+                    document.getElementById('transaction-id').value = '';
+                    document.getElementById('date').value = getTodayISO();
 
-                    savingsActionForm.reset();
-                    openModal(savingsActionModal);
+                    if (action === 'add') {
+                        transactionModalTitle.textContent = `Ajouter à: ${objective.name}`;
+                        document.querySelector('#transaction-form input[name="type"][value="expense"]').checked = true;
+                        transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = true);
+
+                        document.getElementById('category').innerHTML = state.expenseCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                        document.getElementById('category').value = 'Épargne';
+                        document.getElementById('category').disabled = true;
+
+                        document.getElementById('description').value = `Épargne: ${objective.name}`;
+                    } else { // withdraw
+                        transactionModalTitle.textContent = `Retirer de: ${objective.name}`;
+                        document.querySelector('#transaction-form input[name="type"][value="income"]').checked = true;
+                        transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = true);
+
+                        document.getElementById('category').innerHTML = state.incomeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                        document.getElementById('category').value = 'Retrait Épargne';
+                        document.getElementById('category').disabled = true;
+
+                        document.getElementById('description').value = `Retrait: ${objective.name}`;
+                    }
+
+                    handleCategoryChange({target: document.getElementById('category')});
+                    document.getElementById('transaction-savings-objective').value = objectiveId;
+                    
+                    // Ensure the objective dropdown is visible
+                    const wrapper = document.getElementById('savings-objective-wrapper');
+                    wrapper.classList.remove('hidden');
+
+                    saveTransactionBtn.textContent = "Ajouter";
+                    openModal(transactionModal);
                 }
 
                 const editBtn = e.target.closest('.edit-objective-btn');
@@ -1206,50 +1378,6 @@
                     state.savingsObjectives = state.savingsObjectives.filter(o => o.id !== objectiveId);
                     render();
                 }
-            });
-
-            document.getElementById('cancel-savings-action').addEventListener('click', () => closeModal(savingsActionModal));
-            
-            savingsActionForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const amount = parseFloat(document.getElementById('savings-action-amount').value);
-                if (isNaN(amount) || amount <= 0) return;
-
-                const objective = state.savingsObjectives.find(p => p.id === currentObjectiveId);
-                if(!objective) return;
-
-                if (currentSavingsAction === 'add') {
-                    state.transactions.push({
-                        id: Date.now(),
-                        description: `Épargne ou Provision pour ${objective.name}`,
-                        amount: amount,
-                        type: 'expense',
-                        category: 'Épargne',
-                        date: (() => {
-                            const today = new Date();
-                            return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())).toISOString();
-                        })(),
-                        savingsObjectiveId: objective.id
-                    });
-                } else if (currentSavingsAction === 'withdraw') {
-                    state.transactions.push({
-                        id: Date.now(),
-                        description: `Retrait de ${objective.name}`,
-                        amount: amount,
-                        type: 'income',
-                        category: 'Retrait Épargne',
-                        date: (() => {
-                            const today = new Date();
-                            return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())).toISOString();
-                        })(),
-                        savingsObjectiveId: objective.id
-                    });
-                }
-
-                closeModal(savingsActionModal);
-                currentObjectiveId = null;
-                currentSavingsAction = null;
-                render();
             });
 
             // Recurring Transactions Listeners
@@ -1367,6 +1495,31 @@
                     render();
                 }
             });
+
+            // --- Navigation Logic ---
+            const showScreen = (screenToShow) => {
+                const screens = [welcomeScreen, app, helpScreen];
+                screens.forEach(screen => {
+                    if (screen.id === screenToShow) {
+                        screen.classList.remove('hidden');
+                    } else {
+                        screen.classList.add('hidden');
+                    }
+                });
+                const showHeaderAndFooter = (screenToShow !== 'welcome-screen');
+                mainHeader.classList.toggle('hidden', !showHeaderAndFooter);
+                mainFooter.classList.toggle('hidden', !showHeaderAndFooter);
+                window.scrollTo(0, 0); // Scroll to top on screen change
+            };
+            
+            navWelcomeBtn.addEventListener('click', () => showScreen('welcome-screen'));
+            navDashboardBtn.addEventListener('click', () => showScreen('app'));
+            navHelpBtn.addEventListener('click', () => showScreen('help-screen'));
+            enterAppBtn.addEventListener('click', () => {
+                localStorage.setItem('budget-app-visited', 'true');
+                showScreen('app');
+            });
+
 
             // Other Listeners
             document.querySelectorAll('.tab-button').forEach(tab => {
@@ -1494,17 +1647,13 @@
             // --- INITIAL SETUP ---
             const hasVisited = localStorage.getItem('budget-app-visited');
             if (hasVisited) {
-                welcomeScreen.classList.add('hidden');
-                app.classList.remove('hidden');
+                 if (!loadedState) { // If visited but has no data, load initial sample data
+                    state = initialState;
+                }
+                showScreen('app');
             } else {
-                enterAppBtn.addEventListener('click', () => {
-                    localStorage.setItem('budget-app-visited', 'true');
-                    welcomeScreen.style.opacity = '0';
-                    setTimeout(() => {
-                        welcomeScreen.classList.add('hidden');
-                        app.classList.remove('hidden');
-                    }, 500);
-                });
+                state = initialState; // Load initial sample data for the very first visit
+                showScreen('welcome-screen');
             }
             setDefaultDateFilters();
             reportMonthInput.value = getMonthYearISO();
@@ -1513,5 +1662,3 @@
     </script>
 </body>
 </html>
-
-
