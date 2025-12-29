@@ -3,1662 +3,510 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strady - Gestion du budget privé</title>
+    <title>Strady . budget</title>
     <link rel="icon" type="image/svg+xml" href="./public/S-fav-icon.jpeg">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;500;600;700&family=Poppins:wght@500&family=The+Girl+Next+Door&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --orange: #f59e0b; /* amber-500 */
-            --light-blue: #4f46e5; /* indigo-600 */
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* gray-100 */
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        .card {
-            background-color: white;
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            transition: all 0.2s ease-in-out;
-        }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-        }
-        .modal-backdrop {
-            background-color: rgba(0,0,0,0.5);
-            transition: opacity 0.3s ease;
-        }
-        .modal {
-            transition: transform 0.3s ease, opacity 0.3s ease;
-            transform: translateY(20px) scale(0.95);
-            opacity: 0;
-        }
-        .modal.open {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-        .tab-button.active {
-            border-bottom-color: #4f46e5; /* indigo-600 */
-            color: #4f46e5;
-        }
-        .generated-row {
-            background-color: #fafafa; /* gray-50 */
-            font-style: italic;
-            color: #6b7280; /* gray-500 */
-        }
-        .logo {
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-            justify-content: center;
-        }
-        .logo-s {
-            font-family: 'Caveat', cursive;
-            font-size: 2.4rem;
-            font-weight: 700;
-            line-height: 1;
-        }
-        .logo-trady {
-            font-family: 'The Girl Next Door', cursive;
-            font-size: 1.8rem;
-            line-height: 1;
-        }
-        .logo-dot {
-            font-size: 2.2rem;
-            color: var(--orange);
-            line-height: 1;
-        }
-        .logo-imo {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 500;
-            padding: 0.1rem 0.5rem;
-            border-radius: 6px;
-            border-top: 2.5px solid var(--light-blue);
-            border-right: 2.5px solid var(--light-blue);
-            border-bottom: 2.5px solid var(--light-blue);
-            color: var(--light-blue);
-            line-height: 1;
-        }
-        .main-screen {
-            transition: opacity 0.5s ease-in-out;
-        }
-        .prose {
-            max-width: 100%;
-        }
-        .prose h1, .prose h2, .prose h3 {
-             color: #1f2937;
-        }
-        .prose p, .prose li {
-            color: #4b5563;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .logo-strady { color: #228B22; } /* Vert Forêt */
+        .logo-dot { color: #FF8C00; }    /* Orange */
+        .logo-budget { color: #1E90FF; } /* Bleu Tech */
+        .active-nav { @apply bg-blue-50 text-blue-600 font-semibold shadow-sm; }
+        [v-cloak] { display: none; }
     </style>
 </head>
-<body class="antialiased text-gray-800">
+<body class="bg-gray-50 text-gray-900">
 
-    <!-- Sticky Header with Logo -->
-    <header id="main-header" class="sticky top-0 z-30 bg-gray-100/90 backdrop-blur-sm shadow-sm hidden">
-        <div class="container mx-auto max-w-6xl px-4 py-3">
-             <div class="logo"><i><span class="logo-s">S</span><span class="logo-trady">trady</span><span class="logo-dot"> . </span><span class="logo-imo">budget</span></i></div>
-        </div>
-    </header>
-
-    <div id="welcome-screen" class="main-screen flex-grow overflow-y-auto flex items-center justify-center p-4">
-        <div class="card text-center p-8 max-w-lg w-full">
-            <div class="logo mb-6"><i><span class="logo-s">S</span><span class="logo-trady">trady</span><span class="logo-dot"> . </span><span class="logo-imo">budget</span></i></div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Bienvenue dans votre gestionnaire de budget</h1>
-            <p class="text-gray-600 mb-6">
-                Cet outil est conçu pour vous aider à suivre vos finances familiales. Enregistrez vos revenus, vos dépenses, et suivez vos objectifs d'épargne.
-            </p>
-            <button id="enter-app-btn" class="bg-indigo-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
-                Accéder au Dashboard
-            </button>
-        </div>
-    </div>
-
-    <div id="app" class="main-screen flex-grow overflow-y-auto hidden">
-        <!-- Content Wrapper -->
-        <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
-            <!-- Page Title -->
-            <div class="text-center my-8">
-                <h1 class="text-4xl font-bold text-gray-800">Suivi de vos finances</h1>
-                <p class="text-gray-500 mt-2">Enregistrez vos revenus, vos dépenses, et suivez vos objectifs d'épargne
-                </p>
+    <div id="app" class="min-h-screen flex flex-col md:flex-row">
+        <!-- Sidebar Navigation -->
+        <nav class="md:w-64 bg-white border-r border-gray-200 p-4 flex flex-row md:flex-col gap-2 sticky top-0 z-40 h-auto md:h-screen">
+            <div class="hidden md:block mb-8 px-2 py-4">
+                <div class="flex items-center gap-1 text-xl font-bold tracking-tight">
+                    <span class="logo-strady">Strady</span><span class="logo-dot">.</span><span class="logo-budget">budget</span>
+                </div>
             </div>
-
-            <!-- Summary Cards -->
-            <section id="summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="card p-6 flex items-center space-x-4">
-                    <div class="bg-green-100 p-3 rounded-full"><i data-lucide="arrow-down-left" class="w-6 h-6 text-green-600"></i></div>
-                    <div>
-                        <p class="text-gray-500 text-sm">Revenus (Mois Actuel)</p>
-                        <p id="total-income" class="text-2xl font-semibold">0,00 €</p>
-                    </div>
-                </div>
-                <div class="card p-6 flex items-center space-x-4">
-                    <div class="bg-red-100 p-3 rounded-full"><i data-lucide="arrow-up-right" class="w-6 h-6 text-red-600"></i></div>
-                    <div>
-                        <p class="text-gray-500 text-sm">Dépenses (Mois Actuel)</p>
-                        <p id="total-expenses" class="text-2xl font-semibold">0,00 €</p>
-                    </div>
-                </div>
-                <div class="card p-6 flex items-center space-x-4">
-                    <div class="bg-indigo-100 p-3 rounded-full"><i data-lucide="scale" class="w-6 h-6 text-indigo-600"></i></div>
-                    <div>
-                        <p class="text-gray-500 text-sm">Solde (Mois Actuel)</p>
-                        <p id="balance" class="text-2xl font-semibold">0,00 €</p>
-                    </div>
-                </div>
-                <div class="card p-6 flex items-center space-x-4">
-                    <div class="bg-amber-100 p-3 rounded-full"><i data-lucide="piggy-bank" class="w-6 h-6 text-amber-600"></i></div>
-                    <div>
-                        <p class="text-gray-500 text-sm">Total Épargné</p>
-                        <p id="total-savings" class="text-2xl font-semibold">0,00 €</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Main Content -->
-            <main class="card p-6">
-                <!-- Tabs -->
-                <div class="border-b border-gray-200 mb-6">
-                    <nav class="-mb-px flex space-x-6" id="tabs">
-                        <button data-tab="transactions" class="tab-button active py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-indigo-600 hover:border-indigo-300">Transactions</button>
-                        <button data-tab="savings" class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-indigo-600 hover:border-indigo-300">Épargne & Provisions</button>
-                        <button data-tab="reports" class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-indigo-600 hover:border-indigo-300">Rapports</button>
-                    </nav>
-                </div>
-
-                <!-- Transactions Tab Content -->
-                <div id="tab-content-transactions" class="tab-content">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                        <h2 class="text-2xl font-semibold">Historique des Transactions</h2>
-                        <div class="flex flex-wrap justify-center md:justify-end gap-2 items-center">
-                            <button id="add-recurring-transaction-btn" class="bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-slate-700 flex items-center space-x-2"><i data-lucide="repeat" class="w-5 h-5"></i><span>Ajouter Réc.</span></button>
-                            <button id="add-transaction-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 flex items-center space-x-2"><i data-lucide="plus-circle" class="w-5 h-5"></i><span>Ajouter Transaction</span></button>
-                            
-                            <!-- Kebab Menu for Import/Export -->
-                            <div class="relative inline-block text-left">
-                                <div>
-                                    <button type="button" id="kebab-menu-btn" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" aria-expanded="true" aria-haspopup="true">
-                                        <span class="sr-only">Options</span>
-                                        <i data-lucide="more-vertical" class="w-5 h-5"></i>
-                                    </button>
-                                </div>
-                                <div id="kebab-menu-dropdown" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="kebab-menu-btn">
-                                    <div class="py-1" role="none">
-                                        <a href="#" id="import-csv-link" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100 flex items-center space-x-3" role="menuitem">
-                                            <i data-lucide="upload" class="w-5 h-5 text-teal-600"></i>
-                                            <span>Importer CSV</span>
-                                        </a>
-                                        <a href="#" id="export-csv-link" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100 flex items-center space-x-3" role="menuitem">
-                                            <i data-lucide="download" class="w-5 h-5 text-emerald-600"></i>
-                                            <span>Exporter CSV</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            <input type="file" id="csv-import-input" class="hidden" accept=".csv">
-                        </div>
-                    </div>
-
-                    <!-- Search and Filter Section -->
-                    <div id="filters" class="p-4 bg-gray-50 rounded-lg mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                        <div class="lg:col-span-2">
-                            <label for="search-input" class="block text-sm font-medium text-gray-700">Rechercher (desc/montant)</label>
-                            <input type="text" id="search-input" placeholder="Ex: Courses, 50.25" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                        <div>
-                            <label for="category-filter" class="block text-sm font-medium text-gray-700">Catégorie</label>
-                            <select id="category-filter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                <!-- Categories loaded by JS -->
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                             <div>
-                                <label for="start-date-filter" class="block text-sm font-medium text-gray-700">Du</label>
-                                <input type="date" id="start-date-filter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <div>
-                                <label for="end-date-filter" class="block text-sm font-medium text-gray-700">Au</label>
-                                <input type="date" id="end-date-filter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                        </div>
-                        <div>
-                            <button id="clear-filters-btn" class="w-full bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-700 flex items-center justify-center space-x-2">
-                                <i data-lucide="x-circle" class="w-5 h-5"></i>
-                                <span>Effacer</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                    <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                                </tr>
-                            </thead>
-                            <tbody id="transactions-list" class="bg-white divide-y divide-gray-200">
-                                <!-- Transactions will be injected here by JS -->
-                            </tbody>
-                        </table>
-                         <p id="no-transactions" class="text-center text-gray-500 py-8">Aucune transaction trouvée pour les filtres actuels.</p>
-                    </div>
-
-                    <div class="mt-12 border-t pt-6">
-                        <div class="flex justify-between items-center mb-4 cursor-pointer" id="recurring-panel-header">
-                            <h2 class="text-2xl font-semibold">Transactions Récurrentes Définies</h2>
-                            <button id="toggle-recurring-panel-btn" class="p-2 rounded-full hover:bg-gray-200 text-gray-600">
-                                <i data-lucide="chevron-down" class="w-6 h-6 transition-transform"></i>
-                            </button>
-                        </div>
-                        <div id="recurring-transactions-panel" class="hidden">
-                            <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fréquence</th>
-                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Objectif Lié</th>
-                                        <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="recurring-transactions-list" class="bg-white divide-y divide-gray-200">
-                                    <!-- Recurring transactions rules will be injected here -->
-                                </tbody>
-                            </table>
-                            <p id="no-recurring-transactions" class="text-center text-gray-500 py-8">Aucune transaction récurrente définie.</p>
-                        </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Savings Tab Content -->
-                <div id="tab-content-savings" class="tab-content hidden">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold mb-4 md:mb-0">Vos Épargne & Provisions</h2>
-                        <button id="add-savings-objective-btn" class="w-full md:w-auto bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-75 flex items-center justify-center space-x-2">
-                            <i data-lucide="target" class="w-5 h-5"></i>
-                            <span>Ajouter un objectif</span>
-                        </button>
-                    </div>
-                    <div id="savings-objectives-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Savings objectives will be injected here -->
-                    </div>
-                </div>
-
-                <!-- Reports Tab Content -->
-                <div id="tab-content-reports" class="tab-content hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Monthly Results -->
-                        <div>
-                            <h2 class="text-2xl font-semibold mb-4">Compte de Résultat Mensuel</h2>
-                            <div class="mb-4">
-                                <label for="report-month" class="block text-sm font-medium text-gray-700">Sélectionner un mois</label>
-                                <input type="month" id="report-month" name="report-month" class="mt-1 block w-full md:w-60 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <div id="monthly-report-content" class="space-y-4">
-                                <!-- Monthly report will be rendered here -->
-                            </div>
-                        </div>
-                        <!-- Balance Sheet -->
-                        <div>
-                            <h2 class="text-2xl font-semibold mb-4">Bilan Patrimonial</h2>
-                            <div id="balance-sheet-content">
-                                 <!-- Balance sheet will be rendered here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <div id="help-screen" class="main-screen flex-grow overflow-y-auto hidden">
-        <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-4xl">
-            <div class="card p-6 md:p-8 prose">
-                 <h1 class="text-4xl font-bold text-gray-800 text-center mb-8">Manuel d'Utilisation</h1>
-
-                <h2 class="text-2xl font-semibold mt-8">1. Introduction</h2>
-                <p>
-                    Bienvenue sur <strong>Strady.budget</strong>, votre assistant personnel pour la gestion des finances de votre ménage. Cette application vous permet d'enregistrer vos revenus et dépenses, de planifier votre épargne, et d'analyser vos habitudes financières pour prendre de meilleures décisions.
-                </p>
-                <p class="font-semibold text-indigo-600">
-                    Toutes les données sont stockées localement sur votre navigateur. Personne d'autre que vous n'y a accès.
-                </p>
-
-                <h2 class="text-2xl font-semibold mt-8">2. Le Dashboard (Tableau de Bord)</h2>
-                <p>
-                    C'est l'écran principal de l'application. Il vous donne une vue d'ensemble de votre situation financière pour le mois en cours :
-                </p>
-                <ul>
-                    <li><strong>Revenus :</strong> La somme de tous les revenus enregistrés ce mois-ci.</li>
-                    <li><strong>Dépenses :</strong> La somme de toutes les dépenses enregistrées ce mois-ci.</li>
-                    <li><strong>Solde :</strong> La différence entre les revenus et les dépenses.</li>
-                    <li><strong>Total Épargné :</strong> La somme totale de tous vos comptes d'épargne et provisions.</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold mt-8">3. Gérer les Transactions</h2>
-                <h3 class="text-xl font-semibold mt-4">Ajouter une transaction ponctuelle</h3>
-                <ol>
-                    <li>Cliquez sur le bouton <strong>"Ajouter Transaction"</strong>.</li>
-                    <li>Remplissez les champs : description, date, montant, type (revenu ou dépense) et catégorie.</li>
-                    <li>Si vous choisissez la catégorie "Autre", un nouveau champ apparaîtra pour nommer cette nouvelle catégorie.</li>
-                    <li>Cliquez sur "Ajouter" pour enregistrer.</li>
-                </ol>
-
-                <h3 class="text-xl font-semibold mt-4">Ajouter une transaction récurrente</h3>
-                <p>
-                    Idéal pour les salaires, loyers, abonnements... L'application les générera automatiquement pour vous, même dans le futur !
-                </p>
-                <ol>
-                    <li>Cliquez sur <strong>"Ajouter Réc."</strong>.</li>
-                    <li>Remplissez les informations de la transaction, sa fréquence (mensuelle, etc.), sa date de début et, si nécessaire, une date de fin.</li>
-                    <li>Toutes les transactions futures prévues apparaîtront en italique dans votre historique.</li>
-                </ol>
-
-                <h3 class="text-xl font-semibold mt-4">Rechercher et Filtrer</h3>
-                <p>
-                    Utilisez la zone de recherche au-dessus de la liste pour retrouver une transaction par son nom ou son montant, ou utilisez les filtres pour n'afficher que certaines catégories ou une période de temps spécifique.
-                </p>
-
-                <h2 class="text-2xl font-semibold mt-8">4. Gérer l'Épargne et les Provisions</h2>
-                <p>
-                    L'onglet <strong>"Épargne & Provisions"</strong> vous permet de créer des "cagnottes" pour vos différents projets (vacances, apport immobilier, etc.).
-                </p>
-                <ol>
-                    <li>Cliquez sur <strong>"Ajouter un objectif"</strong> pour créer une nouvelle cagnotte.</li>
-                    <li>Utilisez les boutons <strong>"Ajouter"</strong> ou <strong>"Retirer"</strong> sur une cagnotte pour y affecter des fonds.</li>
-                    <li>L'application créera automatiquement la transaction correspondante (une dépense de type "Épargne" ou un revenu de type "Retrait Épargne").</li>
-                </ol>
-                <p class="text-sm bg-amber-100 text-amber-800 p-3 rounded-lg">
-                    <strong>Astuce :</strong> Vous pouvez lier une transaction récurrente à un objectif d'épargne pour automatiser votre effort d'épargne !
-                </p>
-
-                <h2 class="text-2xl font-semibold mt-8">5. Rapports</h2>
-                <p>
-                    L'onglet <strong>"Rapports"</strong> vous aide à analyser vos finances.
-                </p>
-                <ul>
-                    <li><strong>Compte de Résultat Mensuel :</strong> Choisissez un mois pour voir le détail de vos revenus et dépenses, et le résultat net.</li>
-                    <li><strong>Bilan Patrimonial :</strong> Affiche la somme de vos actifs (votre épargne) pour vous donner une idée de votre patrimoine net.</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold mt-8">6. Importer et Exporter vos Données (CSV)</h2>
-                <p>
-                    Vos données sont précieuses. Nous vous recommandons de les exporter régulièrement comme sauvegarde.
-                </p>
-                <ol>
-                    <li>Cliquez sur l'icône avec les trois points verticaux (⋮) en haut à droite de la section des transactions.</li>
-                    <li>Choisissez <strong>"Exporter CSV"</strong> pour télécharger un fichier de toutes les transactions actuellement affichées (vous pouvez filtrer avant d'exporter).</li>
-                    <li>Choisissez <strong>"Importer CSV"</strong> pour remplacer toutes les données de l'application par celles d'un fichier. <strong>Attention, cette action est irréversible.</strong></li>
-                </ol>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Add/Edit Transaction Modal -->
-    <div id="transaction-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="modal card w-full max-w-md mx-4">
-            <form id="transaction-form" class="p-6">
-                <h3 id="transaction-modal-title" class="text-xl font-semibold mb-4">Nouvelle Transaction</h3>
-                <div class="space-y-4">
-                    <input type="hidden" id="transaction-id" name="id">
-                    <div>
-                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-                        <input type="text" id="description" name="description" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                     <div>
-                        <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
-                        <input type="date" id="date" name="date" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label for="amount" class="block text-sm font-medium text-gray-700">Montant (€)</label>
-                        <input type="number" id="amount" name="amount" min="0.01" step="0.01" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Type</label>
-                        <div class="mt-2 flex space-x-4">
-                            <label class="flex items-center"><input type="radio" name="type" value="income" checked class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"> <span class="ml-2">Revenu</span></label>
-                            <label class="flex items-center"><input type="radio" name="type" value="expense" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"> <span class="ml-2">Dépense</span></label>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700">Catégorie</label>
-                        <select id="category" name="category" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                           <!-- Options loaded by JS -->
-                        </select>
-                    </div>
-                    <div id="new-category-wrapper" class="hidden">
-                        <label for="new-category-name" class="block text-sm font-medium text-gray-700">Nom de la nouvelle catégorie</label>
-                        <input type="text" id="new-category-name" name="newCategoryName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div id="savings-objective-wrapper" class="hidden">
-                        <label for="transaction-savings-objective" class="block text-sm font-medium text-gray-700">Affecter à une épargne ou provision</label>
-                        <select id="transaction-savings-objective" name="savingsObjectiveId" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                           <!-- Savings objectives loaded by JS -->
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" id="cancel-transaction" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Annuler</button>
-                    <button type="submit" id="save-transaction-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700">Ajouter</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Add/Edit Recurring Transaction Modal -->
-    <div id="recurring-transaction-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="modal card w-full max-w-md mx-4">
-            <form id="recurring-transaction-form" class="p-6">
-                <h3 id="recurring-modal-title" class="text-xl font-semibold mb-4">Transaction Récurrente</h3>
-                <div class="space-y-4">
-                    <input type="hidden" id="recurring-id" name="id">
-                    <div>
-                        <label for="recurring-description" class="block text-sm font-medium text-gray-700">Description</label>
-                        <input type="text" id="recurring-description" name="description" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Type</label>
-                        <div class="mt-2 flex space-x-4">
-                            <label class="flex items-center"><input type="radio" name="type" value="income" checked class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"> <span class="ml-2">Revenu</span></label>
-                            <label class="flex items-center"><input type="radio" name="type" value="expense" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"> <span class="ml-2">Dépense</span></label>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="recurring-category" class="block text-sm font-medium text-gray-700">Catégorie</label>
-                        <select id="recurring-category" name="category" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                           <!-- Options loaded by JS -->
-                        </select>
-                    </div>
-                    <div id="recurring-new-category-wrapper" class="hidden">
-                        <label for="recurring-new-category-name" class="block text-sm font-medium text-gray-700">Nom de la nouvelle catégorie</label>
-                        <input type="text" id="recurring-new-category-name" name="newCategoryName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div id="recurring-savings-objective-wrapper" class="hidden">
-                        <label for="recurring-savings-objective" class="block text-sm font-medium text-gray-700">Affecter à une épargne ou provision</label>
-                        <select id="recurring-savings-objective" name="savingsObjectiveId" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                           <!-- Savings objectives loaded by JS -->
-                        </select>
-                    </div>
-                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                           <label for="recurring-amount" class="block text-sm font-medium text-gray-700">Montant (€)</label>
-                           <input type="number" id="recurring-amount" name="amount" min="0.01" step="0.01" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                        <div>
-                            <label for="recurring-frequency" class="block text-sm font-medium text-gray-700">Fréquence</label>
-                            <select id="recurring-frequency" name="frequency" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                               <option value="monthly">Mensuelle</option>
-                               <option value="quarterly">Trimestrielle</option>
-                               <option value="yearly">Annuelle</option>
-                            </select>
-                        </div>
-                    </div>
-                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="start-date" class="block text-sm font-medium text-gray-700">Date de début</label>
-                            <input type="date" id="start-date" name="startDate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                        <div>
-                             <label for="end-date" class="block text-sm font-medium text-gray-700">Date de fin (optionnel)</label>
-                             <input type="date" id="end-date" name="endDate" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" id="cancel-recurring-transaction" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Annuler</button>
-                    <button type="submit" id="save-recurring-btn" class="bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-700">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add/Edit Savings Objective Modal -->
-    <div id="objective-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="modal card w-full max-w-md mx-4">
-            <form id="objective-form" class="p-6">
-                <h3 id="objective-modal-title" class="text-xl font-semibold mb-4">Nouvelle Épargne ou Provision</h3>
-                <input type="hidden" id="objective-id" name="id">
-                <div class="space-y-4">
-                    <div>
-                        <label for="objective-name" class="block text-sm font-medium text-gray-700">Nom de l'objectif</label>
-                        <input type="text" id="objective-name" name="name" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label for="objective-goal" class="block text-sm font-medium text-gray-700">Montant Cible (Optionnel)</label>
-                        <input type="number" id="objective-goal" name="goal" min="0" step="1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" id="cancel-objective" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Annuler</button>
-                    <button type="submit" id="save-objective-btn" class="bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-600">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Confirm Import Modal -->
-    <div id="confirm-import-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="modal card w-full max-w-sm mx-4 p-6 text-center">
-            <i data-lucide="alert-triangle" class="w-12 h-12 text-red-500 mx-auto mb-4"></i>
-            <h3 class="text-lg font-semibold mb-2">Êtes-vous sûr ?</h3>
-            <p class="text-sm text-gray-600 mb-6">Cette action remplacera toutes vos données actuelles par le contenu du fichier. Cette opération est irréversible.</p>
-            <div class="flex justify-center space-x-4">
-                <button id="cancel-import" class="bg-gray-200 text-gray-700 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300">Annuler</button>
-                <button id="confirm-import" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-red-700">Confirmer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Fixed Footer Navigation -->
-    <footer id="main-footer" class="bg-white shadow-t border-t border-gray-200 z-40 hidden">
-        <div class="container mx-auto max-w-md px-4">
-            <div class="flex justify-around items-center h-16">
-                <button id="nav-welcome" class="flex flex-col items-center text-gray-500 hover:text-indigo-600">
-                    <i data-lucide="home" class="w-6 h-6"></i>
-                    <span class="text-xs mt-1">Accueil</span>
+            
+            <div class="flex flex-row md:flex-col flex-1 gap-1 overflow-x-auto items-center md:items-stretch">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item flex items-center gap-3 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-100 whitespace-nowrap">
+                    <i data-lucide="layout-dashboard"></i> <span class="hidden md:inline">Tableau de bord</span>
                 </button>
-                <button id="nav-dashboard" class="flex flex-col items-center text-indigo-600 hover:text-indigo-800">
-                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
-                    <span class="text-xs mt-1">Dashboard</span>
+                <button onclick="switchView('accounts')" id="nav-accounts" class="nav-item flex items-center gap-3 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-100 whitespace-nowrap">
+                    <i data-lucide="wallet"></i> <span class="hidden md:inline">Mes Comptes</span>
                 </button>
-                <button id="nav-help" class="flex flex-col items-center text-gray-500 hover:text-indigo-600">
-                    <i data-lucide="help-circle" class="w-6 h-6"></i>
-                    <span class="text-xs mt-1">Aide</span>
+                <button onclick="switchView('profiles')" id="nav-profiles" class="nav-item flex items-center gap-3 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-100 whitespace-nowrap">
+                    <i data-lucide="users"></i> <span class="hidden md:inline">Profils</span>
+                </button>
+                <button onclick="switchView('transactions')" id="nav-transactions" class="nav-item flex items-center gap-3 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-100 whitespace-nowrap">
+                    <i data-lucide="arrow-left-right"></i> <span class="hidden md:inline">Transactions</span>
                 </button>
             </div>
-        </div>
-    </footer>
 
+            <div class="hidden md:flex flex-col gap-2 mt-auto pt-4 border-t border-gray-100">
+                <button onclick="exportData()" class="flex items-center gap-3 p-3 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">
+                    <i data-lucide="download"></i> <span>Exporter</span>
+                </button>
+                <label class="flex items-center gap-3 p-3 text-gray-500 hover:bg-gray-100 rounded-xl cursor-pointer transition-colors">
+                    <i data-lucide="upload"></i> <span>Importer</span>
+                    <input type="file" onchange="importData(event)" class="hidden">
+                </label>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full overflow-y-auto">
+            <header class="flex justify-between items-center mb-8 md:hidden">
+                <div class="flex items-center gap-1 text-xl font-bold tracking-tight">
+                    <span class="logo-strady">Strady</span><span class="logo-dot">.</span><span class="logo-budget">budget</span>
+                </div>
+                <button onclick="showNotificationModal()" class="p-2 relative">
+                    <i data-lucide="bell"></i>
+                    <span id="notif-badge" class="hidden absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+            </header>
+
+            <!-- Views Container -->
+            <div id="view-container">
+                <!-- Content will be injected here by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Notifications -->
+    <div id="notif-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+            <div class="bg-orange-500 p-6 text-white flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="bell"></i>
+                    <h2 class="text-xl font-bold">Rappels de budget</h2>
+                </div>
+                <button onclick="closeNotifModal()"><i data-lucide="x"></i></button>
+            </div>
+            <div id="notif-list" class="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+                <!-- Notifications injected here -->
+            </div>
+            <div class="p-4 border-t border-gray-100 flex justify-end">
+                <button onclick="closeNotifModal()" class="px-6 py-2 font-bold text-gray-500 hover:text-gray-800">Fermer</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            
-            // --- STATE MANAGEMENT ---
-            const initialState = {
-                transactions: [
-                    // Manual transactions for the current month (e.g., October 2025) to show some activity
-                    { id: 1728225600000, description: "Courses de la semaine", amount: 125.50, type: "expense", category: "Alimentation", date: "2025-10-07T00:00:00.000Z", savingsObjectiveId: null, generatedFrom: null },
-                    { id: 1728657600000, description: "Plein de carburant", amount: 80, type: "expense", category: "Carburant", date: "2025-10-12T00:00:00.000Z", savingsObjectiveId: null, generatedFrom: null },
-                    { id: 1728744000000, description: "Restaurant en famille", amount: 65, type: "expense", category: "Loisirs", date: "2025-10-13T00:00:00.000Z", savingsObjectiveId: null, generatedFrom: null },
-                ],
-                recurringTransactions: [
-                    // Incomes
-                    { id: 1, description: "Salaire Papa", amount: 2500, type: "income", category: "Salaire", frequency: "monthly", startDate: "2024-01-28", endDate: null, savingsObjectiveId: null },
-                    { id: 2, description: "Salaire Maman", amount: 2200, type: "income", category: "Salaire", frequency: "monthly", startDate: "2024-01-28", endDate: null, savingsObjectiveId: null },
-                    { id: 3, description: "Allocations familiales", amount: 150, type: "income", category: "Allocation", frequency: "monthly", startDate: "2024-02-08", endDate: null, savingsObjectiveId: null },
-                    // Fixed Expenses
-                    { id: 4, description: "Loyer", amount: 1200, type: "expense", category: "Loyer", frequency: "monthly", startDate: "2024-01-05", endDate: null, savingsObjectiveId: null },
-                    { id: 5, description: "Facture Électricité", amount: 95, type: "expense", category: "Électricité", frequency: "monthly", startDate: "2024-01-15", endDate: null, savingsObjectiveId: null },
-                    { id: 6, description: "Facture Eau", amount: 40, type: "expense", category: "Eau", frequency: "monthly", startDate: "2024-01-15", endDate: null, savingsObjectiveId: null },
-                    { id: 7, description: "Abonnement Internet/TV", amount: 55, type: "expense", category: "Autre", frequency: "monthly", startDate: "2024-01-20", endDate: null, savingsObjectiveId: null },
-                    { id: 8, description: "Frais de garde enfant", amount: 450, type: "expense", category: "Autre", frequency: "monthly", startDate: "2024-01-10", endDate: null, savingsObjectiveId: null },
-                    // Annual Expenses
-                    { id: 9, description: "Assurance Habitation", amount: 240, type: "expense", category: "Assurance", frequency: "yearly", startDate: "2024-03-01", endDate: null, savingsObjectiveId: null },
-                    { id: 10, description: "Assurance Voiture", amount: 600, type: "expense", category: "Assurance", frequency: "yearly", startDate: "2024-06-15", endDate: null, savingsObjectiveId: null },
-                    // Automated Savings
-                    { id: 11, description: "Virement Épargne Vacances", amount: 150, type: "expense", category: "Épargne", frequency: "monthly", startDate: "2024-02-01", endDate: null, savingsObjectiveId: "1" },
-                    { id: 12, description: "Virement Épargne Enfant", amount: 100, type: "expense", category: "Épargne", frequency: "monthly", startDate: "2024-02-01", endDate: null, savingsObjectiveId: "2" },
-                    { id: 13, description: "Virement Apport Immobilier", amount: 400, type: "expense", category: "Épargne", frequency: "monthly", startDate: "2024-02-01", endDate: null, savingsObjectiveId: "3" },
-                ],
-                savingsObjectives: [
-                    { id: 1, name: "Vacances d'été", amount: 0, goal: 2500 },
-                    { id: 2, name: "Épargne Enfant", amount: 0, goal: null },
-                    { id: 3, name: "Apport immobilier", amount: 0, goal: 50000 },
-                    { id: 4, name: "Fonds d'urgence", amount: 0, goal: 10000 },
-                    { id: 5, name: "Provision charges", amount: 0, goal: null },
-                    { id: 6, name: "Loisirs", amount: 0, goal: null },
-                ],
-                incomeCategories: ['Salaire', 'Loyer', 'Allocation', 'Retrait Épargne', 'Autre'],
-                expenseCategories: ['Loyer', 'Électricité', 'Eau', 'Carburant', 'Taxe', 'Alimentation', 'Assurance', 'Épargne', 'Loisirs', 'Autre'],
-                lastRecurringCheck: new Date().toISOString()
-            };
-
-            const loadedState = JSON.parse(localStorage.getItem('budget-data-v6'));
-            let state = {};
-            if (loadedState) {
-                state = loadedState;
-            } else {
-                state = initialState;
+        // --- DATA & STATE ---
+        const INITIAL_DATA = {
+            profiles: [],
+            accounts: [],
+            transactions: [],
+            filters: {
+                profileIds: [],
+                accountIds: [],
+                categories: [],
+                period: 'monthly'
             }
-            
-            // --- DOM SELECTORS ---
-            const app = document.getElementById('app');
-            const welcomeScreen = document.getElementById('welcome-screen');
-            const helpScreen = document.getElementById('help-screen');
-            const enterAppBtn = document.getElementById('enter-app-btn');
-            const mainHeader = document.getElementById('main-header');
-            const mainFooter = document.getElementById('main-footer');
+        };
 
-            const navWelcomeBtn = document.getElementById('nav-welcome');
-            const navDashboardBtn = document.getElementById('nav-dashboard');
-            const navHelpBtn = document.getElementById('nav-help');
-            
-            const totalIncomeEl = document.getElementById('total-income');
-            const totalExpensesEl = document.getElementById('total-expenses');
-            const balanceEl = document.getElementById('balance');
-            const totalSavingsEl = document.getElementById('total-savings');
-            const transactionsListEl = document.getElementById('transactions-list');
-            const noTransactionsEl = document.getElementById('no-transactions');
-            const recurringTransactionsListEl = document.getElementById('recurring-transactions-list');
-            const noRecurringTransactionsEl = document.getElementById('no-recurring-transactions');
-            const savingsObjectivesListEl = document.getElementById('savings-objectives-list');
-            const reportMonthInput = document.getElementById('report-month');
-            const monthlyReportContentEl = document.getElementById('monthly-report-content');
-            const balanceSheetContentEl = document.getElementById('balance-sheet-content');
-            
-            // Filters & Actions
-            const searchInput = document.getElementById('search-input');
-            const categoryFilter = document.getElementById('category-filter');
-            const startDateFilter = document.getElementById('start-date-filter');
-            const endDateFilter = document.getElementById('end-date-filter');
-            const clearFiltersBtn = document.getElementById('clear-filters-btn');
-            const csvImportInput = document.getElementById('csv-import-input');
-            const kebabMenuBtn = document.getElementById('kebab-menu-btn');
-            const kebabMenuDropdown = document.getElementById('kebab-menu-dropdown');
-            const importCsvLink = document.getElementById('import-csv-link');
-            const exportCsvLink = document.getElementById('export-csv-link');
-            const recurringPanelHeader = document.getElementById('recurring-panel-header');
-            const recurringTransactionsPanel = document.getElementById('recurring-transactions-panel');
+        let data = JSON.parse(localStorage.getItem('strady_budget_data')) || INITIAL_DATA;
+        let currentView = 'dashboard';
 
-            // Modals
-            const transactionModal = document.getElementById('transaction-modal');
-            const transactionForm = document.getElementById('transaction-form');
-            const transactionModalTitle = document.getElementById('transaction-modal-title');
-            const saveTransactionBtn = document.getElementById('save-transaction-btn');
+        const CATEGORIES = ["Alimentation", "Loisirs", "Logement", "Santé", "Transport", "Salaire", "Épargne", "Autre"];
 
-            const recurringTransactionModal = document.getElementById('recurring-transaction-modal');
-            const recurringTransactionForm = document.getElementById('recurring-transaction-form');
-            
-            const objectiveModal = document.getElementById('objective-modal');
-            const objectiveForm = document.getElementById('objective-form');
-            const objectiveModalTitle = document.getElementById('objective-modal-title');
-            const saveObjectiveBtn = document.getElementById('save-objective-btn');
+        // --- CORE FUNCTIONS ---
+        function saveData() {
+            localStorage.setItem('strady_budget_data', JSON.stringify(data));
+        }
 
-            const confirmImportModal = document.getElementById('confirm-import-modal');
-            let fileToImport = null;
-            let allRuntimeTransactions = [];
-
-            // --- FUNCTIONS ---
-            const saveData = () => {
-                localStorage.setItem('budget-data-v6', JSON.stringify(state));
-            };
-
-            const formatCurrency = (amount) => {
-                return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount || 0);
-            };
-            
-            const formatDate = (dateString) => {
-                if (!dateString) return 'N/A';
-                const date = new Date(dateString);
-                return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-            };
-            
-            const formatDateForInput = (dateString) => {
-                if (!dateString) return '';
-                const date = new Date(dateString);
-                return date.toISOString().split('T')[0];
-            };
-
-            const openModal = (modal) => {
-                modal.classList.remove('hidden');
-                setTimeout(() => modal.querySelector('.modal').classList.add('open'), 10);
-            };
-
-            const closeModal = (modal) => {
-                modal.querySelector('.modal').classList.remove('open');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-            };
-            
-            
-            const getTodayISO = () => new Date().toISOString().split('T')[0];
-            
-
-                                        
-            const getMonthYearISO = () => {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = (today.getMonth() + 1).toString().padStart(2, '0');
-                return `${year}-${month}`;
-            }
-
-            const setDefaultDateFilters = () => {
-                const today = new Date();
-                const firstDay = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
-                const lastDay = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 0));
-
-                startDateFilter.value = formatDateForInput(firstDay.toISOString());
-                endDateFilter.value = formatDateForInput(lastDay.toISOString());
-            };
-
-            const processRecurringTransactions = () => {
-                const today = new Date();
-                const lastCheck = new Date(state.lastRecurringCheck);
-
-                state.recurringTransactions.forEach(rule => {
-                    let cursorDate = new Date(rule.startDate);
-                    const endDate = rule.endDate ? new Date(rule.endDate) : today;
-                    
-                    while (cursorDate <= endDate) {
-                         if (cursorDate > lastCheck && cursorDate <= today) {
-                             const newTransaction = {
-                                ...rule,
-                                id: Date.now() + Math.random(),
-                                date: cursorDate.toISOString(),
-                                generatedFrom: rule.id,
-                            };
-                            state.transactions.push(newTransaction);
-
-                            if (rule.savingsObjectiveId && rule.category === 'Épargne') {
-                                const objective = state.savingsObjectives.find(o => o.id === parseInt(rule.savingsObjectiveId));
-                                if (objective) {
-                                    objective.amount += rule.amount;
-                                }
-                            }
-                        }
-                        
-                        if (rule.frequency === 'monthly') cursorDate.setUTCMonth(cursorDate.getUTCMonth() + 1);
-                        else if (rule.frequency === 'quarterly') cursorDate.setUTCMonth(cursorDate.getUTCMonth() + 3);
-                        else if (rule.frequency === 'yearly') cursorDate.setUTCFullYear(cursorDate.getUTCFullYear() + 1);
-                        else break;
-                    }
-                });
-
-                state.lastRecurringCheck = today.toISOString();
-            };
-
-            const generateAllRuntimeTransactions = () => {
-                const manualTransactions = state.transactions;
-                const generated = [];
-                const today = new Date();
-                // Define the 3-year default window for generation
-                const defaultStartDate = new Date(Date.UTC(today.getFullYear() - 1, 1, 1)); // Jan 1st of last year
-                const defaultEndDate = new Date(Date.UTC(today.getFullYear() + 1, 12, 31)); // Dec 31st of next year
-
-
-                state.recurringTransactions.forEach(rule => {
-                    const parseDateAsUTC = (dateString) => {
-                        if (!dateString) return null;
-                        const [year, month, day] = dateString.split('-').map(Number);
-                        return new Date(Date.UTC(year, month - 1, day));
-                    };
-
-                    // Start iterating from the rule's start date, which is mandatory
-                    let cursorDate = parseDateAsUTC(rule.startDate);
-                    
-                    // Determine the loop's end date: either the rule's specific end date, or the default future end date
-                    const loopEndDate = rule.endDate ? parseDateAsUTC(rule.endDate) : defaultEndDate;
-
-                    while (cursorDate <= loopEndDate) {
-                        // Only generate transactions that fall within the default 3-year window for performance reasons
-                        if (cursorDate >= defaultStartDate) {
-                            // Check if this recurring instance hasn't already been created manually
-                            // (which can happen if the rule is deleted and re-added, for instance)
-                            const exists = manualTransactions.some(t => 
-                                t.generatedFrom === rule.id && new Date(t.date).getTime() === new Date(cursorDate.toISOString()).getTime()
-                            );
-
-                            if (!exists) {
-                               generated.push({
-                                    ...rule,
-                                    id: `${rule.id}-${cursorDate.toISOString()}`,
-                                    date: cursorDate.toISOString(),
-                                    generatedFrom: rule.id,
-                                });
-                            }
-                        }
-                        
-                        // Increment the date for the next iteration based on frequency
-                        if (rule.frequency === 'monthly') cursorDate.setUTCMonth(cursorDate.getUTCMonth() + 1);
-                        else if (rule.frequency === 'quarterly') cursorDate.setUTCMonth(cursorDate.getUTCMonth() + 3);
-                        else if (rule.frequency === 'yearly') cursorDate.setUTCFullYear(cursorDate.getUTCFullYear() + 1);
-                        else break;
-                    }
-                });
-                allRuntimeTransactions = [...manualTransactions, ...generated];
-            };
-            
-            const recalculateSavings = () => {
-                // Reset all objective amounts to zero before recalculating
-                state.savingsObjectives.forEach(o => o.amount = 0);
-
-                // Recalculate based on all transactions (manual and generated up to today)
-                const today = new Date();
-                allRuntimeTransactions.forEach(t => {
-                    if (new Date(t.date) > today) return; // Don't count future savings
-
-                    if (t.savingsObjectiveId) {
-                        const objective = state.savingsObjectives.find(o => o.id === parseInt(t.savingsObjectiveId));
-                        if (objective) {
-                            if (t.type === 'expense' && t.category === 'Épargne') objective.amount += t.amount;
-                            if (t.type === 'income' && t.category === 'Retrait Épargne') {
-                                objective.amount -= t.amount;
-                            }
-                        }
-                    }
-                });
-            };
-
-            const populateCategoryFilter = () => {
-                const categories = [...new Set(allRuntimeTransactions.map(t => t.category))].sort();
-                categoryFilter.innerHTML = '<option value="">Toutes les catégories</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-            };
-
-            const render = () => {
-                processRecurringTransactions();
-                generateAllRuntimeTransactions();
-                recalculateSavings();
-                populateCategoryFilter();
-                renderSummary();
-                renderTransactions();
-                renderRecurringTransactions();
-                renderSavingsObjectives();
-                renderMonthlyReport();
-                renderBalanceSheet();
-                saveData();
-                lucide.createIcons();
-            };
-            
-            const renderFiltered = () => renderTransactions();
-
-            const renderSummary = () => {
-                const today = new Date();
-                const currentMonth = today.getMonth();
-                const currentYear = today.getFullYear();
-                
-                const currentMonthTransactions = allRuntimeTransactions.filter(t => {
-                    const transactionDate = new Date(t.date);
-                    return transactionDate.getUTCMonth() === currentMonth && transactionDate.getUTCFullYear() === currentYear;
-                });
-
-                const income = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-                const expenses = currentMonthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-                const balance = income - expenses;
-                const totalSavings = state.savingsObjectives.reduce((sum, o) => sum + o.amount, 0);
-                
-                totalIncomeEl.textContent = formatCurrency(income);
-                totalExpensesEl.textContent = formatCurrency(expenses);
-                balanceEl.textContent = formatCurrency(balance);
-                
-                balanceEl.classList.toggle('text-green-600', balance >= 0);
-                balanceEl.classList.toggle('text-red-600', balance < 0);
-                totalSavingsEl.textContent = formatCurrency(totalSavings);
-            };
-
-            const renderTransactions = () => {
-                const searchTerm = searchInput.value.toLowerCase();
-                const selectedCategory = categoryFilter.value;
-                const startDateStr = startDateFilter.value;
-                const endDateStr = endDateFilter.value;
-
-                const filteredTransactions = allRuntimeTransactions.filter(t => {
-                    const transactionDate = new Date(t.date);
-                    
-                    const searchMatch = searchTerm === '' || 
-                                      t.description.toLowerCase().includes(searchTerm) ||
-                                      t.amount.toString().includes(searchTerm);
-                    const categoryMatch = selectedCategory === '' || t.category === selectedCategory;
-                    
-                    const startDateMatch = !startDateStr || transactionDate >= new Date(startDateStr + 'T00:00:00Z');
-                    const endDateMatch = !endDateStr || transactionDate <= new Date(endDateStr + 'T23:59:59Z');
-                    
-                    return searchMatch && categoryMatch && startDateMatch && endDateMatch;
-                }).sort((a,b) => new Date(b.date) - new Date(a.date));
-
-
-                if (filteredTransactions.length === 0) {
-                    transactionsListEl.innerHTML = '';
-                    noTransactionsEl.classList.remove('hidden');
-                } else {
-                    noTransactionsEl.classList.add('hidden');
-                    transactionsListEl.innerHTML = filteredTransactions.map(t => `
-                        <tr class="${t.generatedFrom ? 'generated-row' : 'hover:bg-gray-50'}">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium ${t.generatedFrom ? '' : 'text-gray-900'}">${t.description}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm font-semibold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}">
-                                    ${t.type === 'income' ? '+' : '-'} ${formatCurrency(t.amount)}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">${t.category}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">${formatDate(t.date)}</td>
-                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                ${!t.generatedFrom && t.category.indexOf('Épargne') === -1 ? `
-                                <button class="edit-transaction-btn text-indigo-600 hover:text-indigo-900 mr-2" data-id="${t.id}"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                                <button class="delete-transaction-btn text-red-500 hover:text-red-700" data-id="${t.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-                lucide.createIcons();
-            };
-
-            const renderRecurringTransactions = () => {
-                if (state.recurringTransactions.length === 0) {
-                    recurringTransactionsListEl.innerHTML = '';
-                    noRecurringTransactionsEl.classList.remove('hidden');
-                } else {
-                     noRecurringTransactionsEl.classList.add('hidden');
-                     recurringTransactionsListEl.innerHTML = state.recurringTransactions.map(t => {
-                        const frequencyMap = { monthly: 'Mensuelle', quarterly: 'Trimestrielle', yearly: 'Annuelle' };
-                        const linkedObjective = state.savingsObjectives.find(o => o.id === parseInt(t.savingsObjectiveId));
-                        return `
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">${t.description}</div>
-                            </td>
-                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm font-semibold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}">
-                                     ${formatCurrency(t.amount)}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${frequencyMap[t.frequency]}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${linkedObjective ? linkedObjective.name : 'Aucun'}</td>
-                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button class="edit-recurring-btn text-indigo-600 hover:text-indigo-900 mr-2" data-id="${t.id}"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                                <button class="delete-recurring-btn text-red-500 hover:text-red-700" data-id="${t.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                            </td>
-                        </tr>
-                    `}).join('');
-                }
-            };
-            
-            const renderSavingsObjectives = () => {
-                savingsObjectivesListEl.innerHTML = state.savingsObjectives.map(obj => `
-                    <div class="card p-4 flex flex-col justify-between border-l-4 border-amber-400">
-                        <div>
-                           <div class="flex justify-between items-start">
-                               <p class="font-semibold text-gray-800 pr-2">${obj.name}</p>
-                               <div class="flex-shrink-0">
-                                 <button class="edit-objective-btn text-gray-400 hover:text-indigo-600 p-1" data-id="${obj.id}"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                                 <button class="delete-objective-btn text-gray-400 hover:text-red-600 p-1" data-id="${obj.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                               </div>
-                            </div>
-                            <p class="text-3xl font-bold text-gray-900 my-2">${formatCurrency(obj.amount)}</p>
-                            ${obj.goal ? `<p class="text-sm text-gray-500">Objectif: ${formatCurrency(obj.goal)}</p>` : ''}
-                        </div>
-                        <div class="mt-4 grid grid-cols-2 gap-2">
-                            <button data-objective-id="${obj.id}" data-action="withdraw" class="savings-action-btn w-full bg-gray-100 text-gray-800 font-semibold py-2 px-3 rounded-lg hover:bg-gray-200 text-sm flex items-center justify-center space-x-2">
-                                 <i data-lucide="minus" class="w-4 h-4"></i>
-                                 <span>Retirer</span>
-                            </button>
-                            <button data-objective-id="${obj.id}" data-action="add" class="savings-action-btn w-full bg-amber-100 text-amber-800 font-semibold py-2 px-3 rounded-lg hover:bg-amber-200 text-sm flex items-center justify-center space-x-2">
-                                 <i data-lucide="plus" class="w-4 h-4"></i>
-                                 <span>Ajouter</span>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            };
-
-            const renderMonthlyReport = () => {
-                if(!reportMonthInput.value) return;
-                const [year, month] = reportMonthInput.value.split('-').map(Number);
-                
-                const transactionsForMonth = allRuntimeTransactions.filter(t => {
-                    const transactionDate = new Date(t.date);
-                    return transactionDate.getUTCFullYear() === year && transactionDate.getUTCMonth() === month - 1;
-                });
-
-                const incomeByCategory = transactionsForMonth.filter(t => t.type === 'income').reduce((acc, t) => {
-                    acc[t.category] = (acc[t.category] || 0) + t.amount;
-                    return acc;
-                }, {});
-                const totalIncome = Object.values(incomeByCategory).reduce((sum, a) => sum + a, 0);
-
-                const expenseByCategory = transactionsForMonth.filter(t => t.type === 'expense').reduce((acc, t) => {
-                    acc[t.category] = (acc[t.category] || 0) + t.amount;
-                    return acc;
-                }, {});
-                const totalExpense = Object.values(expenseByCategory).reduce((sum, a) => sum + a, 0);
-                
-                const result = totalIncome - totalExpense;
-
-                monthlyReportContentEl.innerHTML = `
-                    <div class="space-y-3">
-                        <h3 class="font-semibold text-green-600">Revenus</h3>
-                        ${Object.keys(incomeByCategory).length > 0 ? Object.entries(incomeByCategory).map(([cat, amount]) => `
-                            <div class="flex justify-between text-sm"><p>${cat}</p><p>${formatCurrency(amount)}</p></div>
-                        `).join('') : '<p class="text-sm text-gray-500">Aucun revenu.</p>'}
-                        <div class="flex justify-between font-bold border-t pt-2"><p>Total Revenus</p><p>${formatCurrency(totalIncome)}</p></div>
-                    </div>
-                     <div class="space-y-3 mt-4">
-                        <h3 class="font-semibold text-red-600">Dépenses</h3>
-                        ${Object.keys(expenseByCategory).length > 0 ? Object.entries(expenseByCategory).map(([cat, amount]) => `
-                            <div class="flex justify-between text-sm"><p>${cat}</p><p>${formatCurrency(amount)}</p></div>
-                        `).join('') : '<p class="text-sm text-gray-500">Aucune dépense.</p>'}
-                        <div class="flex justify-between font-bold border-t pt-2"><p>Total Dépenses</p><p>${formatCurrency(totalExpense)}</p></div>
-                    </div>
-                    <div class="mt-4 pt-4 border-t-2">
-                        <div class="flex justify-between text-lg font-bold ${result >= 0 ? 'text-gray-800' : 'text-red-600'}">
-                            <p>Résultat Net</p>
-                            <p>${formatCurrency(result)}</p>
-                        </div>
-                    </div>
-                `;
-            };
-
-            const renderBalanceSheet = () => {
-                const totalAssets = state.savingsObjectives.reduce((sum, o) => sum + o.amount, 0);
-                const netWorth = totalAssets;
-                
-                balanceSheetContentEl.innerHTML = `
-                    <div class="space-y-3">
-                        <h3 class="font-semibold text-blue-600">Actifs (Ce que vous possédez)</h3>
-                         ${state.savingsObjectives.map(o => `
-                            <div class="flex justify-between text-sm"><p>${o.name}</p><p>${formatCurrency(o.amount)}</p></div>
-                        `).join('')}
-                        <div class="flex justify-between font-bold border-t pt-2"><p>Total des Actifs</p><p>${formatCurrency(totalAssets)}</p></div>
-                    </div>
-                    <div class="space-y-3 mt-4">
-                        <h3 class="font-semibold text-orange-600">Passifs (Ce que vous devez)</h3>
-                        <p class="text-sm text-gray-500">Aucun passif enregistré.</p>
-                    </div>
-                    <div class="mt-4 pt-4 border-t-2">
-                        <div class="flex justify-between text-lg font-bold text-gray-800">
-                            <p>Patrimoine Net</p>
-                            <p>${formatCurrency(netWorth)}</p>
-                        </div>
-                    </div>
-                `;
-            };
-
-            const populateSavingsObjectivesDropdown = (selectElement, selectedId) => {
-                let options = '<option value="">Sélectionner...</option>';
-                state.savingsObjectives.forEach(o => {
-                    options += `<option value="${o.id}" ${parseInt(selectedId) === o.id ? 'selected' : ''}>${o.name}</option>`;
-                });
-                selectElement.innerHTML = options;
-            }
-
-            // --- EVENT LISTENERS ---
-            
-            [searchInput, categoryFilter, startDateFilter, endDateFilter].forEach(el => el.addEventListener('input', renderFiltered));
-            clearFiltersBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                categoryFilter.value = '';
-                setDefaultDateFilters();
-                renderFiltered();
-            });
-            
-            recurringPanelHeader.addEventListener('click', () => {
-                const icon = recurringPanelHeader.querySelector('i');
-                recurringTransactionsPanel.classList.toggle('hidden');
-                icon.classList.toggle('rotate-180');
-                lucide.createIcons(); // To ensure icon state is correct if it changes
-            });
-
-            const toggleSavingsObjectiveField = (form) => {
-                const type = form.querySelector('input[name="type"]:checked').value;
-                const category = form.querySelector('[name="category"]').value;
-                const wrapper = form.querySelector('[id*="savings-objective-wrapper"]');
-                const label = wrapper.querySelector('label');
-
-                const isSavings = type === 'expense' && category === 'Épargne';
-                const isWithdrawal = type === 'income' && category === 'Retrait Épargne';
-
-                if (isSavings || isWithdrawal) {
-                    wrapper.classList.remove('hidden');
-                    label.textContent = isSavings ? "Affecter à une épargne ou provision" : "Retirer de l'objectif d'épargne";
-                    // When editing, we need the selectedId to pre-fill the dropdown
-                    const idInput = form.querySelector('input[id*="-id"]');
-                    const entityId = idInput ? idInput.value : null;
-                    const transaction = entityId ? state.transactions.find(t => t.id === parseFloat(entityId)) : null;
-                    const selectedId = transaction ? transaction.savingsObjectiveId : null; // This part is specific to one-time transactions
-                    populateSavingsObjectivesDropdown(wrapper.querySelector('select'), selectedId);
-                } else {
-                    wrapper.classList.add('hidden');
-                }
-            };
-            
-            const handleCategoryChange = (e) => {
-                const form = e.target.closest('form');
-                toggleSavingsObjectiveField(form);
-                const newCategoryWrapper = form.querySelector('[id*="new-category-wrapper"]');
-                const newCategoryInput = newCategoryWrapper.querySelector('input');
-                if (e.target.value === 'Autre') {
-                    newCategoryWrapper.classList.remove('hidden');
-                    newCategoryInput.required = true;
-                } else {
-                    newCategoryWrapper.classList.add('hidden');
-                    newCategoryInput.required = false;
-                    newCategoryInput.value = '';
-                }
-            };
-            
-            // Transaction Modal Listeners
-            document.getElementById('add-transaction-btn').addEventListener('click', () => {
-                transactionForm.reset();
-                transactionModalTitle.textContent = "Nouvelle Transaction";
-                saveTransactionBtn.textContent = "Ajouter";
-                document.getElementById('transaction-id').value = '';
-                document.getElementById('date').value = getTodayISO();
-                const typeRadio = document.querySelector('#transaction-form input[name="type"][value="income"]');
-                typeRadio.checked = true;
-                document.getElementById('category').innerHTML = state.incomeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                handleCategoryChange({target: document.getElementById('category')});
-                openModal(transactionModal);
-
-                // Re-enable fields for normal transaction creation
-                transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = false);
-                document.getElementById('category').disabled = false;
-            });
-
-            document.getElementById('cancel-transaction').addEventListener('click', () => {
-                closeModal(transactionModal);
-                // Always re-enable fields on cancel, in case it was a locked savings action
-                transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = false);
-                document.getElementById('category').disabled = false;
-            });
-
-            document.getElementById('cancel-transaction').addEventListener('click', () => closeModal(transactionModal));
-            transactionForm.querySelectorAll('input[name="type"]').forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    const categories = e.target.value === 'income' ? state.incomeCategories : state.expenseCategories;
-                    const categorySelect = document.getElementById('category');
-                    categorySelect.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                    handleCategoryChange({target: categorySelect});
-                });
-            });
-            transactionForm.querySelector('#category').addEventListener('change', handleCategoryChange);
-
-            transactionForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(transactionForm);
-                const transactionId = parseFloat(formData.get('id'));
-                
-                let category = formData.get('category');
-                const type = formData.get('type');
-
-                if (category === 'Autre') {
-                    const newCategoryName = formData.get('newCategoryName').trim();
-                    if (newCategoryName) {
-                        category = newCategoryName; 
-                        if (type === 'income' && !state.incomeCategories.includes(newCategoryName)) {
-                            state.incomeCategories.splice(-1, 0, newCategoryName);
-                        } else if (type === 'expense' && !state.expenseCategories.includes(newCategoryName)) {
-                            state.expenseCategories.splice(-1, 0, newCategoryName);
-                        }
-                    }
-                }
-
-                const transactionData = {
-                    description: formData.get('description'),
-                    amount: parseFloat(formData.get('amount')),
-                    type: type,
-                    category: category,
-                    date: (() => {
-                        const [year, month, day] = formData.get('date').split('-').map(Number);
-                        return new Date(Date.UTC(year, month - 1, day)).toISOString();
-                    })(),
-                    savingsObjectiveId: formData.get('savingsObjectiveId') || null
-                };
-
-                if (transactionId) {
-                    const index = state.transactions.findIndex(t => t.id === transactionId);
-                    if (index !== -1) {
-                        const oldTransaction = state.transactions[index];
-                        state.transactions[index] = { ...state.transactions[index], ...transactionData };
-                    }
-                } else {
-                    state.transactions.push({ ...transactionData, id: Date.now() });
-                }
-
-                closeModal(transactionModal);
-                render();
-            });
-            
-            transactionsListEl.addEventListener('click', (e) => {
-                const editBtn = e.target.closest('.edit-transaction-btn');
-                if (editBtn) {
-                    const transactionId = parseFloat(editBtn.dataset.id);
-                    const transaction = state.transactions.find(t => t.id === transactionId);
-                    if (transaction) {
-                        transactionForm.reset();
-                        document.getElementById('transaction-id').value = transaction.id;
-                        document.getElementById('description').value = transaction.description;
-                        document.getElementById('date').value = formatDateForInput(transaction.date);
-                        document.getElementById('amount').value = transaction.amount;
-                        document.querySelector(`input[name="type"][value="${transaction.type}"]`).checked = true;
-                        
-                        const categories = transaction.type === 'income' ? state.incomeCategories : state.expenseCategories;
-                        const categorySelect = document.getElementById('category');
-                        categorySelect.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                        
-                        if (!categories.includes(transaction.category)) {
-                            const newOption = document.createElement('option');
-                            newOption.value = transaction.category;
-                            newOption.textContent = transaction.category;
-                            newOption.selected = true;
-                            categorySelect.appendChild(newOption);
-                        } else {
-                            categorySelect.value = transaction.category;
-                        }
-                        
-                        handleCategoryChange({target: categorySelect});
-                        if (transaction.savingsObjectiveId) {
-                            document.getElementById('transaction-savings-objective').value = transaction.savingsObjectiveId;
-                        }
-                        
-                        transactionModalTitle.textContent = "Modifier la Transaction";
-                        saveTransactionBtn.textContent = "Enregistrer";
-                        openModal(transactionModal);
-                    }
-                }
-
-                const deleteBtn = e.target.closest('.delete-transaction-btn');
-                if (deleteBtn) {
-                    const transactionId = parseFloat(deleteBtn.dataset.id);
-                    const transactionToDelete = state.transactions.find(t => t.id === transactionId);
-
-                    state.transactions = state.transactions.filter(t => t.id !== transactionId);
-                    render();
-                }
-            });
-
-            // Savings Objectives Listeners
-            document.getElementById('add-savings-objective-btn').addEventListener('click', () => {
-                objectiveForm.reset();
-                document.getElementById('objective-id').value = '';
-                objectiveModalTitle.textContent = "Nouvelle Épargne ou Provision";
-                saveObjectiveBtn.textContent = "Ajouter";
-                openModal(objectiveModal);
-            });
-
-            document.getElementById('cancel-objective').addEventListener('click', () => closeModal(objectiveModal));
-
-            objectiveForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const formData = new FormData(objectiveForm);
-                const id = formData.get('id');
-                const objectiveData = {
-                    name: formData.get('name'),
-                    goal: parseFloat(formData.get('goal')) || null,
-                };
-
-                if (id) {
-                    const index = state.savingsObjectives.findIndex(o => o.id === parseInt(id));
-                    if (index !== -1) {
-                        state.savingsObjectives[index] = { ...state.savingsObjectives[index], ...objectiveData };
-                    }
-                } else {
-                    state.savingsObjectives.push({
-                        ...objectiveData,
-                        id: Date.now(),
-                        amount: 0,
-                    });
-                }
-                closeModal(objectiveModal);
-                render();
-            });
-
-            savingsObjectivesListEl.addEventListener('click', (e) => {
-                const actionBtn = e.target.closest('.savings-action-btn');
-                if (actionBtn) {
-                    const objectiveId = parseInt(actionBtn.dataset.objectiveId);
-                    const action = actionBtn.dataset.action;
-                    const objective = state.savingsObjectives.find(o => o.id === objectiveId);
-
-                    transactionForm.reset();
-                    document.getElementById('transaction-id').value = '';
-                    document.getElementById('date').value = getTodayISO();
-
-                    if (action === 'add') {
-                        transactionModalTitle.textContent = `Ajouter à: ${objective.name}`;
-                        document.querySelector('#transaction-form input[name="type"][value="expense"]').checked = true;
-                        transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = true);
-
-                        document.getElementById('category').innerHTML = state.expenseCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                        document.getElementById('category').value = 'Épargne';
-                        document.getElementById('category').disabled = true;
-
-                        document.getElementById('description').value = `Épargne: ${objective.name}`;
-                    } else { // withdraw
-                        transactionModalTitle.textContent = `Retirer de: ${objective.name}`;
-                        document.querySelector('#transaction-form input[name="type"][value="income"]').checked = true;
-                        transactionForm.querySelectorAll('input[name="type"]').forEach(radio => radio.disabled = true);
-
-                        document.getElementById('category').innerHTML = state.incomeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                        document.getElementById('category').value = 'Retrait Épargne';
-                        document.getElementById('category').disabled = true;
-
-                        document.getElementById('description').value = `Retrait: ${objective.name}`;
-                    }
-
-                    handleCategoryChange({target: document.getElementById('category')});
-                    document.getElementById('transaction-savings-objective').value = objectiveId;
-                    
-                    // Ensure the objective dropdown is visible
-                    const wrapper = document.getElementById('savings-objective-wrapper');
-                    wrapper.classList.remove('hidden');
-
-                    saveTransactionBtn.textContent = "Ajouter";
-                    openModal(transactionModal);
-                }
-
-                const editBtn = e.target.closest('.edit-objective-btn');
-                if(editBtn) {
-                    const objectiveId = parseInt(editBtn.dataset.id);
-                    const objective = state.savingsObjectives.find(o => o.id === objectiveId);
-                    if (objective) {
-                        objectiveForm.reset();
-                        document.getElementById('objective-id').value = objective.id;
-                        document.getElementById('objective-name').value = objective.name;
-                        document.getElementById('objective-goal').value = objective.goal;
-                        objectiveModalTitle.textContent = "Modifier l'Objectif";
-                        saveObjectiveBtn.textContent = "Enregistrer";
-                        openModal(objectiveModal);
-                    }
-                }
-
-                const deleteBtn = e.target.closest('.delete-objective-btn');
-                if(deleteBtn) {
-                    const objectiveId = parseInt(deleteBtn.dataset.id);
-                    state.savingsObjectives = state.savingsObjectives.filter(o => o.id !== objectiveId);
-                    render();
-                }
-            });
-
-            // Recurring Transactions Listeners
-            document.getElementById('add-recurring-transaction-btn').addEventListener('click', () => {
-                recurringTransactionForm.reset();
-                document.getElementById('recurring-id').value = '';
-                document.getElementById('recurring-modal-title').textContent = 'Nouvelle Transaction Récurrente';
-                document.getElementById('save-recurring-btn').textContent = 'Enregistrer';
-                document.getElementById('start-date').value = getTodayISO();
-                const typeRadio = document.querySelector('#recurring-transaction-form input[name="type"][value="income"]');
-                typeRadio.checked = true;
-                document.getElementById('recurring-category').innerHTML = state.incomeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                handleCategoryChange({target: document.getElementById('recurring-category')});
-                openModal(recurringTransactionModal);
-            });
-
-            document.getElementById('cancel-recurring-transaction').addEventListener('click', () => closeModal(recurringTransactionModal));
-
-            recurringTransactionForm.querySelectorAll('input[name="type"]').forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    const categories = e.target.value === 'income' ? state.incomeCategories : state.expenseCategories;
-                    const categorySelect = document.getElementById('recurring-category');
-                    categorySelect.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                    handleCategoryChange({target: categorySelect});
-                });
-            });
-            recurringTransactionForm.querySelector('#recurring-category').addEventListener('change', handleCategoryChange);
-            
-            recurringTransactionForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const formData = new FormData(recurringTransactionForm);
-                const id = formData.get('id');
-                let category = formData.get('category');
-                const type = formData.get('type');
-
-                if (category === 'Autre') {
-                    const newCategoryName = formData.get('newCategoryName').trim();
-                    if (newCategoryName) {
-                        category = newCategoryName;
-                        if (type === 'income' && !state.incomeCategories.includes(newCategoryName)) {
-                            state.incomeCategories.splice(-1, 0, newCategoryName);
-                        } else if (type === 'expense' && !state.expenseCategories.includes(newCategoryName)) {
-                            state.expenseCategories.splice(-1, 0, newCategoryName);
-                        }
-                    }
-                }
-
-                const recurringData = {
-                    description: formData.get('description'),
-                    amount: parseFloat(formData.get('amount')),
-                    type: type,
-                    category: category,
-                    frequency: formData.get('frequency'),
-                    startDate: formData.get('startDate'),
-                    endDate: formData.get('endDate') || null,
-                    savingsObjectiveId: formData.get('savingsObjectiveId') || null
-                };
-
-                if (id) {
-                    const index = state.recurringTransactions.findIndex(t => t.id === parseInt(id));
-                    if(index > -1) state.recurringTransactions[index] = { ...state.recurringTransactions[index], ...recurringData };
-                } else {
-                    state.recurringTransactions.push({ ...recurringData, id: Date.now() });
-                }
-
-                closeModal(recurringTransactionModal);
-                categoryFilter.value = ''; // Reset filter to show the new transaction
-                render();
-            });
-
-            recurringTransactionsListEl.addEventListener('click', e => {
-                const editBtn = e.target.closest('.edit-recurring-btn');
-                if (editBtn) {
-                    const id = parseInt(editBtn.dataset.id);
-                    const rule = state.recurringTransactions.find(t => t.id === id);
-                    if(rule) {
-                        recurringTransactionForm.reset();
-                        document.getElementById('recurring-id').value = rule.id;
-                        document.getElementById('recurring-description').value = rule.description;
-                        document.querySelector(`#recurring-transaction-form input[name="type"][value="${rule.type}"]`).checked = true;
-                        
-                        const categories = rule.type === 'income' ? state.incomeCategories : state.expenseCategories;
-                        const categorySelect = document.getElementById('recurring-category');
-                        categorySelect.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                        if (!categories.includes(rule.category)) {
-                            const newOption = document.createElement('option');
-                            newOption.value = rule.category;
-                            newOption.textContent = rule.category;
-                            newOption.selected = true;
-                            categorySelect.appendChild(newOption);
-                        } else {
-                            categorySelect.value = rule.category;
-                        }
-                        handleCategoryChange({target: categorySelect});
-
-                        if(rule.savingsObjectiveId) {
-                            document.getElementById('recurring-savings-objective').value = rule.savingsObjectiveId;
-                        }
-                        
-                        document.getElementById('recurring-amount').value = rule.amount;
-                        document.getElementById('recurring-frequency').value = rule.frequency;
-                        document.getElementById('start-date').value = rule.startDate;
-                        document.getElementById('end-date').value = rule.endDate;
-
-                        document.getElementById('recurring-modal-title').textContent = 'Modifier la Transaction Récurrente';
-                        document.getElementById('save-recurring-btn').textContent = 'Enregistrer';
-                        openModal(recurringTransactionModal);
-                    }
-                }
-
-                const deleteBtn = e.target.closest('.delete-recurring-btn');
-                if (deleteBtn) {
-                    const id = parseInt(deleteBtn.dataset.id);
-                    state.recurringTransactions = state.recurringTransactions.filter(t => t.id !== id);
-                    render();
-                }
-            });
-
-            // --- Navigation Logic ---
-            const showScreen = (screenToShow) => {
-                const screens = [welcomeScreen, app, helpScreen];
-                screens.forEach(screen => {
-                    if (screen.id === screenToShow) {
-                        screen.classList.remove('hidden');
-                    } else {
-                        screen.classList.add('hidden');
-                    }
-                });
-                const showHeaderAndFooter = (screenToShow !== 'welcome-screen');
-                mainHeader.classList.toggle('hidden', !showHeaderAndFooter);
-                mainFooter.classList.toggle('hidden', !showHeaderAndFooter);
-                window.scrollTo(0, 0); // Scroll to top on screen change
-            };
-            
-            navWelcomeBtn.addEventListener('click', () => showScreen('welcome-screen'));
-            navDashboardBtn.addEventListener('click', () => showScreen('app'));
-            navHelpBtn.addEventListener('click', () => showScreen('help-screen'));
-            enterAppBtn.addEventListener('click', () => {
-                localStorage.setItem('budget-app-visited', 'true');
-                showScreen('app');
-            });
-
-
-            // Other Listeners
-            document.querySelectorAll('.tab-button').forEach(tab => {
-                 tab.addEventListener('click', (e) => {
-                    document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
-                    e.target.classList.add('active');
-                    const tabName = e.target.dataset.tab;
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.toggle('hidden', content.id !== `tab-content-${tabName}`);
-                    });
-                });
-            });
-
-            reportMonthInput.addEventListener('change', renderMonthlyReport);
-
-            kebabMenuBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                kebabMenuDropdown.classList.toggle('hidden');
-            });
-
-            document.addEventListener('click', () => {
-                if (!kebabMenuDropdown.classList.contains('hidden')) {
-                    kebabMenuDropdown.classList.add('hidden');
-                }
-            });
-
-            importCsvLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                csvImportInput.click();
-                kebabMenuDropdown.classList.add('hidden');
-            });
-
-            exportCsvLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                const searchTerm = searchInput.value.toLowerCase();
-                const selectedCategory = categoryFilter.value;
-                const startDateStr = startDateFilter.value;
-                const endDateStr = endDateFilter.value;
-
-                const filteredTransactions = allRuntimeTransactions.filter(t => {
-                    const transactionDate = new Date(t.date);
-                    const searchMatch = searchTerm === '' || t.description.toLowerCase().includes(searchTerm) || t.amount.toString().includes(searchTerm);
-                    const categoryMatch = selectedCategory === '' || t.category === selectedCategory;
-                    const startDateMatch = !startDateStr || transactionDate >= new Date(startDateStr + 'T00:00:00Z');
-                    const endDateMatch = !endDateStr || transactionDate <= new Date(endDateStr + 'T23:59:59Z');
-                    return searchMatch && categoryMatch && startDateMatch && endDateMatch;
-                });
-                
-                let csvContent = "data:text/csv;charset=utf-8,Description;Montant;Type;Catégorie;Date\n";
-                filteredTransactions.forEach(t => {
-                    const row = [t.description, t.amount, t.type, t.category, formatDate(t.date)].join(';');
-                    csvContent += row + "\n";
-                });
-
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "budget-transactions.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                kebabMenuDropdown.classList.add('hidden');
-            });
-
-            csvImportInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    fileToImport = e.target.files[0];
-                    openModal(confirmImportModal);
-                }
-            });
-
-            document.getElementById('cancel-import').addEventListener('click', () => {
-                fileToImport = null;
-                csvImportInput.value = '';
-                closeModal(confirmImportModal);
-            });
-
-            document.getElementById('confirm-import').addEventListener('click', () => {
-                if (!fileToImport) return;
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        const csv = event.target.result;
-                        const lines = csv.split('\n').filter(line => line.trim());
-                        const header = lines.shift(); 
-                        
-                        const newTransactions = lines.map(line => {
-                            const values = line.split(';');
-                            // Basic validation
-                            if(values.length < 5) return null;
-                            const amount = parseFloat(values[1]);
-                            if (isNaN(amount)) return null;
-
-                            return {
-                                id: Date.now() + Math.random(),
-                                description: values[0].trim(),
-                                amount: amount,
-                                type: values[2].trim().toLowerCase(),
-                                category: values[3].trim(),
-                                date: (() => {
-                                    const [day, month, year] = values[4].split('/').map(Number);
-                                    return new Date(Date.UTC(year, month - 1, day)).toISOString();
-                                })(),
-                            };
-                        }).filter(Boolean); // Filter out null values from failed parsing
-                        
-                        state.transactions = newTransactions;
-                        state.recurringTransactions = [];
-                        state.savingsObjectives.forEach(o => o.amount = 0); // Reset savings as they are calculated from transactions
-
-                        render();
-                    } catch (error) {
-                        console.error("Error parsing CSV:", error);
-                        alert("Erreur lors de la lecture du fichier CSV. Assurez-vous qu'il est bien formaté.");
-                    } finally {
-                        fileToImport = null;
-                        csvImportInput.value = '';
-                        closeModal(confirmImportModal);
-                    }
-                };
-                reader.readAsText(fileToImport, 'UTF-8');
-            });
-
-
-            // --- INITIAL SETUP ---
-            const hasVisited = localStorage.getItem('budget-app-visited');
-            if (hasVisited) {
-                 if (!loadedState) { // If visited but has no data, load initial sample data
-                    state = initialState;
-                }
-                showScreen('app');
-            } else {
-                state = initialState; // Load initial sample data for the very first visit
-                showScreen('welcome-screen');
-            }
-            setDefaultDateFilters();
-            reportMonthInput.value = getMonthYearISO();
+        function switchView(viewId) {
+            currentView = viewId;
             render();
-        });
+        }
+
+        function render() {
+            // Update Navigation UI
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('bg-blue-50', 'text-blue-600', 'font-semibold'));
+            const activeNav = document.getElementById(`nav-${currentView}`);
+            if (activeNav) activeNav.classList.add('bg-blue-50', 'text-blue-600', 'font-semibold');
+
+            const container = document.getElementById('view-container');
+            
+            if (currentView === 'dashboard') renderDashboard(container);
+            if (currentView === 'accounts') renderAccounts(container);
+            if (currentView === 'profiles') renderProfiles(container);
+            if (currentView === 'transactions') renderTransactions(container);
+
+            lucide.createIcons();
+            checkNotificationsBadge();
+        }
+
+        // --- DASHBOARD VIEW ---
+        function renderDashboard(container) {
+            const filtered = data.transactions.filter(t => {
+                const acc = data.accounts.find(a => a.id === t.accountId);
+                const matchProfile = data.filters.profileIds.length === 0 || 
+                    (acc && acc.owners.some(oid => data.filters.profileIds.includes(oid)));
+                const matchAccount = data.filters.accountIds.length === 0 || data.filters.accountIds.includes(t.accountId);
+                return matchProfile && matchAccount;
+            });
+
+            let income = 0; let expenses = 0;
+            filtered.forEach(t => {
+                const val = parseFloat(t.amount);
+                if (t.type === 'in') income += val; else expenses += val;
+            });
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <h1 class="text-2xl font-bold">Tableau de bord</h1>
+                        <div class="flex gap-2">
+                             <button onclick="resetFilters()" class="p-2 text-gray-400 hover:text-red-500 transition-colors"><i data-lucide="x"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-gray-500 text-sm font-medium mb-1">Total Revenus</p>
+                            <p class="text-2xl font-bold text-green-600">+${income.toLocaleString()} €</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-gray-500 text-sm font-medium mb-1">Total Dépenses</p>
+                            <p class="text-2xl font-bold text-red-600">-${expenses.toLocaleString()} €</p>
+                        </div>
+                        <div class="bg-blue-600 p-6 rounded-2xl shadow-lg text-white">
+                            <p class="text-blue-100 text-sm font-medium mb-1">Disponibilité Totale</p>
+                            <p class="text-2xl font-bold">${(income - expenses).toLocaleString()} €</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-gray-100 flex flex-wrap gap-4 items-center">
+                        <div class="flex items-center gap-2 text-sm text-gray-500"><i data-lucide="filter" size="16"></i> <span>Filtres :</span></div>
+                        <select onchange="updateFilter('profileIds', Array.from(this.selectedOptions, o => o.value))" multiple class="text-sm bg-gray-50 border-none rounded-lg px-2 py-1 outline-none min-w-[120px]">
+                            <option value="" disabled>Profils</option>
+                            ${data.profiles.map(p => `<option value="${p.id}" ${data.filters.profileIds.includes(p.id) ? 'selected' : ''}>${p.name}</option>`).join('')}
+                        </select>
+                        <select onchange="updateFilter('accountIds', Array.from(this.selectedOptions, o => o.value))" multiple class="text-sm bg-gray-50 border-none rounded-lg px-2 py-1 outline-none min-w-[120px]">
+                            <option value="" disabled>Comptes</option>
+                            ${data.accounts.map(a => `<option value="${a.id}" ${data.filters.accountIds.includes(a.id) ? 'selected' : ''}>${a.name}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <h3 class="font-semibold">Mouvements récents</h3>
+                            <button onclick="switchView('transactions')" class="text-sm text-blue-600 font-medium">Voir tout</button>
+                        </div>
+                        <div class="divide-y divide-gray-100">
+                            ${filtered.slice(0, 5).map(t => `
+                                <div class="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                    <div class="flex gap-3 items-center">
+                                        <div class="p-2 rounded-lg ${t.type === 'in' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}">
+                                            <i data-lucide="arrow-left-right" size="18"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">${t.label}</p>
+                                            <p class="text-xs text-gray-400">${t.category} • ${new Date(t.date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <p class="font-bold ${t.type === 'in' ? 'text-green-600' : 'text-gray-900'}">
+                                        ${t.type === 'in' ? '+' : '-'}${parseFloat(t.amount).toLocaleString()} €
+                                    </p>
+                                </div>
+                            `).join('')}
+                            ${filtered.length === 0 ? '<div class="p-8 text-center text-gray-400">Aucune transaction trouvée.</div>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- PROFILES VIEW ---
+        function renderProfiles(container) {
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <h1 class="text-2xl font-bold">Gestion des Profils</h1>
+                    <form onsubmit="handleProfileAdd(event)" class="flex gap-2">
+                        <input name="name" required placeholder="Nom du profil (ex: Mao)" class="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-green-500" />
+                        <button type="submit" class="bg-[#228B22] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+                            <i data-lucide="plus"></i> Ajouter
+                        </button>
+                    </form>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        ${data.profiles.map(p => `
+                            <div class="bg-white p-6 rounded-2xl border border-gray-100 flex justify-between items-center group">
+                                <span class="font-semibold text-lg">${p.name}</span>
+                                <button onclick="deleteProfile('${p.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
+                                    <i data-lucide="trash-2"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleProfileAdd(e) {
+            e.preventDefault();
+            const name = e.target.name.value;
+            data.profiles.push({ id: crypto.randomUUID(), name });
+            saveData();
+            render();
+        }
+
+        function deleteProfile(id) {
+            data.profiles = data.profiles.filter(p => p.id !== id);
+            data.accounts.forEach(a => a.owners = a.owners.filter(oid => oid !== id));
+            saveData();
+            render();
+        }
+
+        // --- ACCOUNTS VIEW ---
+        function renderAccounts(container) {
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <h1 class="text-2xl font-bold">Mes Comptes de Réserve</h1>
+                    <div class="bg-white p-6 rounded-2xl border border-gray-100 space-y-4">
+                        <h2 class="font-semibold text-lg">Nouveau Compte</h2>
+                        <form onsubmit="handleAccountAdd(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input name="name" required placeholder="Nom du compte" class="bg-gray-50 border-none rounded-xl px-4 py-3" />
+                            <input name="balance" type="number" step="0.01" required placeholder="Solde Initial (€)" class="bg-gray-50 border-none rounded-xl px-4 py-3" />
+                            <select name="owners" multiple required class="bg-gray-50 border-none rounded-xl px-4 py-3 min-h-[100px]">
+                                ${data.profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                            </select>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-[#1E90FF] text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">
+                                    <i data-lucide="plus"></i> Créer le compte
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${data.accounts.map(acc => {
+                            const accTransactions = data.transactions.filter(t => t.accountId === acc.id);
+                            const currentBalance = parseFloat(acc.initialBalance) + accTransactions.reduce((bal, t) => t.type === 'in' ? bal + parseFloat(t.amount) : bal - parseFloat(t.amount), 0);
+                            return `
+                                <div class="bg-white p-6 rounded-2xl border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 class="font-bold text-xl">${acc.name}</h3>
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                ${acc.owners.map(oid => `<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase font-bold">${data.profiles.find(p => p.id === oid)?.name || 'Inconnu'}</span>`).join('')}
+                                            </div>
+                                        </div>
+                                        <span class="text-xl font-mono font-bold ${currentBalance < 0 ? 'text-red-500' : 'text-gray-900'}">${currentBalance.toLocaleString()} €</span>
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-4 border-t pt-2 flex justify-between">
+                                        <span>Initial : ${acc.initialBalance} €</span>
+                                        <button onclick="deleteAccount('${acc.id}')" class="text-gray-300 hover:text-red-500"><i data-lucide="trash-2" size="14"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleAccountAdd(e) {
+            e.preventDefault();
+            const owners = Array.from(e.target.owners.selectedOptions, o => o.value);
+            data.accounts.push({
+                id: crypto.randomUUID(),
+                name: e.target.name.value,
+                initialBalance: e.target.balance.value,
+                owners
+            });
+            saveData();
+            render();
+        }
+
+        function deleteAccount(id) {
+            data.accounts = data.accounts.filter(a => a.id !== id);
+            data.transactions = data.transactions.filter(t => t.accountId !== id);
+            saveData();
+            render();
+        }
+
+        // --- TRANSACTIONS VIEW ---
+        function renderTransactions(container) {
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <h1 class="text-2xl font-bold">Gestion des Transactions</h1>
+                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <form onsubmit="handleTransactionAdd(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <select name="accountId" required class="bg-gray-50 border-none rounded-xl px-4 py-3">
+                                <option value="">Choisir un compte</option>
+                                ${data.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+                            </select>
+                            <input name="label" required placeholder="Libellé" class="bg-gray-50 border-none rounded-xl px-4 py-3" />
+                            <div class="flex">
+                                <select name="type" class="bg-gray-100 border-none rounded-l-xl px-2 py-3 text-sm font-bold">
+                                    <option value="out">Débit (-)</option>
+                                    <option value="in">Crédit (+)</option>
+                                </select>
+                                <input name="amount" type="number" step="0.01" required placeholder="Montant" class="bg-gray-50 border-none rounded-r-xl px-4 py-3 flex-1" />
+                            </div>
+                            <select name="category" required class="bg-gray-50 border-none rounded-xl px-4 py-3">
+                                ${CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            </select>
+                            <input name="date" type="date" required class="bg-gray-50 border-none rounded-xl px-4 py-3" value="${new Date().toISOString().split('T')[0]}" />
+                            <select name="frequency" class="bg-gray-50 border-none rounded-xl px-4 py-3">
+                                <option value="once">Ponctuelle</option>
+                                <option value="monthly">Mensuelle</option>
+                            </select>
+                            <div class="col-span-1 md:col-span-3 flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" name="isNotifiable" class="w-5 h-5 accent-orange-500" />
+                                    <span class="text-sm font-medium">Notifier avant échéance</span>
+                                </label>
+                                <input name="notifyDays" type="number" placeholder="Jours avant" class="bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm w-24" />
+                            </div>
+                            <button type="submit" class="col-span-1 md:col-span-3 bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-black transition-colors">Enregistrer</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-4">Date</th>
+                                    <th class="p-4">Libellé</th>
+                                    <th class="p-4">Compte</th>
+                                    <th class="p-4">Montant</th>
+                                    <th class="p-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                ${data.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).map(t => `
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="p-4 text-sm">${new Date(t.date).toLocaleDateString()}</td>
+                                        <td class="p-4"><div class="font-medium">${t.label}</div><div class="text-[10px] text-gray-400">${t.category}</div></td>
+                                        <td class="p-4 text-sm">${data.accounts.find(a => a.id === t.accountId)?.name || '-'}</td>
+                                        <td class="p-4 font-bold ${t.type === 'in' ? 'text-green-600' : 'text-gray-900'}">${t.type === 'in' ? '+' : '-'}${parseFloat(t.amount).toLocaleString()} €</td>
+                                        <td class="p-4">
+                                            <button onclick="deleteTransaction('${t.id}')" class="text-gray-300 hover:text-red-500"><i data-lucide="trash-2" size="16"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleTransactionAdd(e) {
+            e.preventDefault();
+            data.transactions.push({
+                id: crypto.randomUUID(),
+                accountId: e.target.accountId.value,
+                label: e.target.label.value,
+                amount: e.target.amount.value,
+                type: e.target.type.value,
+                category: e.target.category.value,
+                date: e.target.date.value,
+                frequency: e.target.frequency.value,
+                isNotifiable: e.target.isNotifiable.checked,
+                notifyDaysBefore: parseInt(e.target.notifyDays.value) || 0,
+                status: 'pending'
+            });
+            saveData();
+            render();
+        }
+
+        function deleteTransaction(id) {
+            data.transactions = data.transactions.filter(t => t.id !== id);
+            saveData();
+            render();
+        }
+
+        // --- FILTERS ---
+        function updateFilter(key, value) {
+            data.filters[key] = value;
+            saveData();
+            render();
+        }
+
+        function resetFilters() {
+            data.filters = { ...INITIAL_DATA.filters };
+            saveData();
+            render();
+        }
+
+        // --- IMPORT / EXPORT ---
+        function exportData() {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `strady-budget-export.json`;
+            a.click();
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    data = JSON.parse(e.target.result);
+                    saveData();
+                    render();
+                } catch (err) { alert("Format invalide"); }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- NOTIFICATIONS SYSTEM ---
+        function checkNotificationsBadge() {
+            const today = new Date();
+            const alertes = data.transactions.filter(t => {
+                if (t.status !== 'pending' || !t.isNotifiable) return false;
+                const tDate = new Date(t.date);
+                const diffDays = Math.ceil((tDate - today) / (1000 * 60 * 60 * 24));
+                return diffDays <= t.notifyDaysBefore;
+            });
+            const badge = document.getElementById('notif-badge');
+            if (alertes.length > 0) badge.classList.remove('hidden'); else badge.classList.add('hidden');
+            return alertes;
+        }
+
+        function showNotificationModal() {
+            const alertes = checkNotificationsBadge();
+            const list = document.getElementById('notif-list');
+            list.innerHTML = alertes.map(n => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div>
+                        <p class="font-bold text-gray-900">${n.label}</p>
+                        <p class="text-xs text-gray-500">Échéance : ${new Date(n.date).toLocaleDateString()}</p>
+                        <p class="text-sm font-bold mt-1 text-red-600">${n.amount} €</p>
+                    </div>
+                    <button onclick="markDone('${n.id}')" class="p-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors">
+                        <i data-lucide="check-circle-2"></i>
+                    </button>
+                </div>
+            `).join('') || '<p class="text-center text-gray-400">Aucune notification.</p>';
+            document.getElementById('notif-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function markDone(id) {
+            const t = data.transactions.find(x => x.id === id);
+            if (t) t.status = 'completed';
+            saveData();
+            showNotificationModal();
+            render();
+        }
+
+        function closeNotifModal() {
+            document.getElementById('notif-modal').classList.add('hidden');
+        }
+
+        // --- INIT ---
+        window.onload = () => {
+            render();
+            const alertes = checkNotificationsBadge();
+            if (alertes.length > 0) showNotificationModal();
+        };
     </script>
 </body>
 </html>
