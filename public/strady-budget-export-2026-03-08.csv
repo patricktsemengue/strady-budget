@@ -1,0 +1,29 @@
+date,label,amount,source,destination,reccuring,startdate,endate,periodicity,category
+2026-01-01,Salaire,3000,,Compte Principal (CBC),1,2026-01-01,2027-01-01,M,Revenus
+2026-01-01,Allocation,594,,Belfius (Mao),1,2026-01-01,2027-01-01,M,Revenus
+2026-02-01,Ep_1_10eme_Mao,300,Compte Principal (CBC),1_10eme_Mao(ep),1,2026-02-01,2027-02-01,M,Epargne
+2026-02-01,c_etf_enfants,150,Compte Principal (CBC),etf_enfant(ep),1,2026-02-01,2026-12-01,M,Epargne
+2026-01-01,RP La Louvière,1152,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Logement
+2026-01-01,Assurance Solde Restant dû,63,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Logement
+2026-01-01,Dette 30K,478,Compte Principal (CBC),,1,2026-01-01,2026-01-01,M,Charges diverses
+2026-01-01,Engie (Electricité),380,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M, Charges diverses
+2026-01-01,Swde (eau),238,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M, Charges diverses
+2026-01-01,Alimentation,400,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M, Charges diverses
+2026-01-01,Hygiène,275,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M, Charges diverses
+2026-01-01,Proximus,52,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M, Charges diverses
+2026-01-01,Frais Bancaire BELFIUS,6,Belfius (Mao),,1,2026-01-01,2027-01-01,M, Charges diverses
+2026-01-01,Argent de poche,60,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Loisirs
+2026-01-01,Croix Rouges,14,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Dons
+2026-01-01,Provision Mutualia -  Santé,15,Compte Principal (CBC),Depense_Non_Courante(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Provision Assurance CBC - habitation / Familiale,65,Compte Principal (CBC),Depense_Non_Courante(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Provision Revenu Cadastrale,125,Compte Principal (CBC),Depense_Non_Courante(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Provision Taxes Communales,25,Compte Principal (CBC),Depense_Non_Courante(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Provision EP PENSION,90,Compte Principal (CBC),Depense_Non_Courante(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Aide et Soutien familial,75,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Dons
+2026-01-01,LDD (lili),100,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Dons
+2026-01-01,Ep_1_10eme_Mao,50,Compte Principal (CBC),1_10eme_Mao,0,,,,Epargne
+2026-01-01,"Frais divers (prixtel, ...)",10,Compte Principal (CBC),,1,2026-01-01,2027-01-01,M,Charges diverses
+2026-01-01,Provision Daddy,100,Belfius (Fri), Frial_Cash(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Provison Tema,30,Belfius (Fri), Frial_Cash(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+2026-01-01,Provision Hygiène-Tresse,50,Belfius (Fri), Frial_Cash(Provisions),1,2026-01-01,2027-01-01,M,Provisions
+

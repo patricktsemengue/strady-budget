@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strady.Budget</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="S-fav-icon.jpeg">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Poppins:wght@500&family=The+Girl+Next+Door&family=Inter:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <!-- Top Bar: Logo & Mobile Toggle -->
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <a href="#" class="flex items-center">
+                <div class="logo">
+                    <i>
+                        <span class="logo-s">S</span>
+                        <span class="logo-trady">trady</span>
+                        <span class="logo-dot">.</span>
+                        <span class="logo-app">
+                            <i class="fa-solid fa-wallet"></i>
+                        </span>
+                    </i>
+                </div>
+            </a>
+            
+            <!-- Mobile Menu Button (Only visible on small screens) -->
+            <div class="md:hidden flex items-center">
+                <button class="mobile-menu-button p-2 text-slate-500 hover:text-slate-700">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Bar: Navigation & User Info (Hidden on mobile, flex on desktop) -->
+        <div class="hidden md:block bg-slate-50/50 border-t border-slate-100">
+            <div class="max-w-6xl mx-auto px-4">
+                <div class="flex justify-between items-center h-12">
+                    <!-- Primary Navigation -->
+                    <div class="flex space-x-1 h-full">
+                        <button id="nav-dashboard" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
+                            <i class="fa-solid fa-chart-pie mr-2"></i>Tableau de bord
+                        </button>
+                        <button id="nav-settings" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
+                            <i class="fa-solid fa-cog mr-2"></i>Réglages
+                        </button>
+                    </div>
+
+                    <!-- Authenticated User Info -->
+                    <div id="user-info" class="hidden flex items-center space-x-4">
+                        <div class="flex items-center space-x-2 border-l border-slate-200 pl-4 h-6">
+                            <img id="user-photo" class="h-6 w-6 rounded-full border border-slate-200" src="" alt="Profile">
+                            <span id="user-name" class="text-xs font-bold text-slate-600"></span>
+                        </div>
+                        <button id="btn-logout" class="text-slate-400 hover:text-red-600 transition-colors" title="Déconnexion">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- mobile menu -->
+        <div class="mobile-menu hidden md:hidden bg-white border-t border-slate-100 py-2">
+            <div id="user-info-mobile" class="px-4 py-3 border-b border-slate-100 mb-2 flex items-center space-x-3">
+                <img id="user-photo-mobile" class="h-10 w-10 rounded-full border border-slate-200" src="" alt="Profile">
+                <div class="flex-1">
+                    <p id="user-name-mobile" class="text-sm font-bold text-slate-800"></p>
+                    <p id="user-email-mobile" class="text-xs text-slate-500"></p>
+                </div>
+            </div>
+            <button id="nav-dashboard-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-chart-pie mr-3 text-slate-400"></i>Tableau de bord</button>
+            <button id="nav-settings-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-cog mr-3 text-slate-400"></i>Réglages</button>
+            <div class="border-t border-slate-100 mt-2 pt-2">
+                <button id="btn-logout-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-red-50 flex items-center text-red-600 font-medium"><i class="fa-solid fa-right-from-bracket mr-3"></i>Déconnexion</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="py-6 hidden">
+        <div id="view-dashboard" class="space-y-6 max-w-6xl mx-auto px-4">
+            <h1 class="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+
+            <!-- Month Selection -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-2">
+                <div class="flex items-center gap-2">
+                    <button id="prev-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="flex-1 overflow-x-auto hide-scroll flex gap-2 px-2" id="month-timeline">
+                        <!-- Timeline Items Injected -->
+                    </div>
+                    <button id="next-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Solde Global Actuel</p>
+                    <h2 class="text-3xl font-bold text-slate-800" id="dash-total-balance">--</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Revenus (Ce mois)</p>
+                    <h2 class="text-3xl font-bold text-success" id="dash-month-income">--</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Dépenses (Ce mois)</p>
+                    <h2 class="text-3xl font-bold text-danger" id="dash-month-expense">--</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Fond d'urgence</p>
+                    <div id="dash-emergency-fund">--</div>
+                </div>
+            </div>
+            
+            <!-- Monthly Transactions -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-lg text-slate-800">Transactions du mois</h3>
+                    <div class="flex gap-2">
+                        <button onclick="window.app.openTransactionModal()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900"><i class="fa-solid fa-plus mr-2"></i>Ajouter</button>
+                        <select id="filter-category" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                            <option value="all">Toutes les catégories</option>
+                        </select>
+                        <select id="filter-account" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                            <option value="all">Tous les comptes</option>
+                        </select>
+                    </div>
+                </div>
+                <ul id="transactions-container" class="divide-y divide-slate-100"></ul>
+            </div>
+
+            <!-- Anticipated Expenses -->
+            <div id="anticipated-highlight" class="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Dépenses à venir (non-récurrentes)</h3>
+                <div id="anticipated-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Budget Analysis -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">Analyse du Budget</h3>
+                    <button id="btn-cloture" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-300"><i class="fa-solid fa-lock mr-2"></i>Clôturer le mois</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-2">Pourcentage des dépenses par rapport aux revenus</h4>
+                        <div class="w-full bg-slate-200 rounded-full h-4">
+                            <div id="expense-percentage-bar" class="bg-danger h-4 rounded-full" style="width: 0%;"></div>
+                        </div>
+                        <p class="text-right text-sm font-medium text-slate-500 mt-1"><span id="expense-percentage-text">0%</span></p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-2">Prévisions</h4>
+                        <div class="flex items-center gap-4">
+                            <p class="text-sm text-slate-500">Solde prévu à la fin du mois:</p>
+                            <p class="text-lg font-bold text-slate-800" id="forecast-balance">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 hidden">
+            <h1 class="text-2xl font-bold text-slate-800">Réglages</h1>
+
+            <!-- Categories CRUD -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50">
+                    <h3 class="font-bold text-lg text-slate-800">Catégories</h3>
+                </div>
+                <div class="p-5">
+                    <form id="add-category-form" class="flex gap-4 items-end mb-6">
+                        <div class="flex-grow">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Nom</label>
+                            <input type="text" id="cat-name" required placeholder="Ex: Vacances" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                        </div>
+                        <div class="w-32">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Icône</label>
+                            <div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-2 text-slate-400 text-xs">fa-</span><input type="text" id="cat-icon" placeholder="star" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 pl-7 text-sm"></div>
+                        </div>
+                        <div class="w-16">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Couleur</label>
+                            <input type="color" id="cat-color" value="#3b82f6" class="w-full h-[38px] border-slate-300 rounded-lg shadow-sm border p-1 cursor-pointer">
+                        </div>
+                        <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900">Ajouter</button>
+                    </form>
+                    <ul id="mgmt-categories-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></ul>
+                </div>
+            </div>
+
+            <!-- Accounts CRUD -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50">
+                    <h3 class="font-bold text-lg text-slate-800">Comptes</h3>
+                </div>
+                <div class="p-5">
+                    <form id="add-account-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Nom du compte</label>
+                            <input type="text" id="acc-name" required placeholder="Ex: Compte courant" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Solde initial</label>
+                            <input type="number" id="acc-balance" required value="0" step="0.01" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Date solde initial</label>
+                            <input type="date" id="acc-balance-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="acc-is-savings" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="acc-is-savings" class="text-sm text-slate-600">Compte épargne ?</label>
+                        </div>
+                        <div class="md:col-span-4 flex justify-end">
+                            <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900">Ajouter</button>
+                        </div>
+                    </form>
+                    <ul id="mgmt-accounts-list" class="space-y-3"></ul>
+                </div>
+            </div>
+
+            <!-- Data Management -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                <h3 class="font-bold text-lg text-slate-800 mb-4">Données</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                        <h4 class="font-bold text-slate-700 mb-2">Transactions</h4>
+                        <div class="flex gap-2">
+                            <button id="export-transactions-csv" class="bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-100"><i class="fa-solid fa-download mr-1"></i> Exporter CSV</button>
+                            <button id="import-transactions-csv" class="bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-100"><i class="fa-solid fa-upload mr-1"></i> Importer CSV</button>
+                            <input type="file" id="csv-import-input" class="hidden" accept=".csv">
+                        </div>
+                    </div>
+                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                        <h4 class="font-bold text-slate-700 mb-2">Comptes</h4>
+                        <div class="flex gap-2">
+                            <button id="export-accounts-csv" class="bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-100"><i class="fa-solid fa-download mr-1"></i> Exporter CSV</button>
+                            <button id="import-accounts-csv" class="bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-100"><i class="fa-solid fa-upload mr-1"></i> Importer CSV</button>
+                            <input type="file" id="csv-import-acc-input" class="hidden" accept=".csv">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="mt-8 p-4 border border-red-200 rounded-lg bg-red-50">
+                <h4 class="font-bold text-red-800 mb-2">Zone de Danger</h4>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="delete-transactions-checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                        <label for="delete-transactions-checkbox" class="ml-2 block text-sm text-gray-900">Supprimer les transactions</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="delete-accounts-checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                        <label for="delete-accounts-checkbox" class="ml-2 block text-sm text-gray-900">Supprimer les comptes et les transactions</label>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button id="reset-button" class="bg-white border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Réinitialiser les données
+                    </button>
+                    <button id="btn-logout-settings" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Transaction Edit Modal -->
+    <div id="transaction-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <h2 id="transaction-modal-title" class="text-xl font-bold mb-4">Éditer la transaction</h2>
+            <form id="transaction-form">
+                <input type="hidden" id="transaction-edit-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="transaction-label" class="block text-sm font-medium text-slate-600">Libellé</label>
+                        <input type="text" id="transaction-label" required class="mt-1 w-full border-slate-300 rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="transaction-amount" class="block text-sm font-medium text-slate-600">Montant</label>
+                        <input type="number" id="transaction-amount" required step="0.01" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="transaction-date" class="block text-sm font-medium text-slate-600">Date</label>
+                        <input type="date" id="transaction-date" required class="mt-1 w-full border-slate-300 rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="transaction-category" class="block text-sm font-medium text-slate-600">Catégorie</label>
+                        <select id="transaction-category" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm"></select>
+                    </div>
+                    <div>
+                        <label for="transaction-type" class="block text-sm font-medium text-slate-600">Type</label>
+                        <select id="transaction-type" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm">
+                            <option value="expense">Dépense</option>
+                            <option value="income">Revenu</option>
+                            <option value="transfer">Transfert</option>
+                        </select>
+                    </div>
+                    <div id="source-account-wrapper">
+                        <label for="transaction-source" class="block text-sm font-medium text-slate-600">Compte Source</label>
+                        <select id="transaction-source" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm"></select>
+                    </div>
+                    <div id="destination-account-wrapper">
+                        <label for="transaction-destination" class="block text-sm font-medium text-slate-600">Compte Destination</label>
+                        <select id="transaction-destination" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm"></select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" id="btn-cancel-transaction" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-medium">Annuler</button>
+                    <button type="submit" id="btn-save-transaction" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-medium">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Drawer Overlay -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <!-- Account Edit Drawer -->
+    <div id="account-edit-drawer" class="bottom-drawer shadow-2xl">
+        <div class="drawer-handle"></div>
+        <div class="px-6 py-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Modifier le compte</h2>
+                <button id="btn-close-acc-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="edit-account-form" class="space-y-4">
+                <input type="hidden" id="edit-acc-id">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom du compte</label>
+                    <input type="text" id="edit-acc-name" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Solde initial</label>
+                        <input type="number" id="edit-acc-balance" required step="0.01" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date solde initial</label>
+                        <input type="date" id="edit-acc-balance-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <input type="checkbox" id="edit-acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
+                    <label for="edit-acc-is-savings" class="text-sm font-medium text-slate-700">Considérer comme épargne de précaution</label>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="btn-cancel-acc-edit" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
+                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Edit Drawer -->
+    <div id="category-edit-drawer" class="bottom-drawer shadow-2xl">
+        <div class="drawer-handle"></div>
+        <div class="px-6 py-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Modifier la catégorie</h2>
+                <button id="btn-close-cat-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="edit-category-form" class="space-y-4">
+                <input type="hidden" id="edit-cat-id">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom de la catégorie</label>
+                    <input type="text" id="edit-cat-name" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Icône (FontAwesome)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm">fa-</span>
+                            <input type="text" id="edit-cat-icon" placeholder="star" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 pl-9 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Couleur</label>
+                        <input type="color" id="edit-cat-color" class="w-full h-[46px] border-slate-300 rounded-lg shadow-sm border p-1 cursor-pointer">
+                    </div>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="btn-cancel-cat-edit" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
+                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
