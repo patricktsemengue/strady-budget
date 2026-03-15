@@ -4,12 +4,56 @@ import { renderSettings } from './settings.js';
 
 export const showNotification = (message, type = 'success') => {
     const container = document.getElementById('notification-container');
+    if (!container) return;
+
     const notif = document.createElement('div');
-    const colorClass = type === 'success' ? 'bg-green-100 border-green-500 text-green-700' : 'bg-red-100 border-red-500 text-red-700';
-    notif.className = `p-4 mb-4 text-sm rounded-lg ${colorClass}`;
-    notif.textContent = message;
+    const isSuccess = type === 'success';
+    const isError = type === 'error';
+    const isInfo = type === 'info';
+
+    let bgColor = 'bg-blue-50';
+    let borderColor = 'border-blue-400';
+    let textColor = 'text-blue-800';
+    let icon = 'fa-circle-info';
+
+    if (isSuccess) {
+        bgColor = 'bg-green-50';
+        borderColor = 'border-green-400';
+        textColor = 'text-green-800';
+        icon = 'fa-circle-check';
+    } else if (isError) {
+        bgColor = 'bg-red-50';
+        borderColor = 'border-red-400';
+        textColor = 'text-red-800';
+        icon = 'fa-circle-exclamation';
+    }
+
+    notif.className = `flex items-center p-4 rounded-lg shadow-lg border-l-4 ${bgColor} ${borderColor} ${textColor} pointer-events-auto transition-all duration-500 opacity-0 transform translate-x-8`;
+    notif.style.minWidth = '300px';
+    
+    notif.innerHTML = `
+        <i class="fa-solid ${icon} mr-3 text-lg"></i>
+        <div class="flex-1 font-medium">${message}</div>
+        <button class="ml-auto text-current opacity-50 hover:opacity-100 transition-opacity">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+
     container.appendChild(notif);
-    setTimeout(() => notif.remove(), 3000);
+
+    // Animate in
+    setTimeout(() => {
+        notif.classList.remove('opacity-0', 'translate-x-8');
+    }, 10);
+
+    const closeNotif = () => {
+        notif.classList.add('opacity-0', 'translate-x-8');
+        setTimeout(() => notif.remove(), 500);
+    };
+
+    notif.querySelector('button').addEventListener('click', closeNotif);
+
+    setTimeout(closeNotif, 5000);
 };
 
 export const setView = (view, isInitial = false) => {

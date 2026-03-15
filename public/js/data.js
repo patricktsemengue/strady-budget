@@ -159,11 +159,12 @@ export const importCSV = (event) => {
             updateState({ records: newRecords, recurring: newRecurring });
             saveState();
             render();
-            showNotification(`${importedCount} transactions importées avec succès !`);
+            showNotification(`Importation réussie : "${file.name}" (${importedCount} transactions).`);
         } else {
             showNotification("Le fichier est valide mais ne contient aucune transaction à importer.", "info");
         }
     };
+    reader.onerror = () => showNotification("Erreur lors de la lecture du fichier.", "error");
     reader.readAsText(file);
 };
 
@@ -237,8 +238,9 @@ export const importAccountsCSV = (event) => {
             state.accounts = newAccounts;
             saveState();
             render();
-            showNotification(`${newAccounts.length} comptes importés avec succès !`);
+            showNotification(`Importation réussie : "${file.name}" (${newAccounts.length} comptes).`);
         }
     };
+    reader.onerror = () => showNotification("Erreur lors de la lecture du fichier.", "error");
     reader.readAsText(file);
 };
