@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { generateId, getMonthKey, getTxDisplayInfo } from './utils.js';
-import { saveState } from './storage.js';
+import { currentUserId } from './storage.js';
+import { addTransactionToFirestore, updateTransactionInFirestore, deleteTransactionFromFirestore, addRecurringTemplate } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
 export const openTransactionModal = (id = null) => {
@@ -17,6 +18,10 @@ export const openTransactionModal = (id = null) => {
     sourceSelect.innerHTML = `<option value="external">Externe</option>${accountOptions}`;
     destSelect.innerHTML = `<option value="external">Externe</option>${accountOptions}`;
     
+    // Hide recurring fields by default
+    document.getElementById('recurring-fields').classList.add('hidden');
+    document.getElementById('transaction-is-recurring').checked = false;
+
     if (id) {
         document.getElementById('transaction-modal-title').textContent = 'Éditer la transaction';
         document.getElementById('transaction-edit-id').value = id;
@@ -38,6 +43,12 @@ export const openTransactionModal = (id = null) => {
             if (txInfo.isExpense) type = 'expense';
             document.getElementById('transaction-type').value = type;
             
+            // If it's a recurring instance, we show it's linked but don't allow converting back to template here for simplicity
+            if (tx.isRecurringInst) {
+                // For now, editing a recurring instance only edits that specific instance.
+                // We could add "Edit all future" logic later.
+            }
+
             // Trigger change to update visibility
             document.getElementById('transaction-type').dispatchEvent(new Event('change'));
         }
@@ -45,6 +56,7 @@ export const openTransactionModal = (id = null) => {
         document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
         document.getElementById('transaction-edit-id').value = '';
         document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
+        document.getElementById('transaction-start-month').value = new Date().toISOString().substring(0, 7);
     }
     
     modal.classList.remove('hidden');
@@ -54,7 +66,7 @@ export const closeTransactionModal = () => {
     document.getElementById('transaction-modal').classList.add('hidden');
 };
 
-export const handleSaveTransaction = (e) => {
+export const handleSaveTransaction = async (e) => {
     e.preventDefault();
     const id = document.getElementById('transaction-edit-id').value;
     const label = document.getElementById('transaction-label').value;
@@ -63,68 +75,75 @@ export const handleSaveTransaction = (e) => {
     const category = document.getElementById('transaction-category').value;
     const sourceId = document.getElementById('transaction-source').value;
     const destinationId = document.getElementById('transaction-destination').value;
+    
+    const isRecurring = document.getElementById('transaction-is-recurring').checked;
+    const startMonth = document.getElementById('transaction-start-month').value;
+    const endMonth = document.getElementById('transaction-end-month').value;
 
-    if (!label || !amount || !date || !category || !sourceId || !destinationId) {
-        showNotification('Veuillez remplir tous les champs.', 'error');
+    if (!label || !amount || (isRecurring ? !startMonth : !date) || !category || !sourceId || !destinationId) {
+        showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
         return;
     }
 
-    const monthKey = getMonthKey(new Date(date));
-    if (!state.records[monthKey]) {
-        state.records[monthKey] = { items: [] };
-    }
-
-    const transactionData = { label, amount, date, category, sourceId, destinationId };
-
-    if (id) {
-        const originalMonthKey = getMonthKey(state.viewDate);
-        const txIndex = state.records[originalMonthKey]?.items.findIndex(t => t.id === id);
-
-        if (txIndex !== -1) {
-            if (originalMonthKey === monthKey) {
-                state.records[monthKey].items[txIndex] = { ...state.records[monthKey].items[txIndex], ...transactionData };
-            } else {
-                const [movedTx] = state.records[originalMonthKey].items.splice(txIndex, 1);
-                state.records[monthKey].items.push({ ...movedTx, ...transactionData });
-            }
+    try {
+        if (isRecurring && !id) {
+            // Create a new recurring template (which generates instances)
+            const template = {
+                id: `rec_${generateId()}`,
+                label,
+                amount,
+                sourceId,
+                destinationId,
+                category,
+                startMonth,
+                endMonth: endMonth || null,
+                periodicity: 'M'
+            };
+            await addRecurringTemplate(currentUserId, template);
+            showNotification('Transaction récurrente configurée !');
+        } else if (id) {
+            // Update existing transaction instance
+            await updateTransactionInFirestore(currentUserId, { id, label, amount, date, category, sourceId, destinationId });
             showNotification('Transaction modifiée !');
+        } else {
+            // Create a standard single transaction
+            await addTransactionToFirestore(currentUserId, { id: generateId(), label, amount, date, category, sourceId, destinationId });
+            showNotification('Transaction ajoutée !');
         }
-    } else {
-        state.records[monthKey].items.push({ id: generateId(), ...transactionData });
-        showNotification('Transaction ajoutée !');
+        closeTransactionModal();
+    } catch (err) {
+        console.error(err);
+        showNotification('Erreur de sauvegarde', 'error');
     }
-
-    saveState();
-    render();
-    closeTransactionModal();
 };
 
 export const editTransaction = (id) => {
     openTransactionModal(id);
 };
 
-export const duplicateTransaction = (id) => {
+export const duplicateTransaction = async (id) => {
     const monthKey = getMonthKey(state.viewDate);
-    if (state.records[monthKey]) {
-        const transaction = state.records[monthKey].items.find(item => item.id === id);
-        if (transaction) {
+    const transaction = state.records[monthKey]?.items.find(item => item.id === id);
+    if (transaction) {
+        try {
             const newTransaction = { ...transaction, id: generateId() };
-            state.records[monthKey].items.push(newTransaction);
-            saveState();
-            render();
+            // Ensure we don't accidentally copy system fields or specific recursive IDs if we added any
+            delete newTransaction.updated_at; 
+            await addTransactionToFirestore(currentUserId, newTransaction);
             showNotification('Transaction dupliquée.');
+        } catch (err) {
+            showNotification('Erreur de duplication', 'error');
         }
     }
 };
 
-export const deleteTransaction = (id) => {
+export const deleteTransaction = async (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
-        const monthKey = getMonthKey(state.viewDate);
-        if (state.records[monthKey]) {
-            state.records[monthKey].items = state.records[monthKey].items.filter(item => item.id !== id);
-            saveState();
-            render();
+        try {
+            await deleteTransactionFromFirestore(currentUserId, id);
             showNotification('Transaction supprimée.');
+        } catch (err) {
+            showNotification('Erreur de suppression', 'error');
         }
     }
 };

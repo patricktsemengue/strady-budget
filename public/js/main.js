@@ -1,9 +1,25 @@
-import { state, updateState, defaultCategories, mockAccounts, mockRecurring, mockRecords } from './state.js';
-import { loadState, saveState, setStorageUser } from './storage.js';
+import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
+import { setStorageUser, currentUserId } from './storage.js';
 import { setView, setViewDate, render, showNotification } from './ui.js';
 import { renderTransactions, clotureMois } from './dashboard.js';
-import { handleAddCategory, openEditCategory, closeCategoryDrawer, handleUpdateCategory, deleteCategory } from './categories.js';
-import { handleAddAccount, openEditAccount, closeAccountDrawer, handleUpdateAccount, deleteAccount } from './accounts.js';
+import { 
+    handleAddCategory, 
+    openEditCategory, 
+    closeCategoryDrawer, 
+    handleUpdateCategory, 
+    deleteCategory,
+    openAddCategoryDrawer,
+    closeAddCategoryDrawer
+} from './categories.js';
+import { 
+    handleAddAccount, 
+    openEditAccount, 
+    closeAccountDrawer, 
+    handleUpdateAccount, 
+    deleteAccount,
+    openAddAccountDrawer,
+    closeAddAccountDrawer
+} from './accounts.js';
 import { 
     openTransactionModal, 
     closeTransactionModal, 
@@ -14,12 +30,13 @@ import {
 } from './transactions.js';
 import { handleReset, exportCSV, importCSV, exportAccountsCSV, importAccountsCSV } from './data.js';
 import { login, logout, onUserChanged } from './auth.js';
+import { subscribeToAppData, checkAndGenerateRecurring } from './firestore-service.js';
 
 const init = () => {
     setupEventListeners();
 
     // Firebase Auth listener
-    onUserChanged((user) => {
+    onUserChanged(async (user) => {
         const userInfo = document.getElementById('user-info');
         const userName = document.getElementById('user-name');
         const userPhoto = document.getElementById('user-photo');
@@ -43,28 +60,33 @@ const init = () => {
             if (userEmailMobile) userEmailMobile.textContent = user.email;
             if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
-            // Load data for this specific user
-            const savedState = loadState(user.uid);
-            if (savedState) {
-                updateState({ ...savedState, viewDate: new Date(savedState.viewDate || new Date()) });
-            } else {
+            // Check and generate recurring transactions
+            await checkAndGenerateRecurring(user.uid);
+
+            // Subscribe to Firestore data
+            subscribeToAppData(user.uid, (newData) => {
                 updateState({
-                    accounts: mockAccounts,
-                    recurring: mockRecurring,
-                    records: mockRecords,
-                    categories: defaultCategories
+                    accounts: newData.accounts || [],
+                    categories: newData.categories || defaultCategories,
+                    recurring: newData.recurringTemplates || [],
+                    months: newData.months || {}
                 });
-            }
-            if (!state.categories || state.categories.length === 0) {
-                updateState({ categories: defaultCategories });
-            }
+                
+                if (newData.categories && newData.categories.length === 0) {
+                    updateState({ categories: defaultCategories });
+                }
+
+                // Rebuild records into legacy format
+                rebuildRecords(newData.transactions || [], newData.months || {});
+                
+                render();
+            });
 
             const initialView = window.location.hash.substring(1) || 'dashboard';
             setView(initialView, true);
             
             // Show content
             if (mainContent) mainContent.classList.remove('hidden');
-            render(); 
         } else {
             // User is signed out, redirect to login page
             setStorageUser(null);
@@ -75,6 +97,7 @@ const init = () => {
 };
 
 const setupEventListeners = () => {
+
     // Auth listeners
     const handleLogout = async () => {
         if (confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
@@ -133,20 +156,30 @@ const setupEventListeners = () => {
         setViewDate(newDate); 
     });
 
+    // Category Drawers
     document.getElementById('add-category-form').addEventListener('submit', handleAddCategory);
-    
-    // Category Edit Drawer
+    document.getElementById('btn-close-add-cat-drawer').addEventListener('click', closeAddCategoryDrawer);
+    document.getElementById('btn-cancel-add-cat').addEventListener('click', closeAddCategoryDrawer);
+
     document.getElementById('edit-category-form').addEventListener('submit', handleUpdateCategory);
     document.getElementById('btn-close-cat-drawer').addEventListener('click', closeCategoryDrawer);
     document.getElementById('btn-cancel-cat-edit').addEventListener('click', closeCategoryDrawer);
-    // Note: drawer-overlay click is already handled by account drawer setup if they use the same overlay
-    document.getElementById('add-account-form').addEventListener('submit', handleAddAccount);
     
-    // Account Edit Drawer
+    // Account Drawers
     document.getElementById('edit-account-form').addEventListener('submit', handleUpdateAccount);
     document.getElementById('btn-close-acc-drawer').addEventListener('click', closeAccountDrawer);
     document.getElementById('btn-cancel-acc-edit').addEventListener('click', closeAccountDrawer);
-    document.getElementById('drawer-overlay').addEventListener('click', closeAccountDrawer);
+    
+    document.getElementById('add-account-form').addEventListener('submit', handleAddAccount);
+    document.getElementById('btn-close-add-acc-drawer').addEventListener('click', closeAddAccountDrawer);
+    document.getElementById('btn-cancel-add-acc').addEventListener('click', closeAddAccountDrawer);
+
+    document.getElementById('drawer-overlay').addEventListener('click', () => {
+        closeAccountDrawer();
+        closeAddAccountDrawer();
+        closeCategoryDrawer();
+        closeAddCategoryDrawer();
+    });
     
     document.getElementById('export-transactions-csv').addEventListener('click', exportCSV);
     document.getElementById('import-transactions-csv').addEventListener('click', () => document.getElementById('csv-import-input').click());
@@ -179,6 +212,15 @@ const setupEventListeners = () => {
             destWrapper.classList.remove('hidden');
         }
     });
+
+    document.getElementById('transaction-is-recurring').addEventListener('change', (e) => {
+        const recurringFields = document.getElementById('recurring-fields');
+        if (e.target.checked) {
+            recurringFields.classList.remove('hidden');
+        } else {
+            recurringFields.classList.add('hidden');
+        }
+    });
 };
 
 // Expose app to window for HTML event handlers
@@ -194,7 +236,9 @@ window.app = {
     openTransactionModal,
     clotureMois,
     openEditAccount,
-    deleteAccount
+    deleteAccount,
+    openAddAccountDrawer,
+    openAddCategoryDrawer
 };
 
 document.addEventListener('DOMContentLoaded', init);

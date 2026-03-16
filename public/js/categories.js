@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { generateId } from './utils.js';
-import { saveState } from './storage.js';
+import { currentUserId } from './storage.js';
+import { addCategoryToFirestore, updateCategoryInFirestore, deleteCategoryFromFirestore, updateTransactionInFirestore } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
 export const renderCategoriesList = () => {
@@ -12,7 +13,19 @@ export const renderCategoriesList = () => {
         </li>`).join('');
 };
 
-export const handleAddCategory = (e) => {
+export const openAddCategoryDrawer = () => {
+    document.getElementById('add-category-form').reset();
+    document.getElementById('drawer-overlay').classList.add('active');
+    document.getElementById('category-add-drawer').classList.add('active');
+};
+
+export const closeAddCategoryDrawer = () => {
+    document.getElementById('drawer-overlay').classList.remove('active');
+    document.getElementById('category-add-drawer').classList.remove('active');
+    document.getElementById('add-category-form').reset();
+};
+
+export const handleAddCategory = async (e) => {
     e.preventDefault();
     const name = document.getElementById('cat-name').value.trim();
     let icon = document.getElementById('cat-icon').value.trim();
@@ -28,12 +41,15 @@ export const handleAddCategory = (e) => {
     }
 
     const id = generateId();
-    state.categories.push({ id, label: name, icon, color });
-    document.getElementById('add-category-form').reset();
-    showNotification('Catégorie ajoutée !');
-
-    saveState();
-    renderCategoriesList();
+    const newCategory = { id, label: name, icon, color };
+    
+    try {
+        await addCategoryToFirestore(currentUserId, newCategory);
+        closeAddCategoryDrawer();
+        showNotification('Catégorie ajoutée !');
+    } catch (err) {
+        showNotification("Erreur lors de l'ajout", 'error');
+    }
 };
 
 export const openEditCategory = (id) => {
@@ -55,7 +71,7 @@ export const closeCategoryDrawer = () => {
     document.getElementById('edit-category-form').reset();
 };
 
-export const handleUpdateCategory = (e) => {
+export const handleUpdateCategory = async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-cat-id').value;
     const name = document.getElementById('edit-cat-name').value.trim();
@@ -65,33 +81,38 @@ export const handleUpdateCategory = (e) => {
     if (!icon) icon = 'fa-tag';
     if (!icon.startsWith('fa-')) icon = 'fa-' + icon;
 
-    const catIndex = state.categories.findIndex(c => c.id === id);
-    if (catIndex === -1) return;
-
-    state.categories[catIndex] = { ...state.categories[catIndex], label: name, icon, color };
-    
-    saveState();
-    renderCategoriesList();
-    closeCategoryDrawer();
-    showNotification('Catégorie mise à jour !');
+    try {
+        await updateCategoryInFirestore(currentUserId, { id, label: name, icon, color });
+        closeCategoryDrawer();
+        showNotification('Catégorie mise à jour !');
+    } catch (err) {
+        showNotification('Erreur de mise à jour', 'error');
+    }
 };
 
-export const deleteCategory = (id) => {
+export const deleteCategory = async (id) => {
     if (id === 'Autre') {
         alert("La catégorie 'Autre' ne peut pas être supprimée.");
         return;
     }
     if (confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ? Les transactions associées seront déplacées vers la catégorie "Autre".')) {
-        state.categories = state.categories.filter(c => c.id !== id);
-        Object.values(state.records).forEach(monthData => {
-            monthData.items.forEach(item => {
-                if (item.category === id) {
-                    item.category = 'Autre';
-                }
+        try {
+            await deleteCategoryFromFirestore(currentUserId, id);
+            
+            // Re-assign transactions asynchronously (could use a batch in the future)
+            const updates = [];
+            Object.values(state.records).forEach(monthData => {
+                monthData.items.forEach(item => {
+                    if (item.category === id) {
+                        updates.push(updateTransactionInFirestore(currentUserId, { ...item, category: 'Autre' }));
+                    }
+                });
             });
-        });
-        saveState();
-        render();
-        showNotification('Catégorie supprimée.');
+            await Promise.all(updates);
+            
+            showNotification('Catégorie supprimée.');
+        } catch (err) {
+            showNotification('Erreur de suppression', 'error');
+        }
     }
 };

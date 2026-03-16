@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './utils.js';
-import { saveState } from './storage.js';
+import { currentUserId } from './storage.js';
+import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
 import { showNotification, render, setViewDate } from './ui.js';
 
 export const getBalances = () => {
@@ -69,18 +70,37 @@ export const renderTimeline = () => {
 };
 
 export const renderAnticipatedExpenses = () => {
-    const nextMonthKey = getMonthKey(new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 1));
     const anticipatedList = document.getElementById('anticipated-list');
-    const nonRecurring = (state.records[nextMonthKey]?.items || []).filter(item => !item.isRecurringInst && getTxDisplayInfo(item.sourceId, item.destinationId).isExpense);
+    let allNonRecurring = [];
 
-    if(nonRecurring.length === 0) {
+    // Collect from selected month, next month, and next+1 month
+    for (let i = 0; i < 3; i++) {
+        const targetDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + i, 1);
+        const monthKey = getMonthKey(targetDate);
+        const monthItems = (state.records[monthKey]?.items || []).filter(item => 
+            !item.isRecurringInst && 
+            getTxDisplayInfo(item.sourceId, item.destinationId).isExpense
+        );
+        allNonRecurring = [...allNonRecurring, ...monthItems];
+    }
+
+    if(allNonRecurring.length === 0) {
         document.getElementById('anticipated-highlight').classList.add('hidden');
         return;
     }
+
+    // Sort by date ascending
+    allNonRecurring.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     document.getElementById('anticipated-highlight').classList.remove('hidden');
-    anticipatedList.innerHTML = nonRecurring.map(item => `
+    anticipatedList.innerHTML = allNonRecurring.map(item => `
         <div class="bg-white/60 rounded-lg p-3 border border-amber-100 flex justify-between items-center shadow-sm">
-            <div class="truncate pr-2"><div class="font-medium text-amber-900">${item.label}</div><div class="text-xs text-amber-600 font-semibold"><i class="fa-regular fa-calendar mr-1"></i>${formatDateStr(item.date)}</div></div>
+            <div class="truncate pr-2">
+                <div class="font-medium text-amber-900">${item.label}</div>
+                <div class="text-xs text-amber-600 font-semibold">
+                    <i class="fa-regular fa-calendar mr-1"></i>${formatDateStr(item.date)}
+                </div>
+            </div>
             <span class="font-bold text-amber-700 whitespace-nowrap">- ${formatCurrency(item.amount)}</span>
         </div>`).join('');
 };
@@ -183,7 +203,7 @@ export const renderDashboard = () => {
     }
 };
 
-export const clotureMois = () => {
+export const clotureMois = async () => {
     const currentMonthKey = getMonthKey(state.viewDate);
     if (state.records[currentMonthKey]?.status === 'closed') {
         showNotification('Ce mois est déjà clôturé.', 'error');
@@ -191,25 +211,31 @@ export const clotureMois = () => {
     }
 
     if (confirm(`Êtes-vous sûr de vouloir clôturer le mois de ${new Intl.DateTimeFormat('fr-BE', { month: 'long', year: 'numeric' }).format(state.viewDate)} ? Cette action est irréversible.`)) {
-        const balances = getBalances();
-        
-        state.accounts.forEach(acc => {
-            acc.initialBalance = balances[acc.id] || 0;
-        });
+        try {
+            const balances = getBalances();
+            const updates = [];
+            
+            // Update all accounts with new initial balances based on the closed month
+            state.accounts.forEach(acc => {
+                const newBalance = balances[acc.id] || 0;
+                updates.push(updateAccountInFirestore(currentUserId, { ...acc, initialBalance: newBalance }));
+            });
 
-        if(!state.records[currentMonthKey]) {
-            state.records[currentMonthKey] = { items: [], status: 'open' };
+            // Mark current month as closed
+            updates.push(updateMonthStatus(currentUserId, currentMonthKey, 'closed'));
+
+            // Also close previous open months
+            Object.keys(state.records).forEach(monthKey => {
+                if (monthKey < currentMonthKey && state.records[monthKey].status !== 'closed') {
+                    updates.push(updateMonthStatus(currentUserId, monthKey, 'closed'));
+                }
+            });
+
+            await Promise.all(updates);
+            
+            showNotification('Mois clôturé avec succès. Les soldes initiaux ont été mis à jour.');
+        } catch (err) {
+            showNotification('Erreur lors de la clôture', 'error');
         }
-        state.records[currentMonthKey].status = 'closed';
-
-        Object.keys(state.records).sort().forEach(monthKey => {
-            if (monthKey < currentMonthKey && state.records[monthKey].status !== 'closed') {
-                state.records[monthKey].status = 'closed';
-            }
-        });
-
-        saveState();
-        render();
-        showNotification('Mois clôturé avec succès. Les soldes initiaux du mois suivant ont été mis à jour.');
     }
 };

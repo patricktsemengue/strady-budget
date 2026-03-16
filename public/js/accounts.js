@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { generateId, formatCurrency } from './utils.js';
-import { saveState } from './storage.js';
+import { currentUserId } from './storage.js';
+import { addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
 export const renderAccountsList = () => {
@@ -22,7 +23,20 @@ export const renderAccountsList = () => {
         </li>`).join('');
 };
 
-export const handleAddAccount = (e) => {
+export const openAddAccountDrawer = () => {
+    document.getElementById('add-account-form').reset();
+    document.getElementById('acc-balance-date').value = new Date().toISOString().substring(0, 10);
+    document.getElementById('drawer-overlay').classList.add('active');
+    document.getElementById('account-add-drawer').classList.add('active');
+};
+
+export const closeAddAccountDrawer = () => {
+    document.getElementById('drawer-overlay').classList.remove('active');
+    document.getElementById('account-add-drawer').classList.remove('active');
+    document.getElementById('add-account-form').reset();
+};
+
+export const handleAddAccount = async (e) => {
     e.preventDefault();
     const name = document.getElementById('acc-name').value.trim();
     const initialBalance = parseFloat(document.getElementById('acc-balance').value);
@@ -37,12 +51,15 @@ export const handleAddAccount = (e) => {
     }
 
     const id = `acc_${generateId()}`;
-    state.accounts.push({ id, name, initialBalance, initialBalanceDate, isSavings });
-    document.getElementById('add-account-form').reset();
-    showNotification('Compte ajouté !');
-
-    saveState();
-    renderAccountsList();
+    const newAccount = { id, name, initialBalance, initialBalanceDate, isSavings };
+    
+    try {
+        await addAccountToFirestore(currentUserId, newAccount);
+        closeAddAccountDrawer();
+        showNotification('Compte ajouté !');
+    } catch (err) {
+        showNotification("Erreur lors de l'ajout", 'error');
+    }
 };
 
 export const openEditAccount = (id) => {
@@ -65,7 +82,7 @@ export const closeAccountDrawer = () => {
     document.getElementById('edit-account-form').reset();
 };
 
-export const handleUpdateAccount = (e) => {
+export const handleUpdateAccount = async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-acc-id').value;
     const name = document.getElementById('edit-acc-name').value.trim();
@@ -73,30 +90,27 @@ export const handleUpdateAccount = (e) => {
     const initialBalanceDate = document.getElementById('edit-acc-balance-date').value;
     const isSavings = document.getElementById('edit-acc-is-savings').checked;
 
-    const accIndex = state.accounts.findIndex(a => a.id === id);
-    if (accIndex === -1) return;
-
     if (state.accounts.some(a => a.id !== id && a.name.toLowerCase() === name.toLowerCase())) {
         showNotification(`Un autre compte porte déjà le nom "${name}".`, 'error');
         return;
     }
 
-    state.accounts[accIndex] = { ...state.accounts[accIndex], name, initialBalance, initialBalanceDate, isSavings };
-    
-    saveState();
-    renderAccountsList();
-    closeAccountDrawer();
-    showNotification('Compte mis à jour !');
+    try {
+        await updateAccountInFirestore(currentUserId, { id, name, initialBalance, initialBalanceDate, isSavings });
+        closeAccountDrawer();
+        showNotification('Compte mis à jour !');
+    } catch (err) {
+        showNotification('Erreur de mise à jour', 'error');
+    }
 };
 
-export const deleteAccount = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte ? Toutes les transactions associées seront également supprimées.')) {
-        state.accounts = state.accounts.filter(a => a.id !== id);
-        Object.keys(state.records).forEach(monthKey => {
-            state.records[monthKey].items = state.records[monthKey].items.filter(item => item.sourceId !== id && item.destinationId !== id);
-        });
-        saveState();
-        render();
-        showNotification('Compte supprimé.');
+export const deleteAccount = async (id) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte ? Les transactions associées ne seront pas supprimées automatiquement pour conserver l\'historique.')) {
+        try {
+            await deleteAccountFromFirestore(currentUserId, id);
+            showNotification('Compte supprimé.');
+        } catch (err) {
+            showNotification('Erreur de suppression', 'error');
+        }
     }
 };

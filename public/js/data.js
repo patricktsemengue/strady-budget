@@ -1,9 +1,10 @@
-import { state, updateState } from './state.js';
-import { saveState } from './storage.js';
+import { state } from './state.js';
+import { currentUserId } from './storage.js';
+import { resetDataInFirestore, importDataToFirestore } from './firestore-service.js';
 import { render, showNotification } from './ui.js';
 import { generateId } from './utils.js';
 
-export const handleReset = () => {
+export const handleReset = async () => {
     const deleteTransactions = document.getElementById('delete-transactions-checkbox').checked;
     const deleteAccounts = document.getElementById('delete-accounts-checkbox').checked;
 
@@ -20,14 +21,12 @@ export const handleReset = () => {
     }
 
     if (confirm(confirmationMessage)) {
-        if (deleteAccounts) {
-            updateState({ accounts: [], records: {}, recurring: [] });
-        } else if (deleteTransactions) {
-            updateState({ records: {}, recurring: [] });
+        try {
+            await resetDataInFirestore(currentUserId, deleteAccounts, deleteTransactions);
+            showNotification('Données réinitialisées avec succès.');
+        } catch (err) {
+            showNotification('Erreur lors de la réinitialisation.', 'error');
         }
-        saveState();
-        render();
-        showNotification('Données réinitialisées.');
     }
 };
 
@@ -56,7 +55,7 @@ export const importCSV = (event) => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         const text = e.target.result;
         const lines = text.split('\n');
         const header = lines[0] ? lines[0].trim().replace(/\r/g, '') : "";
@@ -73,15 +72,14 @@ export const importCSV = (event) => {
             accountMap[acc.name.toLowerCase()] = acc.id;
         });
 
-        const newRecords = {};
-        const newRecurring = [];
+        const newTransactions = [];
+        const newTemplates = [];
         let importedCount = 0;
 
         for (let i = 0; i < dataLines.length; i++) {
             const line = dataLines[i];
             if (!line || line.trim() === "") continue;
 
-            // Handle potentially quoted values
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/"/g, '').replace(/'/g, '').trim());
             if (parts.length < 10) continue;
 
@@ -106,60 +104,58 @@ export const importCSV = (event) => {
                 const isRecurring = recurringFlag === '1';
                 const finalCategory = category || 'Autre';
 
-                // Add to records
-                const monthKey = date.substring(0, 7);
-                if (!newRecords[monthKey]) newRecords[monthKey] = { status: 'open', items: [] };
-                
-                const txId = generateId();
-                newRecords[monthKey].items.push({
-                    id: txId,
-                    label,
-                    amount: parseFloat(amount),
-                    date,
-                    category: finalCategory,
-                    sourceId,
-                    destinationId,
-                    isRecurringInst: isRecurring, // If it's recurring in CSV, we mark it as instance? Or just a record.
-                    parentId: isRecurring ? `rec_${txId}` : null
-                });
-
                 if (isRecurring) {
                     if (!startDate) {
                         throw new Error(`La date de début est obligatoire pour la transaction récurrente "${label}".`);
                     }
                     
-                    // End date logic
-                    let finalEndDate = endDate;
-                    if (!finalEndDate) {
-                        const d = new Date(startDate);
-                        d.setFullYear(d.getFullYear() + 1);
-                        finalEndDate = d.toISOString().split('T')[0];
-                    }
-
-                    newRecurring.push({
-                        id: `rec_${txId}`,
+                    const templateId = `rec_${generateId()}`;
+                    newTemplates.push({
+                        id: templateId,
                         label,
                         amount: parseFloat(amount),
                         sourceId,
                         destinationId,
                         startMonth: startDate.substring(0, 7),
-                        endMonth: finalEndDate.substring(0, 7),
+                        endMonth: endDate ? endDate.substring(0, 7) : null,
                         periodicity: periodicity || 'M',
                         category: finalCategory
+                    });
+                } else {
+                    newTransactions.push({
+                        id: generateId(),
+                        label,
+                        amount: parseFloat(amount),
+                        date,
+                        category: finalCategory,
+                        sourceId,
+                        destinationId
                     });
                 }
                 importedCount++;
             } catch (err) {
                 showNotification(`Erreur d'importation : ${err.message}`, 'error');
-                return; // Stop the whole process
+                return;
             }
         }
 
         if (importedCount > 0) {
-            updateState({ records: newRecords, recurring: newRecurring });
-            saveState();
-            render();
-            showNotification(`Importation réussie : "${file.name}" (${importedCount} transactions).`);
+            try {
+                // Import templates one by one to trigger generation
+                const templatePromises = newTemplates.map(tpl => import('./firestore-service.js').then(m => m.addRecurringTemplate(currentUserId, tpl)));
+                
+                // Import standalone transactions in one go
+                if (newTransactions.length > 0) {
+                    await importDataToFirestore(currentUserId, null, newTransactions, null);
+                }
+                
+                await Promise.all(templatePromises);
+                
+                showNotification(`Importation réussie : "${file.name}" (${importedCount} lignes traitées).`);
+            } catch (err) {
+                console.error(err);
+                showNotification("Erreur lors de l'enregistrement de l'import.", 'error');
+            }
         } else {
             showNotification("Le fichier est valide mais ne contient aucune transaction à importer.", "info");
         }
@@ -190,7 +186,7 @@ export const importAccountsCSV = (event) => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         const text = e.target.result;
         const lines = text.split('\n');
         const header = lines[0] ? lines[0].trim().replace(/\r/g, '') : "";
@@ -208,7 +204,6 @@ export const importAccountsCSV = (event) => {
             const line = dataLines[i];
             if (!line || line.trim() === "") continue;
             
-            // Handle potentially quoted values
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (parts.length < 4) continue;
             
@@ -217,10 +212,9 @@ export const importAccountsCSV = (event) => {
             const initialBalanceDate = parts[2].trim();
             const isSavings = parts[3].trim().toLowerCase() === 'yes';
             
-            // Uniqueness validation
             if (seenNames.has(name.toLowerCase())) {
                 showNotification(`Erreur d'importation : le nom de compte "${name}" est utilisé plusieurs fois dans le fichier.`, 'error');
-                return; // Stop the whole process
+                return;
             }
             seenNames.add(name.toLowerCase());
 
@@ -234,11 +228,13 @@ export const importAccountsCSV = (event) => {
         }
 
         if (newAccounts.length > 0) {
-            // Success: delete existing accounts and replace with new ones
-            state.accounts = newAccounts;
-            saveState();
-            render();
-            showNotification(`Importation réussie : "${file.name}" (${newAccounts.length} comptes).`);
+            try {
+                await resetDataInFirestore(currentUserId, true, false); // clear existing accounts first
+                await importDataToFirestore(currentUserId, newAccounts, null, null);
+                showNotification(`Importation réussie : "${file.name}" (${newAccounts.length} comptes).`);
+            } catch (err) {
+                showNotification("Erreur lors de l'enregistrement des comptes.", 'error');
+            }
         }
     };
     reader.onerror = () => showNotification("Erreur lors de la lecture du fichier.", "error");

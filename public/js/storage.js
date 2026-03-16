@@ -1,23 +1,21 @@
-import { state } from './state.js';
-
-let currentUserId = null;
+export let currentUserId = null;
 
 export const setStorageUser = (userId) => {
     currentUserId = userId;
 };
 
-const getStorageKey = (userId) => {
+const getUIStorageKey = (userId) => {
     const id = userId || currentUserId;
-    return id ? `stradyBudgetState_${id}` : 'stradyBudgetState';
+    return id ? `stradyBudgetUI_${id}` : 'stradyBudgetUI';
 };
 
-export const saveState = (userId = null) => {
+export const saveUIState = (viewDate, currentView) => {
     try {
-        localStorage.setItem(getStorageKey(userId), JSON.stringify(state));
+        localStorage.setItem(getUIStorageKey(), JSON.stringify({ viewDate, currentView }));
     } catch (e) { console.error('Save failed', e); }
 };
 
-export const loadState = (userId = null) => {
-    const saved = localStorage.getItem(getStorageKey(userId));
+export const loadUIState = () => {
+    const saved = localStorage.getItem(getUIStorageKey());
     return saved ? JSON.parse(saved) : null;
 };

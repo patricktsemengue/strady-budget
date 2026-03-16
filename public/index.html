@@ -137,7 +137,7 @@
 
             <!-- Anticipated Expenses -->
             <div id="anticipated-highlight" class="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
-                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Dépenses à venir (non-récurrentes)</h3>
+                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Dépenses à venir (Prochains 3 mois, non-récurrentes)</h3>
                 <div id="anticipated-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
 
@@ -172,56 +172,26 @@
 
             <!-- Categories CRUD -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-5 border-b border-slate-100 bg-slate-50">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                     <h3 class="font-bold text-lg text-slate-800">Catégories</h3>
+                    <button onclick="window.app.openAddCategoryDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-plus text-xs"></i> Ajouter
+                    </button>
                 </div>
                 <div class="p-5">
-                    <form id="add-category-form" class="flex gap-4 items-end mb-6">
-                        <div class="flex-grow">
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Nom</label>
-                            <input type="text" id="cat-name" required placeholder="Ex: Vacances" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                        </div>
-                        <div class="w-32">
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Icône</label>
-                            <div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-2 text-slate-400 text-xs">fa-</span><input type="text" id="cat-icon" placeholder="star" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 pl-7 text-sm"></div>
-                        </div>
-                        <div class="w-16">
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Couleur</label>
-                            <input type="color" id="cat-color" value="#3b82f6" class="w-full h-[38px] border-slate-300 rounded-lg shadow-sm border p-1 cursor-pointer">
-                        </div>
-                        <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900">Ajouter</button>
-                    </form>
                     <ul id="mgmt-categories-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></ul>
                 </div>
             </div>
 
             <!-- Accounts CRUD -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-5 border-b border-slate-100 bg-slate-50">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                     <h3 class="font-bold text-lg text-slate-800">Comptes</h3>
+                    <button onclick="window.app.openAddAccountDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-plus text-xs"></i> Ajouter
+                    </button>
                 </div>
                 <div class="p-5">
-                    <form id="add-account-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
-                        <div class="md:col-span-1">
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Nom du compte</label>
-                            <input type="text" id="acc-name" required placeholder="Ex: Compte courant" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Solde initial</label>
-                            <input type="number" id="acc-balance" required value="0" step="0.01" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Date solde initial</label>
-                            <input type="date" id="acc-balance-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                        </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="acc-is-savings" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            <label for="acc-is-savings" class="text-sm text-slate-600">Compte épargne ?</label>
-                        </div>
-                        <div class="md:col-span-4 flex justify-end">
-                            <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900">Ajouter</button>
-                        </div>
-                    </form>
                     <ul id="mgmt-accounts-list" class="space-y-3"></ul>
                 </div>
             </div>
@@ -313,6 +283,22 @@
                         <label for="transaction-destination" class="block text-sm font-medium text-slate-600">Compte Destination</label>
                         <select id="transaction-destination" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm"></select>
                     </div>
+                    <div class="md:col-span-2 border-t pt-4 mt-2">
+                        <div class="flex items-center gap-2 mb-3">
+                            <input type="checkbox" id="transaction-is-recurring" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="transaction-is-recurring" class="text-sm font-semibold text-slate-700">Transaction Récurrente</label>
+                        </div>
+                        <div id="recurring-fields" class="hidden grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <div>
+                                <label for="transaction-start-month" class="block text-xs font-medium text-slate-500 mb-1">Mois de début</label>
+                                <input type="month" id="transaction-start-month" class="w-full border-slate-300 rounded-lg shadow-sm text-sm">
+                            </div>
+                            <div>
+                                <label for="transaction-end-month" class="block text-xs font-medium text-slate-500 mb-1">Mois de fin (optionnel)</label>
+                                <input type="month" id="transaction-end-month" class="w-full border-slate-300 rounded-lg shadow-sm text-sm">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-3 mt-6">
                     <button type="button" id="btn-cancel-transaction" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-medium">Annuler</button>
@@ -361,6 +347,41 @@
         </div>
     </div>
 
+    <!-- Add Account Drawer -->
+    <div id="account-add-drawer" class="bottom-drawer shadow-2xl">
+        <div class="drawer-handle"></div>
+        <div class="px-6 py-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Ajouter un compte</h2>
+                <button id="btn-close-add-acc-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="add-account-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom du compte</label>
+                    <input type="text" id="acc-name" required placeholder="Ex: Compte courant" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Solde initial</label>
+                        <input type="number" id="acc-balance" required value="0" step="0.01" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date solde initial</label>
+                        <input type="date" id="acc-balance-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <input type="checkbox" id="acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
+                    <label for="acc-is-savings" class="text-sm font-medium text-slate-700">Considérer comme épargne de précaution</label>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="btn-cancel-add-acc" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
+                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Ajouter le compte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Category Edit Drawer -->
     <div id="category-edit-drawer" class="bottom-drawer shadow-2xl">
         <div class="drawer-handle"></div>
@@ -391,6 +412,40 @@
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="btn-cancel-cat-edit" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
                     <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Category Drawer -->
+    <div id="category-add-drawer" class="bottom-drawer shadow-2xl">
+        <div class="drawer-handle"></div>
+        <div class="px-6 py-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Ajouter une catégorie</h2>
+                <button id="btn-close-add-cat-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="add-category-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom de la catégorie</label>
+                    <input type="text" id="cat-name" required placeholder="Ex: Vacances" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Icône (FontAwesome)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm">fa-</span>
+                            <input type="text" id="cat-icon" placeholder="star" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 pl-9 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Couleur</label>
+                        <input type="color" id="cat-color" value="#3b82f6" class="w-full h-[46px] border-slate-300 rounded-lg shadow-sm border p-1 cursor-pointer">
+                    </div>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="btn-cancel-add-cat" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
+                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Ajouter la catégorie</button>
                 </div>
             </form>
         </div>
