@@ -1,7 +1,15 @@
 import { state } from './state.js';
 import { generateId, getMonthKey, getTxDisplayInfo } from './utils.js';
 import { currentUserId } from './storage.js';
-import { addTransactionToFirestore, updateTransactionInFirestore, deleteTransactionFromFirestore, addRecurringTemplate } from './firestore-service.js';
+import { 
+    addTransactionToFirestore, 
+    updateTransactionInFirestore, 
+    deleteTransactionFromFirestore, 
+    addRecurringTemplate,
+    updateRecurringSeriesInFirestore,
+    deleteRecurringSeriesInFirestore,
+    generateJitTransactions
+} from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
 export const openTransactionModal = (id = null) => {
@@ -18,7 +26,7 @@ export const openTransactionModal = (id = null) => {
     sourceSelect.innerHTML = `<option value="external">Externe</option>${accountOptions}`;
     destSelect.innerHTML = `<option value="external">Externe</option>${accountOptions}`;
     
-    // Hide recurring fields by default
+    // Default visibility
     document.getElementById('recurring-fields').classList.add('hidden');
     document.getElementById('transaction-is-recurring').checked = false;
 
@@ -43,20 +51,31 @@ export const openTransactionModal = (id = null) => {
             if (txInfo.isExpense) type = 'expense';
             document.getElementById('transaction-type').value = type;
             
-            // If it's a recurring instance, we show it's linked but don't allow converting back to template here for simplicity
-            if (tx.isRecurringInst) {
-                // For now, editing a recurring instance only edits that specific instance.
-                // We could add "Edit all future" logic later.
-            }
-
             // Trigger change to update visibility
             document.getElementById('transaction-type').dispatchEvent(new Event('change'));
+
+            // Handle recurring fields visibility and population
+            const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
+            const recurringFields = document.getElementById('recurring-fields');
+            
+            if (tx.isRecurringInst) {
+                isRecurringCheckbox.checked = true;
+                recurringFields.classList.remove('hidden');
+                
+                // Find the associated template to populate recurring fields
+                const template = state.recurring.find(r => r.id === tx.parentId);
+                if (template) {
+                    document.getElementById('transaction-periodicity').value = template.periodicity || 'M';
+                    document.getElementById('transaction-end-month').value = template.endMonth || '';
+                }
+            }
         }
     } else {
         document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
         document.getElementById('transaction-edit-id').value = '';
         document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
-        document.getElementById('transaction-start-month').value = new Date().toISOString().substring(0, 7);
+        document.getElementById('transaction-end-month').value = '';
+        document.getElementById('transaction-periodicity').value = 'M';
     }
     
     modal.classList.remove('hidden');
@@ -64,6 +83,37 @@ export const openTransactionModal = (id = null) => {
 
 export const closeTransactionModal = () => {
     document.getElementById('transaction-modal').classList.add('hidden');
+};
+
+const showRecurringChoiceModal = (title, message, btnAllText) => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('recurring-choice-modal');
+        const btnAll = document.getElementById('btn-choice-all');
+        const btnSingle = document.getElementById('btn-choice-single');
+        const btnCancel = document.getElementById('btn-choice-cancel');
+
+        modal.querySelector('h2').textContent = title;
+        modal.querySelector('p').textContent = message;
+        btnAll.textContent = btnAllText;
+
+        const cleanup = (choice) => {
+            modal.classList.add('hidden');
+            btnAll.removeEventListener('click', onAll);
+            btnSingle.removeEventListener('click', onSingle);
+            btnCancel.removeEventListener('click', onCancel);
+            resolve(choice);
+        };
+
+        const onAll = () => cleanup('all');
+        const onSingle = () => cleanup('single');
+        const onCancel = () => cleanup('cancel');
+
+        btnAll.addEventListener('click', onAll);
+        btnSingle.addEventListener('click', onSingle);
+        btnCancel.addEventListener('click', onCancel);
+
+        modal.classList.remove('hidden');
+    });
 };
 
 export const handleSaveTransaction = async (e) => {
@@ -77,17 +127,17 @@ export const handleSaveTransaction = async (e) => {
     const destinationId = document.getElementById('transaction-destination').value;
     
     const isRecurring = document.getElementById('transaction-is-recurring').checked;
-    const startMonth = document.getElementById('transaction-start-month').value;
+    const periodicity = document.getElementById('transaction-periodicity').value;
     const endMonth = document.getElementById('transaction-end-month').value;
 
-    if (!label || !amount || (isRecurring ? !startMonth : !date) || !category || !sourceId || !destinationId) {
+    if (!label || !amount || !date || !category || !sourceId || !destinationId) {
         showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
         return;
     }
 
     try {
         if (isRecurring && !id) {
-            // Create a new recurring template (which generates instances)
+            // Create a new recurring template
             const template = {
                 id: `rec_${generateId()}`,
                 label,
@@ -95,16 +145,43 @@ export const handleSaveTransaction = async (e) => {
                 sourceId,
                 destinationId,
                 category,
-                startMonth,
+                anchorDate: date,
+                startMonth: date.substring(0, 7),
                 endMonth: endMonth || null,
-                periodicity: 'M'
+                periodicity
             };
             await addRecurringTemplate(currentUserId, template);
             showNotification('Transaction récurrente configurée !');
         } else if (id) {
             // Update existing transaction instance
-            await updateTransactionInFirestore(currentUserId, { id, label, amount, date, category, sourceId, destinationId });
-            showNotification('Transaction modifiée !');
+            const currentMonthKey = getMonthKey(state.viewDate);
+            const tx = state.records[currentMonthKey]?.items.find(t => t.id === id);
+            
+            if (tx && tx.isRecurringInst) {
+                const choice = await showRecurringChoiceModal(
+                    'Mise à jour d\'une transaction récurrente',
+                    'Souhaitez-vous appliquer cette modification à toutes les occurrences futures de cette transaction récurrente ou seulement à celle-ci ?',
+                    'Appliquer à la série (Split & Update)'
+                );
+                if (choice === 'cancel') return;
+                
+                if (choice === 'all') {
+                    // Update the entire series: Split & Create new template version
+                    await updateRecurringSeriesInFirestore(currentUserId, tx.parentId, currentMonthKey, {
+                        label, amount, category, sourceId, destinationId,
+                        anchorDate: date, periodicity, endMonth: endMonth || null
+                    });
+                    showNotification('Série de transactions mise à jour !');
+                } else {
+                    // Update only this instance
+                    await updateTransactionInFirestore(currentUserId, { id, label, amount, date, category, sourceId, destinationId });
+                    showNotification('Transaction modifiée !');
+                }
+            } else {
+                // Update normal transaction
+                await updateTransactionInFirestore(currentUserId, { id, label, amount, date, category, sourceId, destinationId });
+                showNotification('Transaction modifiée !');
+            }
         } else {
             // Create a standard single transaction
             await addTransactionToFirestore(currentUserId, { id: generateId(), label, amount, date, category, sourceId, destinationId });
@@ -138,12 +215,39 @@ export const duplicateTransaction = async (id) => {
 };
 
 export const deleteTransaction = async (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
+    const currentMonthKey = getMonthKey(state.viewDate);
+    const tx = state.records[currentMonthKey]?.items.find(t => t.id === id);
+    
+    if (!tx) return;
+
+    if (tx.isRecurringInst) {
+        const choice = await showRecurringChoiceModal(
+            'Suppression d\'une transaction récurrente',
+            'Souhaitez-vous supprimer toutes les occurrences futures de cette série ou seulement cette transaction ?',
+            'Supprimer la série future'
+        );
+        
+        if (choice === 'cancel') return;
+        
         try {
-            await deleteTransactionFromFirestore(currentUserId, id);
-            showNotification('Transaction supprimée.');
+            if (choice === 'all') {
+                await deleteRecurringSeriesInFirestore(currentUserId, tx.parentId, currentMonthKey);
+                showNotification('Série future supprimée.');
+            } else {
+                await deleteTransactionFromFirestore(currentUserId, id);
+                showNotification('Transaction supprimée.');
+            }
         } catch (err) {
             showNotification('Erreur de suppression', 'error');
+        }
+    } else {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
+            try {
+                await deleteTransactionFromFirestore(currentUserId, id);
+                showNotification('Transaction supprimée.');
+            } catch (err) {
+                showNotification('Erreur de suppression', 'error');
+            }
         }
     }
 };

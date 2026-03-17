@@ -41,7 +41,13 @@ export const renderTransactions = () => {
         return `
             <li class="p-4 flex items-center gap-4 group">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                <div class="flex-1"><p class="font-semibold">${item.label}</p><p class="text-sm text-slate-500">${txInfo.src.name} -> ${txInfo.dst.name}</p></div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <p class="font-semibold">${item.label}</p>
+                        ${item.isRecurringInst ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
+                    </div>
+                    <p class="text-sm text-slate-500">${txInfo.src.name} -> ${txInfo.dst.name}</p>
+                </div>
                 <div class="text-right"><p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p><p class="text-sm text-slate-500">${formatDateStr(item.date)}</p></div>
                 <div class="opacity-0 group-hover:opacity-100 transition-opacity">
                     ${!isMonthClosed ? `

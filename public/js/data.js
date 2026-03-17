@@ -2,28 +2,38 @@ import { state } from './state.js';
 import { currentUserId } from './storage.js';
 import { resetDataInFirestore, importDataToFirestore } from './firestore-service.js';
 import { render, showNotification } from './ui.js';
-import { generateId } from './utils.js';
+import { generateId, generateDeterministicId } from './utils.js';
 
 export const handleReset = async () => {
-    const deleteTransactions = document.getElementById('delete-transactions-checkbox').checked;
-    const deleteAccounts = document.getElementById('delete-accounts-checkbox').checked;
+    const txCheckbox = document.getElementById('delete-transactions-checkbox');
+    const accCheckbox = document.getElementById('delete-accounts-checkbox');
+    
+    const deleteTransactions = txCheckbox.checked;
+    const deleteAccounts = accCheckbox.checked;
 
     if (!deleteTransactions && !deleteAccounts) {
-        alert("Veuillez sélectionner une option de réinitialisation.");
+        showNotification("Veuillez sélectionner une option de réinitialisation.", 'error');
         return;
     }
 
-    let confirmationMessage = "Êtes-vous sûr de vouloir continuer ? Cette action est irréversible.";
+    let confirmationMessage = "";
     if (deleteAccounts) {
-        confirmationMessage = "Êtes-vous sûr de vouloir supprimer tous les comptes et transactions ? Cette action est irréversible.";
-    } else if (deleteTransactions) {
-        confirmationMessage = "Êtes-vous sûr de vouloir supprimer toutes les transactions ? Cette action est irréversible.";
+        // If accounts is checked, it deletes BOTH (as per requirement and UI label)
+        confirmationMessage = "Êtes-vous sûr de vouloir supprimer TOUS les comptes et TOUTES les transactions ? Cette action est irréversible.";
+    } else {
+        // Only transactions
+        confirmationMessage = "Êtes-vous sûr de vouloir supprimer TOUTES les transactions ? Les comptes seront conservés. Cette action est irréversible.";
     }
 
     if (confirm(confirmationMessage)) {
         try {
-            await resetDataInFirestore(currentUserId, deleteAccounts, deleteTransactions);
+            // If deleteAccounts is true, we force deleteTransactions to true as well
+            await resetDataInFirestore(currentUserId, deleteAccounts, deleteAccounts || deleteTransactions);
             showNotification('Données réinitialisées avec succès.');
+            
+            // Uncheck after success
+            txCheckbox.checked = false;
+            accCheckbox.checked = false;
         } catch (err) {
             showNotification('Erreur lors de la réinitialisation.', 'error');
         }
@@ -72,6 +82,10 @@ export const importCSV = (event) => {
             accountMap[acc.name.toLowerCase()] = acc.id;
         });
 
+        const existingCategories = new Set(state.categories.map(c => c.id.toLowerCase()));
+        const categoriesToCreate = [];
+        const seenInCsv = new Set();
+
         const newTransactions = [];
         const newTemplates = [];
         let importedCount = 0;
@@ -104,32 +118,40 @@ export const importCSV = (event) => {
                 const isRecurring = recurringFlag === '1';
                 const finalCategory = category || 'Autre';
 
+                // Auto-generate category if it doesn't exist
+                if (finalCategory !== 'Autre' && !existingCategories.has(finalCategory.toLowerCase()) && !seenInCsv.has(finalCategory.toLowerCase())) {
+                    categoriesToCreate.push({
+                        id: finalCategory,
+                        label: finalCategory,
+                        icon: 'fa-tag',
+                        color: '#94a3b8'
+                    });
+                    seenInCsv.add(finalCategory.toLowerCase());
+                }
+
                 if (isRecurring) {
                     if (!startDate) {
                         throw new Error(`La date de début est obligatoire pour la transaction récurrente "${label}".`);
                     }
                     
-                    const templateId = `rec_${generateId()}`;
+                    // Deterministic ID for templates to prevent duplicates
+                    const templateData = { label, amount: parseFloat(amount), sourceId, destinationId, anchorDate: startDate, periodicity: periodicity || 'M', category: finalCategory };
+                    const templateId = `rec_${generateDeterministicId(templateData)}`;
+                    
                     newTemplates.push({
                         id: templateId,
-                        label,
-                        amount: parseFloat(amount),
-                        sourceId,
-                        destinationId,
+                        ...templateData,
                         startMonth: startDate.substring(0, 7),
-                        endMonth: endDate ? endDate.substring(0, 7) : null,
-                        periodicity: periodicity || 'M',
-                        category: finalCategory
+                        endMonth: endDate ? endDate.substring(0, 7) : null
                     });
                 } else {
+                    // Deterministic ID for single transactions to prevent duplicates
+                    const txData = { label, amount: parseFloat(amount), date, category: finalCategory, sourceId, destinationId };
+                    const txId = `tx_${generateDeterministicId(txData)}`;
+
                     newTransactions.push({
-                        id: generateId(),
-                        label,
-                        amount: parseFloat(amount),
-                        date,
-                        category: finalCategory,
-                        sourceId,
-                        destinationId
+                        id: txId,
+                        ...txData
                     });
                 }
                 importedCount++;
@@ -141,12 +163,17 @@ export const importCSV = (event) => {
 
         if (importedCount > 0) {
             try {
+                // Import categories first
+                if (categoriesToCreate.length > 0) {
+                    await importDataToFirestore(currentUserId, null, null, null, categoriesToCreate);
+                }
+
                 // Import templates one by one to trigger generation
                 const templatePromises = newTemplates.map(tpl => import('./firestore-service.js').then(m => m.addRecurringTemplate(currentUserId, tpl)));
                 
                 // Import standalone transactions in one go
                 if (newTransactions.length > 0) {
-                    await importDataToFirestore(currentUserId, null, newTransactions, null);
+                    await importDataToFirestore(currentUserId, null, newTransactions, null, null);
                 }
                 
                 await Promise.all(templatePromises);

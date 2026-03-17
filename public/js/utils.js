@@ -13,6 +13,17 @@ export const generateId = () => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+export const generateDeterministicId = (obj) => {
+    const str = JSON.stringify(obj);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36) + str.length.toString(36);
+};
+
 export const getTxDisplayInfo = (sourceId, destinationId) => {
     const isSrcExt = sourceId === 'external';
     const isDstExt = destinationId === 'external';

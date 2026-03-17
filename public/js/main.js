@@ -2,6 +2,7 @@ import { state, updateState, defaultCategories, rebuildRecords } from './state.j
 import { setStorageUser, currentUserId } from './storage.js';
 import { setView, setViewDate, render, showNotification } from './ui.js';
 import { renderTransactions, clotureMois } from './dashboard.js';
+import { getMonthKey } from './utils.js';
 import { 
     handleAddCategory, 
     openEditCategory, 
@@ -30,7 +31,7 @@ import {
 } from './transactions.js';
 import { handleReset, exportCSV, importCSV, exportAccountsCSV, importAccountsCSV } from './data.js';
 import { login, logout, onUserChanged } from './auth.js';
-import { subscribeToAppData, checkAndGenerateRecurring } from './firestore-service.js';
+import { subscribeToAppData, generateJitTransactions } from './firestore-service.js';
 
 const init = () => {
     setupEventListeners();
@@ -60,8 +61,9 @@ const init = () => {
             if (userEmailMobile) userEmailMobile.textContent = user.email;
             if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
-            // Check and generate recurring transactions
-            await checkAndGenerateRecurring(user.uid);
+            // Trigger JIT generation for current month
+            const initialMonthKey = getMonthKey(state.viewDate);
+            await generateJitTransactions(user.uid, initialMonthKey);
 
             // Subscribe to Firestore data
             subscribeToAppData(user.uid, (newData) => {

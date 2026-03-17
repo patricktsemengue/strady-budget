@@ -1,6 +1,9 @@
 import { state, updateState } from './state.js';
 import { renderDashboard } from './dashboard.js';
 import { renderSettings } from './settings.js';
+import { generateJitTransactions } from './firestore-service.js';
+import { currentUserId } from './storage.js';
+import { getMonthKey } from './utils.js';
 
 export const showNotification = (message, type = 'success') => {
     const container = document.getElementById('notification-container');
@@ -64,8 +67,13 @@ export const setView = (view, isInitial = false) => {
     render();
 };
 
-export const setViewDate = (date) => {
-    updateState({ viewDate: new Date(date) });
+export const setViewDate = async (date) => {
+    const newDate = new Date(date);
+    updateState({ viewDate: newDate });
+    const monthKey = getMonthKey(newDate);
+    if (currentUserId) {
+        await generateJitTransactions(currentUserId, monthKey);
+    }
     render();
 };
 
