@@ -59,6 +59,32 @@ export const showNotification = (message, type = 'success') => {
     setTimeout(closeNotif, 5000);
 };
 
+export const setDataStatusIndicator = (status) => {
+    const indicator = document.getElementById('data-status-indicator');
+    if (!indicator) return;
+
+    if (status === 'cached') {
+        indicator.textContent = 'Données en cache';
+        indicator.className = 'fixed top-[68px] md:top-[100px] left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300 bg-amber-100 text-amber-800';
+        indicator.classList.remove('hidden');
+    } else if (status === 'live') {
+        indicator.textContent = 'Données à jour';
+        indicator.className = 'fixed top-[68px] md:top-[100px] left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300 bg-green-100 text-green-800';
+        indicator.classList.remove('hidden'); // Ensure it's visible before fading
+        // Fade out after a couple of seconds
+        setTimeout(() => {
+            indicator.classList.add('opacity-0');
+        }, 2000);
+        // Hide completely after fade out
+        setTimeout(() => {
+            indicator.classList.add('hidden');
+            indicator.classList.remove('opacity-0'); // reset for next time
+        }, 2500);
+    } else {
+        indicator.classList.add('hidden');
+    }
+};
+
 export const setView = (view, isInitial = false) => {
     updateState({ currentView: view });
     if (!isInitial) {

@@ -153,25 +153,29 @@ export const handleSaveTransaction = async (e) => {
             const tx = state.records[onFocusMonthKey]?.items.find(t => t.id === id);
             
             if (tx && tx.Model) {
-                // RECURRING UPDATE: Align with TODO.litcoffee
-                // 1. Update old template endDate
-                // 2. Clean old instances
-                // 3. Create new template
-                // 4. Create new instance for focused month
-                const newTemplateValues = {
-                    date, label, amount, source, destination, category: Category,
-                    recurring: true, endDate, periodicity
-                };
-                await updateRecurringSeriesInFirestore(currentUserId, tx.Model, onFocusMonthKey, newTemplateValues);
-                showNotification('Série récurrente mise à jour (Split).');
+                if (confirm("Vous modifiez une transaction récurrente. Pour préserver l'historique, cela va mettre fin à l'ancienne série et en créer une nouvelle à partir de cette date. Continuer ?")) {
+                    // RECURRING UPDATE: Align with TODO.litcoffee
+                    const newTemplateValues = {
+                        date, label, amount, source, destination, category: Category,
+                        recurring: true, endDate, periodicity
+                    };
+                    await updateRecurringSeriesInFirestore(currentUserId, tx.Model, onFocusMonthKey, newTemplateValues);
+                    showNotification('Série récurrente mise à jour (Split).');
+                } else {
+                    return; // User cancelled
+                }
             } else {
-                // SINGLE UPDATE: Align with TODO.litcoffee
-                // "deletes the old transaction, and creates a new transaction"
-                await deleteTransactionFromFirestore(currentUserId, id);
-                await addTransactionToFirestore(currentUserId, {
-                    id: generateId(), label, amount, date, Category, source, destination, Model: null
-                });
-                showNotification('Transaction mise à jour (Remplacée).');
+                if (confirm("Êtes-vous sûr de vouloir remplacer cette transaction ? Cette action supprime l'ancienne et en crée une nouvelle.")) {
+                    // SINGLE UPDATE: Align with TODO.litcoffee
+                    // "deletes the old transaction, and creates a new transaction"
+                    await deleteTransactionFromFirestore(currentUserId, id);
+                    await addTransactionToFirestore(currentUserId, {
+                        id: generateId(), label, amount, date, Category, source, destination, Model: null
+                    });
+                    showNotification('Transaction mise à jour (Remplacée).');
+                } else {
+                    return; // User cancelled
+                }
             }
         } else {
             // CREATION CASE

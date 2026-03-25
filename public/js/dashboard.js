@@ -34,40 +34,83 @@ export const renderTransactions = () => {
     if (categoryFilter !== 'all') filteredItems = filteredItems.filter(item => item.Category === categoryFilter);
     if (accountFilter !== 'all') filteredItems = filteredItems.filter(item => item.source === accountFilter || item.destination === accountFilter);
 
-    // Sort by category label, then by date
+    const sortOrder = document.getElementById('sort-order').value;
+    localStorage.setItem('transactionSortOrder', sortOrder);
+
+    const getType = (tx) => {
+        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
+        if (txInfo.isIncome) return 'Revenu';
+        if (txInfo.isExpense) return 'Dépense';
+        return 'Transfert';
+    };
+
+    const getPrimaryAccountName = (tx) => {
+        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
+        if (txInfo.isExpense) return txInfo.src.name;
+        if (txInfo.isIncome) return txInfo.dst.name;
+        return txInfo.src.name; // Default for transfer
+    };
+
     filteredItems.sort((a, b) => {
-        const categoryA = state.categories.find(c => c.id === a.Category)?.label || '';
-        const categoryB = state.categories.find(c => c.id === b.Category)?.label || '';
-        const categoryCompare = categoryA.localeCompare(categoryB);
-        if (categoryCompare !== 0) {
-            return categoryCompare;
+        switch (sortOrder) {
+            case 'category': {
+                const categoryA = state.categories.find(c => c.id === a.Category);
+                const categoryB = state.categories.find(c => c.id === b.Category);
+                
+                const orderA = categoryA ? (categoryA['index-order'] ?? Infinity) : Infinity;
+                const orderB = categoryB ? (categoryB['index-order'] ?? Infinity) : Infinity;
+
+                if (orderA !== orderB) {
+                    return orderA - orderB;
+                }
+                return new Date(b.date) - new Date(a.date); // Fallback to date sort
+            }
+            case 'account': {
+                const accountA = getPrimaryAccountName(a);
+                const accountB = getPrimaryAccountName(b);
+                const accountCompare = accountA.localeCompare(accountB);
+                if (accountCompare !== 0) return accountCompare;
+                return new Date(b.date) - new Date(a.date);
+            }
+            case 'type': {
+                const typeA = getType(a);
+                const typeB = getType(b);
+                const typeCompare = typeA.localeCompare(typeB);
+                if (typeCompare !== 0) return typeCompare;
+                return new Date(b.date) - new Date(a.date);
+            }
+            case 'amount-desc': return b.amount - a.amount;
+            case 'amount-asc': return a.amount - b.amount;
+            default: return new Date(b.date) - new Date(a.date);
         }
-        // If categories are the same, sort by date (most recent first)
-        return new Date(b.date) - new Date(a.date);
     });
 
-    container.innerHTML = filteredItems.map(item => {
+    container.innerHTML = filteredItems.map((item, index) => {
         const category = state.categories.find(c => c.id === item.Category);
         const txInfo = getTxDisplayInfo(item.source, item.destination);
         const isMonthClosed = monthData.status === 'closed';
         const isRecurring = !!item.Model;
         return `
-            <li class="p-4 flex items-center gap-4 group">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                <div class="flex-1">
-                    <div class="flex items-center gap-2">
-                        <p class="font-semibold">${item.label}</p>
-                        ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
+            <li class="p-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 group transaction-item-animate" style="animation-delay: ${index * 30}ms">
+                <div class="flex items-center gap-4 flex-grow">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <p class="font-semibold">${item.label}</p>
+                            ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
+                        </div>
+                        <p class="text-sm text-slate-500">${txInfo.src.name} -> ${txInfo.dst.name}</p>
                     </div>
-                    <p class="text-sm text-slate-500">${txInfo.src.name} -> ${txInfo.dst.name}</p>
                 </div>
-                <div class="text-right"><p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p><p class="text-sm text-slate-500">${formatDateStr(item.date)}</p></div>
-                <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-                    ${!isMonthClosed ? `
-                    <button onclick="window.app.editTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-blue-600"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-green-600"><i class="fa-solid fa-copy"></i></button>
-                    <button onclick="window.app.deleteTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-red-600"><i class="fa-solid fa-trash-can"></i></button>
-                    ` : ''}
+                <div class="flex items-center gap-4">
+                    <div class="text-right"><p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p><p class="text-sm text-slate-500">${formatDateStr(item.date)}</p></div>
+                    <div class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        ${!isMonthClosed ? `
+                        <button onclick="window.app.editTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-blue-600"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-green-600"><i class="fa-solid fa-copy"></i></button>
+                        <button onclick="window.app.deleteTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-red-600"><i class="fa-solid fa-trash-can"></i></button>
+                        ` : ''}
+                    </div>
                 </div>
             </li>`;
     }).join('');
@@ -155,6 +198,12 @@ export const renderDashboard = () => {
     
     const currentMonthKey = getMonthKey(state.viewDate);
     const currentMonthData = state.records[currentMonthKey] || { items: [], status: 'open' };
+
+    const savedSortOrder = localStorage.getItem('transactionSortOrder') || 'date-desc';
+    const sortOrderSelect = document.getElementById('sort-order');
+    if (sortOrderSelect) {
+        sortOrderSelect.value = savedSortOrder;
+    }
 
     const balances = getBalances();
     const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);

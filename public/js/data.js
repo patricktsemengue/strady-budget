@@ -143,31 +143,39 @@ export const importCSV = (event) => {
                 }
 
                 if (isRecurring) {
-                    const templateData = { 
-                        date: date, // "date" is the anchor date
+                    const identityFields = {
+                        date: date,
                         label, 
                         amount: parseFloat(amount), 
                         source, 
-                        destination, 
+                        destination
+                    };
+                    const templateId = `rec_${generateDeterministicId(identityFields)}`;
+                    
+                    newTemplates.push({
+                        ...identityFields,
+                        id: templateId,
                         recurring: true, 
                         endDate: endDate || null, 
                         periodicity: periodicity || 'M', 
                         category: finalCategory 
-                    };
-                    const templateId = `rec_${generateDeterministicId(templateData)}`;
-                    newTemplates.push({ id: templateId, ...templateData });
+                    });
                 } else {
-                    const txData = { 
+                    // Per user spec, identity is based on these core fields
+                    const identityFields = {
                         date, 
                         label, 
                         amount: parseFloat(amount), 
-                        Category: finalCategory, 
                         source, 
                         destination, 
                         Model: null 
                     };
-                    const txId = `tx_${generateDeterministicId(txData)}`;
-                    newTransactions.push({ id: txId, ...txData });
+                    const txId = `tx_${generateDeterministicId(identityFields)}`;
+                    newTransactions.push({ 
+                        ...identityFields,
+                        id: txId,
+                        Category: finalCategory, 
+                    });
                 }
                 importedCount++;
             } catch (err) {

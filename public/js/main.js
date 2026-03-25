@@ -1,6 +1,6 @@
 import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
-import { setStorageUser, currentUserId } from './storage.js';
-import { setView, setViewDate, render, showNotification } from './ui.js';
+import { setStorageUser, currentUserId, loadDataFromCache } from './storage.js';
+import { setView, setViewDate, render, showNotification, setDataStatusIndicator } from './ui.js';
 import { renderTransactions, clotureMois } from './dashboard.js';
 import { getMonthKey } from './utils.js';
 import { 
@@ -61,12 +61,34 @@ const init = () => {
             if (userEmailMobile) userEmailMobile.textContent = user.email;
             if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
+            // 1. Load from cache first for instant UI
+            const cachedData = loadDataFromCache(user.uid);
+            if (cachedData) {
+                setDataStatusIndicator('cached');
+                updateState({
+                    accounts: cachedData.accounts || [],
+                    categories: cachedData.categories || defaultCategories,
+                    recurring: cachedData.recurringTemplates || [],
+                    months: cachedData.months || {}
+                });
+                rebuildRecords(cachedData.transactions || [], cachedData.months || {});
+                render(); // Render immediately with cached data
+            }
+
             // Trigger JIT generation for current month
             const initialMonthKey = getMonthKey(state.viewDate);
             await generateJitTransactions(user.uid, initialMonthKey);
 
-            // Subscribe to Firestore data
+            // 2. Subscribe to Firestore for live data and updates
+            let isFirstFirestoreUpdate = true;
             subscribeToAppData(user.uid, (newData) => {
+                if (isFirstFirestoreUpdate) {
+                    if (cachedData) { // Only show the "live" transition if we started from cache
+                        setDataStatusIndicator('live');
+                    }
+                    isFirstFirestoreUpdate = false;
+                }
+                // This callback will be triggered by Firestore, updating the UI and the cache.
                 updateState({
                     accounts: newData.accounts || [],
                     categories: newData.categories || defaultCategories,
@@ -149,6 +171,7 @@ const setupEventListeners = () => {
 
     document.getElementById('filter-category').addEventListener('change', renderTransactions);
     document.getElementById('filter-account').addEventListener('change', renderTransactions);
+    document.getElementById('sort-order').addEventListener('change', renderTransactions);
     document.getElementById('prev-month').addEventListener('click', () => { 
         const newDate = new Date(state.viewDate.setMonth(state.viewDate.getMonth() - 1));
         setViewDate(newDate); 

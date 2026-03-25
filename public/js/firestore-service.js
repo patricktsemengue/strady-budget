@@ -14,6 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth } from "./auth.js";
 import { generateId, getMonthKey } from "./utils.js";
+import { saveDataToCache } from "./storage.js";
 
 const db = getFirestore();
 let unsubscribes = [];
@@ -35,7 +36,10 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         recurringTemplates: []
     };
 
-    const triggerUpdate = () => onDataUpdate({ ...localState });
+    const triggerUpdate = () => {
+        onDataUpdate({ ...localState });
+        saveDataToCache(userId, localState);
+    };
 
     // Listen to Accounts
     const accUnsub = onSnapshot(collection(db, `users/${userId}/accounts`), (snapshot) => {
@@ -111,6 +115,15 @@ export const updateCategoryInFirestore = async (userId, category) => {
 export const deleteCategoryFromFirestore = async (userId, categoryId) => {
     const docRef = doc(db, `users/${userId}/categories`, categoryId);
     await deleteDoc(docRef);
+};
+
+export const updateCategoryOrderInFirestore = async (userId, updates) => {
+    const batch = writeBatch(db);
+    updates.forEach(update => {
+        const docRef = doc(db, `users/${userId}/categories`, update.id);
+        batch.update(docRef, { 'index-order': update['index-order'], updated_at: serverTimestamp() });
+    });
+    await batch.commit();
 };
 
 // -- TRANSACTIONS --
@@ -228,44 +241,57 @@ export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
 
 export const generateJitTransactions = async (userId, monthKey) => {
     if (!userId) return;
-    
-    const templatesSnap = await getDocs(collection(db, `users/${userId}/recurringTemplates`));
+
+    const [year, month] = monthKey.split('-').map(Number);
+    const monthStart = monthKey + '-01';
+    const monthEnd = new Date(year, month, 0).toISOString().split('T')[0];
+
+    // 1. Fetch all templates and all existing JIT transactions for the month in parallel
+    const templatesQuery = getDocs(collection(db, `users/${userId}/recurringTemplates`));
+    const existingTxQuery = getDocs(query(
+        collection(db, `users/${userId}/transactions`),
+        where("date", ">=", monthStart),
+        where("date", "<=", monthEnd),
+        where("Model", "!=", null)
+    ));
+
+    const [templatesSnap, existingTxSnap] = await Promise.all([templatesQuery, existingTxQuery]);
+
+    // 2. Create a lookup set for existing transactions for fast checking
+    const existingTxSet = new Set();
+    existingTxSnap.forEach(doc => {
+        const data = doc.data();
+        existingTxSet.add(`${data.Model}_${data.date}`);
+    });
+
     const batch = writeBatch(db);
     let hasNewTxs = false;
 
+    // 3. Iterate through templates to find what's missing
     for (const docSnap of templatesSnap.docs) {
         const template = docSnap.data();
         
-        // Safety check: skip malformed templates
         if (!template.date) {
             console.warn(`Template ${docSnap.id} is missing a start date. Skipping.`, template);
             continue;
         }
 
-        // Check if template is active for this month
+        // Check if template is active for the given month
         const endM = template.endDate ? template.endDate.substring(0, 7) : null;
         const startM = template.date.substring(0, 7);
-        
-        if (monthKey < startM || (endM && monthKey > endM)) continue;
-        
-        // Calculate expected dates for this month
+        if (monthKey < startM || (endM && monthKey > endM)) {
+            continue;
+        }
+
         const dates = calculateOccurrencesInMonth(template, monthKey);
         
         for (const date of dates) {
-            // Check within exact date range if endDate is set
             if (template.endDate && date > template.endDate) continue;
             if (date < template.date) continue;
 
-            // Check if transaction already exists for this parent and date
-            // According to Spec: Logical ID check can also be used, but Model + date is safer for JIT
-            const q = query(
-                collection(db, `users/${userId}/transactions`),
-                where("Model", "==", template.id),
-                where("date", "==", date)
-            );
-            const existingSnap = await getDocs(q);
-            
-            if (existingSnap.empty) {
+            // 4. Check against the lookup set. If not present, it's a new transaction.
+            const lookupKey = `${template.id}_${date}`;
+            if (!existingTxSet.has(lookupKey)) {
                 const txId = generateId();
                 const txRef = doc(db, `users/${userId}/transactions`, txId);
                 batch.set(txRef, {
@@ -273,7 +299,7 @@ export const generateJitTransactions = async (userId, monthKey) => {
                     label: template.label,
                     amount: template.amount,
                     date: date,
-                    Category: template.category, // Spec uses category in template, Category in single tx
+                    Category: template.category,
                     source: template.source,
                     destination: template.destination,
                     Model: template.id,
@@ -286,6 +312,7 @@ export const generateJitTransactions = async (userId, monthKey) => {
 
     if (hasNewTxs) {
         await batch.commit();
+        console.log(`JIT: Generated new transactions for ${monthKey}`);
     }
 };
 
