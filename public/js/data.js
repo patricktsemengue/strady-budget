@@ -18,20 +18,15 @@ export const handleReset = async () => {
 
     let confirmationMessage = "";
     if (deleteAccounts) {
-        // If accounts is checked, it deletes BOTH (as per requirement and UI label)
         confirmationMessage = "Êtes-vous sûr de vouloir supprimer TOUS les comptes et TOUTES les transactions ? Cette action est irréversible.";
     } else {
-        // Only transactions
         confirmationMessage = "Êtes-vous sûr de vouloir supprimer TOUTES les transactions ? Les comptes seront conservés. Cette action est irréversible.";
     }
 
     if (confirm(confirmationMessage)) {
         try {
-            // If deleteAccounts is true, we force deleteTransactions to true as well
             await resetDataInFirestore(currentUserId, deleteAccounts, deleteAccounts || deleteTransactions);
             showNotification('Données réinitialisées avec succès.');
-            
-            // Uncheck after success
             txCheckbox.checked = false;
             accCheckbox.checked = false;
         } catch (err) {
@@ -41,11 +36,20 @@ export const handleReset = async () => {
 };
 
 export const exportCSV = () => {
-    // Basic implementation of export
-    let csv = "ID,Label,Amount,Date,Category,Source,Destination\n";
+    // Header based on public/strady-budget-export-2026-03-08.csv
+    let csv = "date,label,amount,source,destination,reccuring,startdate,endate,periodicity,category\n";
+    
+    // First, Export Templates as "recurring"
+    state.recurringTemplates.forEach(tpl => {
+        csv += `${tpl.date},"${tpl.label}",${tpl.amount},"${tpl.source || ''}","${tpl.destination || ''}",1,${tpl.date},${tpl.endDate || ''},${tpl.periodicity},${tpl.category}\n`;
+    });
+    
+    // Then, Export Standalone Transactions (those without a Model)
     Object.values(state.records).forEach(monthData => {
         monthData.items.forEach(item => {
-            csv += `${item.id},"${item.label}",${item.amount},${item.date},${item.category},${item.sourceId},${item.destinationId}\n`;
+            if (!item.Model) {
+                csv += `${item.date},"${item.label}",${item.amount},"${item.source || ''}","${item.destination || ''}",0,,,,"${item.Category || item.category || ''}"\n`;
+            }
         });
     });
     
@@ -53,7 +57,7 @@ export const exportCSV = () => {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `transactions_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `strady-budget-export-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -70,11 +74,19 @@ export const importCSV = (event) => {
         const lines = text.split('\n');
         const header = lines[0] ? lines[0].trim().replace(/\r/g, '') : "";
 
-        const expectedHeader = "date,label,amount,source,destination,reccuring,startdate,endate,periodicity,category";
-        if (header !== expectedHeader) {
-            showNotification(`L'en-tête du fichier est invalide. Attendu: ${expectedHeader}`, 'error');
+        // User requested validation: "date,label,amount,source,destination,reccuring,endate,periodicity,category"
+        // The provided CSV has "startdate" between reccuring and endate. We'll handle both.
+        const headerCols = header.split(',').map(c => c.trim().toLowerCase());
+        const requiredCols = ["date", "label", "amount", "source", "destination", "reccuring", "endate", "periodicity", "category"];
+        const missing = requiredCols.filter(c => !headerCols.includes(c));
+
+        if (missing.length > 0) {
+            showNotification(`L'en-tête du fichier est invalide. Colonnes manquantes: ${missing.join(', ')}`, 'error');
             return;
         }
+
+        const colIdx = {};
+        headerCols.forEach((col, idx) => colIdx[col] = idx);
 
         const dataLines = lines.slice(1);
         const accountMap = {};
@@ -95,17 +107,24 @@ export const importCSV = (event) => {
             if (!line || line.trim() === "") continue;
 
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/"/g, '').replace(/'/g, '').trim());
-            if (parts.length < 10) continue;
+            if (parts.length < requiredCols.length) continue;
 
-            const [date, label, amount, sourceName, destName, recurringFlag, startDate, endDate, periodicity, category] = parts;
+            const getValue = (colName) => parts[colIdx[colName]] || "";
 
-            const getAccountId = (name, fieldName, label) => {
-                if (!name) return 'external';
+            const date = getValue("date");
+            const label = getValue("label");
+            const amount = getValue("amount");
+            const sourceName = getValue("source");
+            const destName = getValue("destination");
+            const recurringFlag = getValue("reccuring");
+            const endDate = getValue("endate");
+            const periodicity = getValue("periodicity");
+            const category = getValue("category");
+
+            const getAccountId = (name) => {
+                if (!name) return '';
                 const id = accountMap[name.toLowerCase()];
-                if (!id) {
-                    throw new Error(`Le compte ${fieldName} "${name}" n'existe pas (transaction: "${label}").`);
-                }
-                return id;
+                return id || name; 
             };
 
             try {
@@ -113,78 +132,71 @@ export const importCSV = (event) => {
                     throw new Error(`La transaction "${label}" doit avoir au moins un compte source ou destination.`);
                 }
 
-                const sourceId = getAccountId(sourceName, 'source', label);
-                const destinationId = getAccountId(destName, 'destination', label);
-                const isRecurring = recurringFlag === '1';
+                const source = getAccountId(sourceName);
+                const destination = getAccountId(destName);
+                const isRecurring = recurringFlag === '1' || recurringFlag === 'true';
                 const finalCategory = category || 'Autre';
 
-                // Auto-generate category if it doesn't exist
                 if (finalCategory !== 'Autre' && !existingCategories.has(finalCategory.toLowerCase()) && !seenInCsv.has(finalCategory.toLowerCase())) {
-                    categoriesToCreate.push({
-                        id: finalCategory,
-                        label: finalCategory,
-                        icon: 'fa-tag',
-                        color: '#94a3b8'
-                    });
+                    categoriesToCreate.push({ id: finalCategory, label: finalCategory, icon: 'fa-tag', color: '#94a3b8' });
                     seenInCsv.add(finalCategory.toLowerCase());
                 }
 
                 if (isRecurring) {
-                    if (!startDate) {
-                        throw new Error(`La date de début est obligatoire pour la transaction récurrente "${label}".`);
-                    }
-                    
-                    // Deterministic ID for templates to prevent duplicates
-                    const templateData = { label, amount: parseFloat(amount), sourceId, destinationId, anchorDate: startDate, periodicity: periodicity || 'M', category: finalCategory };
+                    const templateData = { 
+                        date: date, // "date" is the anchor date
+                        label, 
+                        amount: parseFloat(amount), 
+                        source, 
+                        destination, 
+                        recurring: true, 
+                        endDate: endDate || null, 
+                        periodicity: periodicity || 'M', 
+                        category: finalCategory 
+                    };
                     const templateId = `rec_${generateDeterministicId(templateData)}`;
-                    
-                    newTemplates.push({
-                        id: templateId,
-                        ...templateData,
-                        startMonth: startDate.substring(0, 7),
-                        endMonth: endDate ? endDate.substring(0, 7) : null
-                    });
+                    newTemplates.push({ id: templateId, ...templateData });
                 } else {
-                    // Deterministic ID for single transactions to prevent duplicates
-                    const txData = { label, amount: parseFloat(amount), date, category: finalCategory, sourceId, destinationId };
+                    const txData = { 
+                        date, 
+                        label, 
+                        amount: parseFloat(amount), 
+                        Category: finalCategory, 
+                        source, 
+                        destination, 
+                        Model: null 
+                    };
                     const txId = `tx_${generateDeterministicId(txData)}`;
-
-                    newTransactions.push({
-                        id: txId,
-                        ...txData
-                    });
+                    newTransactions.push({ id: txId, ...txData });
                 }
                 importedCount++;
             } catch (err) {
-                showNotification(`Erreur d'importation : ${err.message}`, 'error');
+                showNotification(`Erreur d'importation ligne ${i+2} : ${err.message}`, 'error');
                 return;
             }
         }
 
         if (importedCount > 0) {
             try {
-                // Import categories first
+                // DELETE ALL FIRST as per requirement
+                await resetDataInFirestore(currentUserId, false, true);
+
                 if (categoriesToCreate.length > 0) {
                     await importDataToFirestore(currentUserId, null, null, null, categoriesToCreate);
                 }
 
-                // Import templates one by one to trigger generation
                 const templatePromises = newTemplates.map(tpl => import('./firestore-service.js').then(m => m.addRecurringTemplate(currentUserId, tpl)));
                 
-                // Import standalone transactions in one go
                 if (newTransactions.length > 0) {
                     await importDataToFirestore(currentUserId, null, newTransactions, null, null);
                 }
                 
                 await Promise.all(templatePromises);
-                
                 showNotification(`Importation réussie : "${file.name}" (${importedCount} lignes traitées).`);
             } catch (err) {
                 console.error(err);
                 showNotification("Erreur lors de l'enregistrement de l'import.", 'error');
             }
-        } else {
-            showNotification("Le fichier est valide mais ne contient aucune transaction à importer.", "info");
         }
     };
     reader.onerror = () => showNotification("Erreur lors de la lecture du fichier.", "error");
@@ -192,16 +204,16 @@ export const importCSV = (event) => {
 };
 
 export const exportAccountsCSV = () => {
-    let csv = "ID,Account,balance,date,saving\n";
+    let csv = "Account,balance,date,saving\n";
     state.accounts.forEach(acc => {
-        csv += `${acc.id},"${acc.name}",${acc.initialBalance},${acc.initialBalanceDate},${acc.isSavings ? 'Yes' : 'No'}\n`;
+        csv += `"${acc.name}",${acc.initialBalance},${acc.initialBalanceDate},${acc.isSavings ? 'Yes' : 'No'}\n`;
     });
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `accounts_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `strady-accounts-export-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -256,7 +268,7 @@ export const importAccountsCSV = (event) => {
 
         if (newAccounts.length > 0) {
             try {
-                await resetDataInFirestore(currentUserId, true, false); // clear existing accounts first
+                await resetDataInFirestore(currentUserId, true, false); 
                 await importDataToFirestore(currentUserId, newAccounts, null, null);
                 showNotification(`Importation réussie : "${file.name}" (${newAccounts.length} comptes).`);
             } catch (err) {

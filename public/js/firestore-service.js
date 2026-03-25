@@ -147,64 +147,76 @@ export const addRecurringTemplate = async (userId, template) => {
         updated_at: serverTimestamp() 
     });
     // Trigger initial generation for the month of the start date
-    const startMonth = template.anchorDate.substring(0, 7);
-    await generateJitTransactions(userId, startMonth);
+    if (template.date) {
+        const startMonth = template.date.substring(0, 7);
+        await generateJitTransactions(userId, startMonth);
+    }
 };
 
-export const updateRecurringSeriesInFirestore = async (userId, parentId, monthX, newValues) => {
+/**
+ * Align with TODO.litcoffee:
+ * - Update enddate of old Template
+ * - Clean all single transactions linked to old Template having a date out of range
+ * - Create new template
+ * - Create single transaction for onfocused month
+ */
+export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, onFocusedMonthKey, newTemplateValues) => {
     const batch = writeBatch(db);
     
-    // 1. Update the old template: set endMonth to X-1
-    const prevMonthDate = new Date(monthX + "-01");
-    prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-    const endMonth = prevMonthDate.toISOString().substring(0, 7);
+    // 1. Update the old template: set endDate to the day before the focused month's start or some appropriate boundary
+    // Based on spec: "updates the enddate of the old Template"
+    // Usually this means it ends just before the new one starts.
+    const focusedDate = new Date(onFocusedMonthKey + "-01");
+    const prevDay = new Date(focusedDate);
+    prevDay.setDate(prevDay.getDate() - 1);
+    const endDateStr = prevDay.toISOString().substring(0, 10);
     
-    const oldTemplateRef = doc(db, `users/${userId}/recurringTemplates`, parentId);
-    batch.update(oldTemplateRef, { endMonth, updated_at: serverTimestamp() });
+    const oldTemplateRef = doc(db, `users/${userId}/recurringTemplates`, oldTemplateId);
+    batch.update(oldTemplateRef, { endDate: endDateStr, updated_at: serverTimestamp() });
     
-    // 2. Delete future physical transactions of the old template (from monthX onwards)
+    // 2. Clean transactions out of range for the old template
+    // Range is [template.date, template.endDate]
+    // We specifically need to delete those from onFocusedMonth onwards
     const q = query(
         collection(db, `users/${userId}/transactions`), 
-        where("parentId", "==", parentId),
-        where("date", ">=", monthX + "-01")
+        where("Model", "==", oldTemplateId),
+        where("date", ">=", onFocusedMonthKey + "-01")
     );
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
         batch.delete(doc.ref);
     });
     
-    // 3. Create a new template version starting from monthX
+    // 3. Create a new template version
     const newTemplateId = `rec_${generateId()}`;
     const newTemplateRef = doc(db, `users/${userId}/recurringTemplates`, newTemplateId);
     batch.set(newTemplateRef, {
-        ...newValues,
+        ...newTemplateValues,
         id: newTemplateId,
-        startMonth: monthX,
         updated_at: serverTimestamp()
     });
     
     await batch.commit();
     
     // 4. Generate JIT for the current month with the new template
-    await generateJitTransactions(userId, monthX);
+    await generateJitTransactions(userId, onFocusedMonthKey);
 };
 
-export const deleteRecurringSeriesInFirestore = async (userId, parentId, monthX) => {
+/**
+ * Align with TODO.litcoffee:
+ * "deletes the template and linked transactions"
+ */
+export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
     const batch = writeBatch(db);
     
-    // 1. Close the template: endMonth = X-1
-    const prevMonthDate = new Date(monthX + "-01");
-    prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-    const endMonth = prevMonthDate.toISOString().substring(0, 7);
+    // 1. Delete the template
+    const templateRef = doc(db, `users/${userId}/recurringTemplates`, templateId);
+    batch.delete(templateRef);
     
-    const templateRef = doc(db, `users/${userId}/recurringTemplates`, parentId);
-    batch.update(templateRef, { endMonth, updated_at: serverTimestamp() });
-    
-    // 2. Delete future transactions (from monthX onwards)
+    // 2. Delete ALL linked transactions
     const q = query(
         collection(db, `users/${userId}/transactions`), 
-        where("parentId", "==", parentId),
-        where("date", ">=", monthX + "-01")
+        where("Model", "==", templateId)
     );
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
@@ -224,9 +236,15 @@ export const generateJitTransactions = async (userId, monthKey) => {
     for (const docSnap of templatesSnap.docs) {
         const template = docSnap.data();
         
+        // Safety check: skip malformed templates
+        if (!template.date) {
+            console.warn(`Template ${docSnap.id} is missing a start date. Skipping.`, template);
+            continue;
+        }
+
         // Check if template is active for this month
-        const startM = template.startMonth || template.anchorDate.substring(0, 7);
-        const endM = template.endMonth;
+        const endM = template.endDate ? template.endDate.substring(0, 7) : null;
+        const startM = template.date.substring(0, 7);
         
         if (monthKey < startM || (endM && monthKey > endM)) continue;
         
@@ -234,10 +252,15 @@ export const generateJitTransactions = async (userId, monthKey) => {
         const dates = calculateOccurrencesInMonth(template, monthKey);
         
         for (const date of dates) {
+            // Check within exact date range if endDate is set
+            if (template.endDate && date > template.endDate) continue;
+            if (date < template.date) continue;
+
             // Check if transaction already exists for this parent and date
+            // According to Spec: Logical ID check can also be used, but Model + date is safer for JIT
             const q = query(
                 collection(db, `users/${userId}/transactions`),
-                where("parentId", "==", template.id),
+                where("Model", "==", template.id),
                 where("date", "==", date)
             );
             const existingSnap = await getDocs(q);
@@ -250,11 +273,10 @@ export const generateJitTransactions = async (userId, monthKey) => {
                     label: template.label,
                     amount: template.amount,
                     date: date,
-                    category: template.category,
-                    sourceId: template.sourceId,
-                    destinationId: template.destinationId,
-                    isRecurringInst: true,
-                    parentId: template.id,
+                    Category: template.category, // Spec uses category in template, Category in single tx
+                    source: template.source,
+                    destination: template.destination,
+                    Model: template.id,
                     updated_at: serverTimestamp()
                 });
                 hasNewTxs = true;
@@ -269,7 +291,7 @@ export const generateJitTransactions = async (userId, monthKey) => {
 
 const calculateOccurrencesInMonth = (template, monthKey) => {
     const occurrences = [];
-    const anchorDate = new Date(template.anchorDate);
+    const anchorDate = new Date(template.date);
     const targetMonth = parseInt(monthKey.split('-')[1]) - 1;
     const targetYear = parseInt(monthKey.split('-')[0]);
     
@@ -295,24 +317,19 @@ const calculateOccurrencesInMonth = (template, monthKey) => {
                 occurrences.push(lastDay.toISOString().split('T')[0]);
             }
         }
-    } else if (template.periodicity === 'W') {
-        // Weekly: Every 7 days from anchor
-        let current = new Date(anchorDate);
-        // Move current to or before the start of target month
-        const monthStart = new Date(targetYear, targetMonth, 1);
-        const monthEnd = new Date(targetYear, targetMonth + 1, 0);
+    } else if (template.periodicity === 'Q') {
+        // Quarterly: Every 3 months from anchor
+        const anchorMonth = anchorDate.getMonth();
+        const diffMonths = (targetYear - anchorDate.getFullYear()) * 12 + (targetMonth - anchorMonth);
         
-        const diffDays = Math.floor((monthStart - current) / (1000 * 60 * 60 * 24));
-        if (diffDays > 0) {
-            const weeksToAdd = Math.floor(diffDays / 7);
-            current.setDate(current.getDate() + (weeksToAdd * 7));
-        }
-        
-        while (current <= monthEnd) {
-            if (current >= monthStart) {
-                occurrences.push(current.toISOString().split('T')[0]);
+        if (diffMonths >= 0 && diffMonths % 3 === 0) {
+            const d = new Date(targetYear, targetMonth, anchorDate.getDate());
+            if (d.getMonth() === targetMonth) {
+                occurrences.push(d.toISOString().split('T')[0]);
+            } else {
+                const lastDay = new Date(targetYear, targetMonth + 1, 0);
+                occurrences.push(lastDay.toISOString().split('T')[0]);
             }
-            current.setDate(current.getDate() + 7);
         }
     }
     

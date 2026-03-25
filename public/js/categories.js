@@ -103,8 +103,8 @@ export const deleteCategory = async (id) => {
             const updates = [];
             Object.values(state.records).forEach(monthData => {
                 monthData.items.forEach(item => {
-                    if (item.category === id) {
-                        updates.push(updateTransactionInFirestore(currentUserId, { ...item, category: 'Autre' }));
+                    if (item.Category === id || item.category === id) {
+                        updates.push(updateTransactionInFirestore(currentUserId, { ...item, Category: 'Autre' }));
                     }
                 });
             });

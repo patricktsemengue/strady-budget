@@ -12,11 +12,11 @@ export const getBalances = () => {
     Object.keys(state.records).sort().forEach(monthKey => {
         if (monthKey <= currentMonthKey && state.records[monthKey]) {
             state.records[monthKey].items.forEach(item => {
-                if (item.sourceId !== 'external' && balances[item.sourceId] !== undefined) {
-                    balances[item.sourceId] -= item.amount;
+                if (item.source !== 'external' && item.source !== '' && balances[item.source] !== undefined) {
+                    balances[item.source] -= item.amount;
                 }
-                if (item.destinationId !== 'external' && balances[item.destinationId] !== undefined) {
-                    balances[item.destinationId] += item.amount;
+                if (item.destination !== 'external' && item.destination !== '' && balances[item.destination] !== undefined) {
+                    balances[item.destination] += item.amount;
                 }
             });
         }
@@ -31,20 +31,33 @@ export const renderTransactions = () => {
     const monthData = state.records[getMonthKey(state.viewDate)] || { items: [] };
     
     let filteredItems = monthData.items;
-    if (categoryFilter !== 'all') filteredItems = filteredItems.filter(item => item.category === categoryFilter);
-    if (accountFilter !== 'all') filteredItems = filteredItems.filter(item => item.sourceId === accountFilter || item.destinationId === accountFilter);
+    if (categoryFilter !== 'all') filteredItems = filteredItems.filter(item => item.Category === categoryFilter);
+    if (accountFilter !== 'all') filteredItems = filteredItems.filter(item => item.source === accountFilter || item.destination === accountFilter);
+
+    // Sort by category label, then by date
+    filteredItems.sort((a, b) => {
+        const categoryA = state.categories.find(c => c.id === a.Category)?.label || '';
+        const categoryB = state.categories.find(c => c.id === b.Category)?.label || '';
+        const categoryCompare = categoryA.localeCompare(categoryB);
+        if (categoryCompare !== 0) {
+            return categoryCompare;
+        }
+        // If categories are the same, sort by date (most recent first)
+        return new Date(b.date) - new Date(a.date);
+    });
 
     container.innerHTML = filteredItems.map(item => {
-        const category = state.categories.find(c => c.id === item.category);
-        const txInfo = getTxDisplayInfo(item.sourceId, item.destinationId);
+        const category = state.categories.find(c => c.id === item.Category);
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
         const isMonthClosed = monthData.status === 'closed';
+        const isRecurring = !!item.Model;
         return `
             <li class="p-4 flex items-center gap-4 group">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
                 <div class="flex-1">
                     <div class="flex items-center gap-2">
                         <p class="font-semibold">${item.label}</p>
-                        ${item.isRecurringInst ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
+                        ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
                     </div>
                     <p class="text-sm text-slate-500">${txInfo.src.name} -> ${txInfo.dst.name}</p>
                 </div>
@@ -84,8 +97,8 @@ export const renderAnticipatedExpenses = () => {
         const targetDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + i, 1);
         const monthKey = getMonthKey(targetDate);
         const monthItems = (state.records[monthKey]?.items || []).filter(item => 
-            !item.isRecurringInst && 
-            getTxDisplayInfo(item.sourceId, item.destinationId).isExpense
+            !item.Model && 
+            getTxDisplayInfo(item.source, item.destination).isExpense
         );
         allNonRecurring = [...allNonRecurring, ...monthItems];
     }
@@ -149,7 +162,7 @@ export const renderDashboard = () => {
 
     let monthIncome = 0, monthExpense = 0;
     currentMonthData.items.forEach(item => {
-        const txInfo = getTxDisplayInfo(item.sourceId, item.destinationId);
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
         if (txInfo.isIncome) monthIncome += item.amount;
         else if (txInfo.isExpense) monthExpense += item.amount;
     });
@@ -181,7 +194,7 @@ export const renderDashboard = () => {
     let nextMonthExpectedIncome = 0, nextMonthExpectedExpense = 0;
     const nextMonthKey = getMonthKey(new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 1));
     (state.records[nextMonthKey]?.items || []).forEach(item => {
-        const txInfo = getTxDisplayInfo(item.sourceId, item.destinationId);
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
         if(txInfo.isIncome) nextMonthExpectedIncome += item.amount;
         if(txInfo.isExpense) nextMonthExpectedExpense += item.amount;
     });

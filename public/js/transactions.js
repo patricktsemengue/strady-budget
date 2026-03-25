@@ -22,9 +22,10 @@ export const openTransactionModal = (id = null) => {
 
     const sourceSelect = document.getElementById('transaction-source');
     const destSelect = document.getElementById('transaction-destination');
+    // Align with TODO.litcoffee: Default value = "" to indicates external account
     const accountOptions = state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-    sourceSelect.innerHTML = `<option value="external">Externe</option>${accountOptions}`;
-    destSelect.innerHTML = `<option value="external">Externe</option>${accountOptions}`;
+    sourceSelect.innerHTML = `<option value="">Externe (Revenu)</option>${accountOptions}`;
+    destSelect.innerHTML = `<option value="">Externe (Dépense)</option>${accountOptions}`;
     
     // Default visibility
     document.getElementById('recurring-fields').classList.add('hidden');
@@ -38,82 +39,85 @@ export const openTransactionModal = (id = null) => {
         const tx = state.records[monthKey]?.items.find(t => t.id === id);
 
         if (tx) {
-            document.getElementById('transaction-label').value = tx.label;
-            document.getElementById('transaction-amount').value = tx.amount;
-            document.getElementById('transaction-date').value = tx.date.substring(0, 10);
-            categorySelect.value = tx.category;
-            sourceSelect.value = tx.sourceId;
-            destSelect.value = tx.destinationId;
+            document.getElementById('transaction-label').value = tx.label || '';
+            document.getElementById('transaction-amount').value = tx.amount || 0;
+            if (tx.date) {
+                document.getElementById('transaction-date').value = tx.date.substring(0, 10);
+            } else {
+                document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
+            }
+            categorySelect.value = tx.Category || tx.category || '';
+            sourceSelect.value = tx.source || tx.sourceId || '';
+            destSelect.value = tx.destination || tx.destinationId || '';
 
-            const txInfo = getTxDisplayInfo(tx.sourceId, tx.destinationId);
-            let type = 'transfer';
-            if (txInfo.isIncome) type = 'income';
-            if (txInfo.isExpense) type = 'expense';
-            document.getElementById('transaction-type').value = type;
-            
-            // Trigger change to update visibility
-            document.getElementById('transaction-type').dispatchEvent(new Event('change'));
-
-            // Handle recurring fields visibility and population
+            const isRecurring = !!tx.Model;
             const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
             const recurringFields = document.getElementById('recurring-fields');
             
-            if (tx.isRecurringInst) {
+            if (isRecurring) {
                 isRecurringCheckbox.checked = true;
                 recurringFields.classList.remove('hidden');
                 
-                // Find the associated template to populate recurring fields
-                const template = state.recurring.find(r => r.id === tx.parentId);
+                // Find the associated template
+                const template = state.recurringTemplates.find(r => r.id === tx.Model);
                 if (template) {
                     document.getElementById('transaction-periodicity').value = template.periodicity || 'M';
-                    document.getElementById('transaction-end-month').value = template.endMonth || '';
+                    document.getElementById('transaction-end-date').value = template.endDate || '';
                 }
             }
         }
     } else {
         document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
         document.getElementById('transaction-edit-id').value = '';
+        // Defaults from TODO.litcoffee
         document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
-        document.getElementById('transaction-end-month').value = '';
+        document.getElementById('transaction-amount').value = 0;
         document.getElementById('transaction-periodicity').value = 'M';
+        document.getElementById('transaction-end-date').value = '';
+
+        // Category defaulting logic based on initial empty source/destination
+        // Since both are empty by default, we need to pick a default. 
+        // Let's default to "Dépense" (source = account, destination = external) for new ones?
+        // Actually, the spec says:
+        // "Category. Default value =
+        //  * "Revenu" if source is empty
+        //  * "Autre" if destination is empty"
+        // Let's set an initial state that makes sense.
+        if (state.accounts.length > 0) {
+            sourceSelect.value = state.accounts[0].id;
+            destSelect.value = "";
+            // Default category for this state would be "Autre" (destination is empty)
+            const autreCat = state.categories.find(c => c.label === "Autre");
+            if (autreCat) categorySelect.value = autreCat.id;
+        }
     }
     
+    // Add event listeners for dynamic category defaulting
+    const updateDefaultCategory = () => {
+        const source = sourceSelect.value;
+        const destination = destSelect.value;
+        if (source === "" && destination !== "") {
+            const revenuCat = state.categories.find(c => c.label === "Revenu");
+            if (revenuCat) categorySelect.value = revenuCat.id;
+        } else if (destination === "" && source !== "") {
+            const autreCat = state.categories.find(c => c.label === "Autre");
+            if (autreCat) categorySelect.value = autreCat.id;
+        }
+    };
+
+    sourceSelect.onchange = updateDefaultCategory;
+    destSelect.onchange = updateDefaultCategory;
+
+    // Recurring checkbox toggle
+    document.getElementById('transaction-is-recurring').onchange = (e) => {
+        document.getElementById('recurring-fields').classList.toggle('hidden', !e.target.checked);
+    };
+
     modal.classList.remove('hidden');
 };
 
 export const closeTransactionModal = () => {
     document.getElementById('transaction-modal').classList.add('hidden');
-};
-
-const showRecurringChoiceModal = (title, message, btnAllText) => {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('recurring-choice-modal');
-        const btnAll = document.getElementById('btn-choice-all');
-        const btnSingle = document.getElementById('btn-choice-single');
-        const btnCancel = document.getElementById('btn-choice-cancel');
-
-        modal.querySelector('h2').textContent = title;
-        modal.querySelector('p').textContent = message;
-        btnAll.textContent = btnAllText;
-
-        const cleanup = (choice) => {
-            modal.classList.add('hidden');
-            btnAll.removeEventListener('click', onAll);
-            btnSingle.removeEventListener('click', onSingle);
-            btnCancel.removeEventListener('click', onCancel);
-            resolve(choice);
-        };
-
-        const onAll = () => cleanup('all');
-        const onSingle = () => cleanup('single');
-        const onCancel = () => cleanup('cancel');
-
-        btnAll.addEventListener('click', onAll);
-        btnSingle.addEventListener('click', onSingle);
-        btnCancel.addEventListener('click', onCancel);
-
-        modal.classList.remove('hidden');
-    });
 };
 
 export const handleSaveTransaction = async (e) => {
@@ -122,70 +126,71 @@ export const handleSaveTransaction = async (e) => {
     const label = document.getElementById('transaction-label').value;
     const amount = parseFloat(document.getElementById('transaction-amount').value);
     const date = document.getElementById('transaction-date').value;
-    const category = document.getElementById('transaction-category').value;
-    const sourceId = document.getElementById('transaction-source').value;
-    const destinationId = document.getElementById('transaction-destination').value;
+    const Category = document.getElementById('transaction-category').value;
+    const source = document.getElementById('transaction-source').value;
+    const destination = document.getElementById('transaction-destination').value;
     
     const isRecurring = document.getElementById('transaction-is-recurring').checked;
     const periodicity = document.getElementById('transaction-periodicity').value;
-    const endMonth = document.getElementById('transaction-end-month').value;
+    const endDate = document.getElementById('transaction-end-date').value || null;
 
-    if (!label || !amount || !date || !category || !sourceId || !destinationId) {
+    // Validation from TODO.litcoffee
+    if (!label || isNaN(amount) || !date || !Category) {
         showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
         return;
     }
 
+    if (source === "" && destination === "") {
+        showNotification('La source et la destination ne peuvent pas être vides simultanément.', 'error');
+        return;
+    }
+
     try {
-        if (isRecurring && !id) {
-            // Create a new recurring template
-            const template = {
-                id: `rec_${generateId()}`,
-                label,
-                amount,
-                sourceId,
-                destinationId,
-                category,
-                anchorDate: date,
-                startMonth: date.substring(0, 7),
-                endMonth: endMonth || null,
-                periodicity
-            };
-            await addRecurringTemplate(currentUserId, template);
-            showNotification('Transaction récurrente configurée !');
-        } else if (id) {
-            // Update existing transaction instance
-            const currentMonthKey = getMonthKey(state.viewDate);
-            const tx = state.records[currentMonthKey]?.items.find(t => t.id === id);
+        const onFocusMonthKey = getMonthKey(state.viewDate);
+
+        if (id) {
+            // UPDATE CASE
+            const tx = state.records[onFocusMonthKey]?.items.find(t => t.id === id);
             
-            if (tx && tx.isRecurringInst) {
-                const choice = await showRecurringChoiceModal(
-                    'Mise à jour d\'une transaction récurrente',
-                    'Souhaitez-vous appliquer cette modification à toutes les occurrences futures de cette transaction récurrente ou seulement à celle-ci ?',
-                    'Appliquer à la série (Split & Update)'
-                );
-                if (choice === 'cancel') return;
-                
-                if (choice === 'all') {
-                    // Update the entire series: Split & Create new template version
-                    await updateRecurringSeriesInFirestore(currentUserId, tx.parentId, currentMonthKey, {
-                        label, amount, category, sourceId, destinationId,
-                        anchorDate: date, periodicity, endMonth: endMonth || null
-                    });
-                    showNotification('Série de transactions mise à jour !');
-                } else {
-                    // Update only this instance
-                    await updateTransactionInFirestore(currentUserId, { id, label, amount, date, category, sourceId, destinationId });
-                    showNotification('Transaction modifiée !');
-                }
+            if (tx && tx.Model) {
+                // RECURRING UPDATE: Align with TODO.litcoffee
+                // 1. Update old template endDate
+                // 2. Clean old instances
+                // 3. Create new template
+                // 4. Create new instance for focused month
+                const newTemplateValues = {
+                    date, label, amount, source, destination, category: Category,
+                    recurring: true, endDate, periodicity
+                };
+                await updateRecurringSeriesInFirestore(currentUserId, tx.Model, onFocusMonthKey, newTemplateValues);
+                showNotification('Série récurrente mise à jour (Split).');
             } else {
-                // Update normal transaction
-                await updateTransactionInFirestore(currentUserId, { id, label, amount, date, category, sourceId, destinationId });
-                showNotification('Transaction modifiée !');
+                // SINGLE UPDATE: Align with TODO.litcoffee
+                // "deletes the old transaction, and creates a new transaction"
+                await deleteTransactionFromFirestore(currentUserId, id);
+                await addTransactionToFirestore(currentUserId, {
+                    id: generateId(), label, amount, date, Category, source, destination, Model: null
+                });
+                showNotification('Transaction mise à jour (Remplacée).');
             }
         } else {
-            // Create a standard single transaction
-            await addTransactionToFirestore(currentUserId, { id: generateId(), label, amount, date, category, sourceId, destinationId });
-            showNotification('Transaction ajoutée !');
+            // CREATION CASE
+            if (isRecurring) {
+                // RECURRING CREATION: Align with TODO.litcoffee
+                const template = {
+                    id: `rec_${generateId()}`,
+                    date, label, amount, source, destination, category: Category,
+                    recurring: true, endDate, periodicity
+                };
+                await addRecurringTemplate(currentUserId, template);
+                showNotification('Transaction récurrente créée !');
+            } else {
+                // SINGLE CREATION: Align with TODO.litcoffee
+                await addTransactionToFirestore(currentUserId, {
+                    id: generateId(), label, amount, date, Category, source, destination, Model: null
+                });
+                showNotification('Transaction ajoutée !');
+            }
         }
         closeTransactionModal();
     } catch (err) {
@@ -204,7 +209,6 @@ export const duplicateTransaction = async (id) => {
     if (transaction) {
         try {
             const newTransaction = { ...transaction, id: generateId() };
-            // Ensure we don't accidentally copy system fields or specific recursive IDs if we added any
             delete newTransaction.updated_at; 
             await addTransactionToFirestore(currentUserId, newTransaction);
             showNotification('Transaction dupliquée.');
@@ -220,27 +224,19 @@ export const deleteTransaction = async (id) => {
     
     if (!tx) return;
 
-    if (tx.isRecurringInst) {
-        const choice = await showRecurringChoiceModal(
-            'Suppression d\'une transaction récurrente',
-            'Souhaitez-vous supprimer toutes les occurrences futures de cette série ou seulement cette transaction ?',
-            'Supprimer la série future'
-        );
-        
-        if (choice === 'cancel') return;
-        
-        try {
-            if (choice === 'all') {
-                await deleteRecurringSeriesInFirestore(currentUserId, tx.parentId, currentMonthKey);
-                showNotification('Série future supprimée.');
-            } else {
-                await deleteTransactionFromFirestore(currentUserId, id);
-                showNotification('Transaction supprimée.');
+    if (tx.Model) {
+        // RECURRING DELETION: Align with TODO.litcoffee
+        // "deletes the template and linked transactions"
+        if (confirm('Voulez-vous supprimer cette transaction récurrente ET toutes les transactions liées ? (Action irréversible)')) {
+            try {
+                await deleteRecurringSeriesInFirestore(currentUserId, tx.Model);
+                showNotification('Série récurrente supprimée.');
+            } catch (err) {
+                showNotification('Erreur de suppression', 'error');
             }
-        } catch (err) {
-            showNotification('Erreur de suppression', 'error');
         }
     } else {
+        // SINGLE DELETION: Align with TODO.litcoffee
         if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
             try {
                 await deleteTransactionFromFirestore(currentUserId, id);

@@ -24,11 +24,11 @@ export const generateDeterministicId = (obj) => {
     return Math.abs(hash).toString(36) + str.length.toString(36);
 };
 
-export const getTxDisplayInfo = (sourceId, destinationId) => {
-    const isSrcExt = sourceId === 'external';
-    const isDstExt = destinationId === 'external';
-    const src = isSrcExt ? { name: 'Externe' } : state.accounts.find(a => a.id === sourceId) || { name: 'Supprimé' };
-    const dst = isDstExt ? { name: 'Externe' } : state.accounts.find(a => a.id === destinationId) || { name: 'Supprimé' };
+export const getTxDisplayInfo = (source, destination) => {
+    const isSrcExt = source === '' || source === 'external';
+    const isDstExt = destination === '' || destination === 'external';
+    const src = isSrcExt ? { name: 'Externe' } : state.accounts.find(a => a.id === source) || { name: 'Supprimé' };
+    const dst = isDstExt ? { name: 'Externe' } : state.accounts.find(a => a.id === destination) || { name: 'Supprimé' };
 
     if (isSrcExt && !isDstExt) return { src, dst, isIncome: true, isExpense: false, ui: { icon: 'fa-arrow-down', color: 'text-green-500' } };
     if (!isSrcExt && isDstExt) return { src, dst, isIncome: false, isExpense: true, ui: { icon: 'fa-arrow-up', color: 'text-red-500' } };
