@@ -91,6 +91,7 @@ const init = () => {
                 // This callback will be triggered by Firestore, updating the UI and the cache.
                 updateState({
                     accounts: newData.accounts || [],
+                    transactions: newData.transactions || [],
                     categories: newData.categories || defaultCategories,
                     recurring: newData.recurringTemplates || [],
                     months: newData.months || {}

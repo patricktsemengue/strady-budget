@@ -38,18 +38,22 @@ export const initSortableCategories = () => {
 
 export const renderCategoriesList = () => {
     const container = document.getElementById('mgmt-categories-list');
+    if (!container || !state.transactions) return;
+
     const usedCategoryIds = new Set();
-    Object.values(state.records).forEach(monthData => {
-        monthData.items.forEach(item => {
-            if (item.Category) usedCategoryIds.add(item.Category);
-        });
+    // Check for usage in all transactions and templates for a robust check
+    state.transactions.forEach(tx => {
+        if (tx.Category) usedCategoryIds.add(tx.Category);
+    });
+    state.recurringTemplates.forEach(tpl => {
+        if (tpl.category) usedCategoryIds.add(tpl.category);
     });
 
     const sortedCategories = [...state.categories].sort((a, b) => {
-        const orderA = a['index-order'] ?? Infinity;
-        const orderB = b['index-order'] ?? Infinity;
-        if (orderA === orderB) return a.label.localeCompare(b.label);
-        return orderA - orderB;
+        const orderA = a['index-order'] !== undefined ? a['index-order'] : Infinity;
+        const orderB = b['index-order'] !== undefined ? b['index-order'] : Infinity;
+        if (orderA === orderB) return a.label.localeCompare(b.label); // Secondary sort by label if order is same
+        return orderA - orderB; // Primary sort by index-order
     });
     container.innerHTML = sortedCategories.map(cat => {
         const isUsed = usedCategoryIds.has(cat.id);
@@ -58,7 +62,7 @@ export const renderCategoriesList = () => {
         const disabledTitle = isDefaultOther ? "Cette catégorie par défaut ne peut pas être supprimée." : "Catégorie utilisée par des transactions.";
 
         return `
-            <li data-id="${cat.id}" class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 group">
+            <li data-id="${cat.id}" class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 group ${isDisabled ? 'opacity-70' : ''}">
                 <div class="flex items-center gap-3">
                     <div class="drag-handle cursor-move text-slate-400 p-1" title="Glisser pour réorganiser"><i class="fa-solid fa-grip-vertical"></i></div>
                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-white" style="background-color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i></div><span class="font-medium">${cat.label}</span></div>
@@ -151,14 +155,11 @@ export const handleUpdateCategory = async (e) => {
 };
 
 export const deleteCategory = async (id) => {
-    if (id === 'Autre') {
-        showNotification("La catégorie 'Autre' ne peut pas être supprimée.", 'error');
-        return;
-    }
-
     // Double-check in case the UI is out of sync
-    const isUsed = Object.values(state.records).some(month => month.items.some(tx => tx.Category === id));
-    if (isUsed) {
+    const isUsedInTransactions = state.transactions.some(tx => tx.Category === id);
+    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.category === id);
+
+    if (isUsedInTransactions || isUsedInTemplates) {
         showNotification("Impossible de supprimer une catégorie actuellement utilisée.", "error");
         render(); // Re-render to fix the UI
         return;

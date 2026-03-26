@@ -1,6 +1,7 @@
 import { state, updateState } from './state.js';
 import { renderDashboard } from './dashboard.js';
 import { renderSettings } from './settings.js';
+import { renderEmergencyFund, renderMonthlyIncome } from './dashboard-widgets.js';
 import { generateJitTransactions } from './firestore-service.js';
 import { currentUserId } from './storage.js';
 import { getMonthKey } from './utils.js';
@@ -120,6 +121,10 @@ export const render = () => {
         dashboardView.classList.remove('hidden');
         settingsView.classList.add('hidden');
         renderDashboard();
+
+        // Render the new dashboard widgets
+        renderEmergencyFund();
+        renderMonthlyIncome();
     } else if (state.currentView === 'settings') {
         dashboardView.classList.add('hidden');
         settingsView.classList.remove('hidden');
