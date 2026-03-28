@@ -12,7 +12,23 @@ import {
 } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
-export const openTransactionModal = (id = null) => {
+let duplicationChangeChecker = null;
+const fieldsToWatchForDuplication = [
+    'transaction-label', 
+    'transaction-amount', 
+    'transaction-date', 
+    'transaction-source', 
+    'transaction-destination'
+];
+
+const generateDeterministicTransactionId = (txData) => {
+    // ID is based on the core properties that define a unique transaction.
+    const key = `${txData.date}|${txData.label}|${txData.amount}|${txData.source}|${txData.destination}`;
+    // Use btoa for a simple, URL-safe "hash". Encode to handle UTF-8.
+    return `tx_${btoa(unescape(encodeURIComponent(key)))}`;
+};
+
+export const openTransactionModal = (id = null, duplicateData = null) => {
     const modal = document.getElementById('transaction-modal');
     const form = document.getElementById('transaction-form');
     form.reset();
@@ -31,39 +47,56 @@ export const openTransactionModal = (id = null) => {
     document.getElementById('recurring-fields').classList.add('hidden');
     document.getElementById('transaction-is-recurring').checked = false;
 
-    if (id) {
+    // Clean up previous listener if it exists
+    if (duplicationChangeChecker) {
+        fieldsToWatchForDuplication.forEach(fieldId => {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                el.removeEventListener('input', duplicationChangeChecker);
+                el.removeEventListener('change', duplicationChangeChecker);
+            }
+        });
+        duplicationChangeChecker = null;
+    }
+
+    const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : duplicateData;
+
+    if (id) { // EDIT MODE
         document.getElementById('transaction-modal-title').textContent = 'Éditer la transaction';
         document.getElementById('transaction-edit-id').value = id;
+    } else if (duplicateData) { // DUPLICATE MODE
+        document.getElementById('transaction-modal-title').textContent = 'Dupliquer la transaction';
+        document.getElementById('transaction-edit-id').value = '';
+    } else { // NEW MODE
+        document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
+        document.getElementById('transaction-edit-id').value = '';
+    }
 
-        const monthKey = getMonthKey(state.viewDate);
-        const tx = state.records[monthKey]?.items.find(t => t.id === id);
+    if (tx) { // Pre-fill for EDIT or DUPLICATE
+        document.getElementById('transaction-label').value = tx.label || '';
+        document.getElementById('transaction-amount').value = tx.amount || 0;
+        if (tx.date) {
+            document.getElementById('transaction-date').value = tx.date.substring(0, 10);
+        } else {
+            document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
+        }
+        categorySelect.value = tx.Category || tx.category || '';
+        sourceSelect.value = tx.source || tx.sourceId || '';
+        destSelect.value = tx.destination || tx.destinationId || '';
 
-        if (tx) {
-            document.getElementById('transaction-label').value = tx.label || '';
-            document.getElementById('transaction-amount').value = tx.amount || 0;
-            if (tx.date) {
-                document.getElementById('transaction-date').value = tx.date.substring(0, 10);
-            } else {
-                document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
-            }
-            categorySelect.value = tx.Category || tx.category || '';
-            sourceSelect.value = tx.source || tx.sourceId || '';
-            destSelect.value = tx.destination || tx.destinationId || '';
-
-            const isRecurring = !!tx.Model;
-            const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
-            const recurringFields = document.getElementById('recurring-fields');
+        const isRecurring = !!tx.Model;
+        const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
+        const recurringFields = document.getElementById('recurring-fields');
+        
+        if (isRecurring) {
+            isRecurringCheckbox.checked = true;
+            recurringFields.classList.remove('hidden');
             
-            if (isRecurring) {
-                isRecurringCheckbox.checked = true;
-                recurringFields.classList.remove('hidden');
-                
-                // Find the associated template
-                const template = state.recurringTemplates.find(r => r.id === tx.Model);
-                if (template) {
-                    document.getElementById('transaction-periodicity').value = template.periodicity || 'M';
-                    document.getElementById('transaction-end-date').value = template.endDate || '';
-                }
+            // Find the associated template
+            const template = state.recurringTemplates.find(r => r.id === tx.Model);
+            if (template) {
+                document.getElementById('transaction-periodicity').value = template.periodicity || 'M';
+                document.getElementById('transaction-end-date').value = template.endDate || '';
             }
         }
     } else {
@@ -113,6 +146,47 @@ export const openTransactionModal = (id = null) => {
         document.getElementById('recurring-fields').classList.toggle('hidden', !e.target.checked);
     };
 
+    const saveButton = form.querySelector('button[type="submit"]');
+    if (duplicateData) {
+        saveButton.disabled = true;
+
+        const initialData = {
+            label: document.getElementById('transaction-label').value,
+            amount: document.getElementById('transaction-amount').value,
+            date: document.getElementById('transaction-date').value,
+            source: document.getElementById('transaction-source').value,
+            destination: document.getElementById('transaction-destination').value
+        };
+
+        duplicationChangeChecker = () => {
+            const currentData = {
+                label: document.getElementById('transaction-label').value,
+                amount: document.getElementById('transaction-amount').value,
+                date: document.getElementById('transaction-date').value,
+                source: document.getElementById('transaction-source').value,
+                destination: document.getElementById('transaction-destination').value
+            };
+
+            const hasChanged = currentData.label !== initialData.label ||
+                               currentData.amount !== initialData.amount ||
+                               currentData.date !== initialData.date ||
+                               currentData.source !== initialData.source ||
+                               currentData.destination !== initialData.destination;
+            
+            saveButton.disabled = !hasChanged;
+        };
+
+        fieldsToWatchForDuplication.forEach(fieldId => {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                el.addEventListener('input', duplicationChangeChecker);
+                el.addEventListener('change', duplicationChangeChecker);
+            }
+        });
+    } else {
+        saveButton.disabled = false;
+    }
+
     modal.classList.remove('hidden');
 };
 
@@ -155,11 +229,11 @@ export const handleSaveTransaction = async (e) => {
             if (tx && tx.Model) {
                 if (confirm("Vous modifiez une transaction récurrente. Pour préserver l'historique, cela va mettre fin à l'ancienne série et en créer une nouvelle à partir de cette date. Continuer ?")) {
                     // RECURRING UPDATE: Align with TODO.litcoffee
-                    const newTemplateValues = {
+                    const newTemplateValues = { 
                         date, label, amount, source, destination, category: Category,
                         recurring: true, endDate, periodicity
                     };
-                    await updateRecurringSeriesInFirestore(currentUserId, tx.Model, onFocusMonthKey, newTemplateValues);
+                    await updateRecurringSeriesInFirestore(currentUserId, tx.Model, newTemplateValues);
                     showNotification('Série récurrente mise à jour (Split).');
                 } else {
                     return; // User cancelled
@@ -168,9 +242,11 @@ export const handleSaveTransaction = async (e) => {
                 if (confirm("Êtes-vous sûr de vouloir remplacer cette transaction ? Cette action supprime l'ancienne et en crée une nouvelle.")) {
                     // SINGLE UPDATE: Align with TODO.litcoffee
                     // "deletes the old transaction, and creates a new transaction"
+                    const newTxData = { label, amount, date, Category, source, destination, Model: null };
+                    const newId = generateDeterministicTransactionId(newTxData);
                     await deleteTransactionFromFirestore(currentUserId, id);
                     await addTransactionToFirestore(currentUserId, {
-                        id: generateId(), label, amount, date, Category, source, destination, Model: null
+                        id: newId, ...newTxData
                     });
                     showNotification('Transaction mise à jour (Remplacée).');
                 } else {
@@ -190,8 +266,10 @@ export const handleSaveTransaction = async (e) => {
                 showNotification('Transaction récurrente créée !');
             } else {
                 // SINGLE CREATION: Align with TODO.litcoffee
+                const newTxData = { label, amount, date, Category, source, destination, Model: null };
+                const newId = generateDeterministicTransactionId(newTxData);
                 await addTransactionToFirestore(currentUserId, {
-                    id: generateId(), label, amount, date, Category, source, destination, Model: null
+                    id: newId, ...newTxData
                 });
                 showNotification('Transaction ajoutée !');
             }
@@ -207,21 +285,14 @@ export const editTransaction = (id) => {
     openTransactionModal(id);
 };
 
-export const duplicateTransaction = async (id) => {
+export const duplicateTransaction = (id) => {
     const monthKey = getMonthKey(state.viewDate);
     const transaction = state.records[monthKey]?.items.find(item => item.id === id);
     if (transaction) {
-        try {
-            const newTransaction = { ...transaction, id: generateId() };
-            delete newTransaction.updated_at; 
-            await addTransactionToFirestore(currentUserId, newTransaction);
-            showNotification('Transaction dupliquée.');
-        } catch (err) {
-            showNotification('Erreur de duplication', 'error');
-        }
+        // Open the modal for a *new* transaction, but pre-filled with this data.
+        openTransactionModal(null, transaction);
     }
 };
-
 export const deleteTransaction = async (id) => {
     const currentMonthKey = getMonthKey(state.viewDate);
     const tx = state.records[currentMonthKey]?.items.find(t => t.id === id);

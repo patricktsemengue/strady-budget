@@ -12,7 +12,7 @@ date,label,amount,source,destination,reccuring,endate,periodicity,category
 2026-01-01,Hygiène,275,Compte Principal (CBC),,1,2027-01-01,M, Charge diverse
 2026-01-01,Proximus,52,Compte Principal (CBC),,1,2027-01-01,M, Charge diverse
 2026-01-01,Frais Bancaire BELFIUS,6,Belfius (Mao),,1,2027-01-01,M, Charge diverse
-2026-01-01,Argent de poche,60,Compte Principal (CBC),,1,2027-01-01,M,"Loisirs / Abonnements"
+2026-01-01,Argent de poche,60,Compte Principal (CBC),,1,2027-01-01,M, Charge diverse
 2026-01-01,Croix Rouges,14,Compte Principal (CBC),,1,2027-01-01,M,Don
 2026-01-01,Provision Mutualia -  Santé,15,Compte Principal (CBC),Depense_Non_Courante(Provision),1,2027-01-01,M,Provision
 2026-01-01,Provision Assurance CBC - habitation / Familiale,65,Compte Principal (CBC),Depense_Non_Courante(Provision),1,2027-01-01,M,Provision

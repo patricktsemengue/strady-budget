@@ -16,6 +16,13 @@ import { auth } from "./auth.js";
 import { generateId, getMonthKey } from "./utils.js";
 import { saveDataToCache } from "./storage.js";
 
+const generateDeterministicTransactionId = (txData) => {
+    // ID is based on the core properties that define a unique transaction.
+    const key = `${txData.date}|${txData.label}|${txData.amount}|${txData.source}|${txData.destination}`;
+    // Use btoa for a simple, URL-safe "hash". Encode to handle UTF-8.
+    return `tx_${btoa(unescape(encodeURIComponent(key)))}`;
+};
+
 const db = getFirestore();
 let unsubscribes = [];
 
@@ -27,6 +34,17 @@ export const unsubscribeFromData = () => {
 export const subscribeToAppData = (userId, onDataUpdate) => {
     unsubscribeFromData();
     if (!userId) return;
+
+    // --- BATCHED INITIAL LOAD ---
+    // We want to avoid re-rendering for each collection's initial load.
+    // This logic collects the first snapshot from all listeners and triggers a single update.
+    let initialLoadsPending = 5; // The number of collections we are subscribing to.
+    const onInitialLoadComplete = () => {
+        initialLoadsPending--;
+        if (initialLoadsPending === 0) {
+            triggerUpdate(); // Fire a single update after all initial data is loaded.
+        }
+    };
 
     let localState = {
         accounts: [],
@@ -44,19 +62,31 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     // Listen to Accounts
     const accUnsub = onSnapshot(collection(db, `users/${userId}/accounts`), (snapshot) => {
         localState.accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        triggerUpdate();
+        if (initialLoadsPending > 0) {
+            onInitialLoadComplete();
+        } else {
+            triggerUpdate();
+        }
     });
 
     // Listen to Categories
     const catUnsub = onSnapshot(collection(db, `users/${userId}/categories`), (snapshot) => {
         localState.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        triggerUpdate();
+        if (initialLoadsPending > 0) {
+            onInitialLoadComplete();
+        } else {
+            triggerUpdate();
+        }
     });
 
     // Listen to Transactions
     const txUnsub = onSnapshot(collection(db, `users/${userId}/transactions`), (snapshot) => {
         localState.transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        triggerUpdate();
+        if (initialLoadsPending > 0) {
+            onInitialLoadComplete();
+        } else {
+            triggerUpdate();
+        }
     });
 
     // Listen to Months
@@ -65,13 +95,21 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         snapshot.docs.forEach(doc => {
             localState.months[doc.id] = doc.data();
         });
-        triggerUpdate();
+        if (initialLoadsPending > 0) {
+            onInitialLoadComplete();
+        } else {
+            triggerUpdate();
+        }
     });
 
     // Listen to Recurring Templates
     const recUnsub = onSnapshot(collection(db, `users/${userId}/recurringTemplates`), (snapshot) => {
         localState.recurringTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        triggerUpdate();
+        if (initialLoadsPending > 0) {
+            onInitialLoadComplete();
+        } else {
+            triggerUpdate();
+        }
     });
 
     unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, recUnsub);
@@ -167,40 +205,43 @@ export const addRecurringTemplate = async (userId, template) => {
 };
 
 /**
- * Align with TODO.litcoffee:
- * - Update enddate of old Template
- * - Clean all single transactions linked to old Template having a date out of range
- * - Create new template
- * - Create single transaction for onfocused month
+ * Splits a recurring series to preserve history when a user edits a recurring transaction.
+ * It achieves this by:
+ * 1. Setting an `endDate` on the original template to stop it from generating future transactions.
+ * 2. Deleting any future JIT transactions that were already generated from the old template.
+ * 3. Creating a new template with the updated details, which will take over from the new start date.
+ * 4. Triggering JIT generation to create the first instance from the new template immediately.
+ * @param {string} userId - The current user's ID.
+ * @param {string} oldTemplateId - The ID of the recurring template being split.
+ * @param {object} newTemplateValues - An object containing all properties for the new template.
  */
-export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, onFocusedMonthKey, newTemplateValues) => {
+export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, newTemplateValues) => {
     const batch = writeBatch(db);
     
-    // 1. Update the old template: set endDate to the day before the focused month's start or some appropriate boundary
-    // Based on spec: "updates the enddate of the old Template"
-    // Usually this means it ends just before the new one starts.
-    const focusedDate = new Date(onFocusedMonthKey + "-01");
-    const prevDay = new Date(focusedDate);
+    // The new series starts on the date specified in the updated values.
+    const newStartDate = new Date(newTemplateValues.date);
+    
+    // 1. Update the old template: set its endDate to the day before the new series starts.
+    const prevDay = new Date(newStartDate);
     prevDay.setDate(prevDay.getDate() - 1);
-    const endDateStr = prevDay.toISOString().substring(0, 10);
+    const oldTemplateEndDateStr = prevDay.toISOString().substring(0, 10);
     
     const oldTemplateRef = doc(db, `users/${userId}/recurringTemplates`, oldTemplateId);
-    batch.update(oldTemplateRef, { endDate: endDateStr, updated_at: serverTimestamp() });
+    batch.update(oldTemplateRef, { endDate: oldTemplateEndDateStr, updated_at: serverTimestamp() });
     
-    // 2. Clean transactions out of range for the old template
-    // Range is [template.date, template.endDate]
-    // We specifically need to delete those from onFocusedMonth onwards
+    // 2. Clean up any future JIT transactions from the old template.
+    // This deletes any instances that were scheduled on or after the new template's start date.
     const q = query(
         collection(db, `users/${userId}/transactions`), 
         where("Model", "==", oldTemplateId),
-        where("date", ">=", onFocusedMonthKey + "-01")
+        where("date", ">=", newTemplateValues.date) // Use the new start date as the boundary
     );
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
         batch.delete(doc.ref);
     });
     
-    // 3. Create a new template version
+    // 3. Create the new template with a new ID.
     const newTemplateId = `rec_${generateId()}`;
     const newTemplateRef = doc(db, `users/${userId}/recurringTemplates`, newTemplateId);
     batch.set(newTemplateRef, {
@@ -211,8 +252,9 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, on
     
     await batch.commit();
     
-    // 4. Generate JIT for the current month with the new template
-    await generateJitTransactions(userId, onFocusedMonthKey);
+    // 4. Generate JIT for the month of the new transaction to ensure it appears immediately.
+    const newTransactionMonthKey = getMonthKey(newStartDate);
+    await generateJitTransactions(userId, newTransactionMonthKey);
 };
 
 /**
@@ -247,7 +289,10 @@ export const generateJitTransactions = async (userId, monthKey) => {
     const monthEnd = new Date(year, month, 0).toISOString().split('T')[0];
 
     // 1. Fetch all templates and all existing JIT transactions for the month in parallel
-    const templatesQuery = getDocs(collection(db, `users/${userId}/recurringTemplates`));
+    const templatesQuery = getDocs(query(
+        collection(db, `users/${userId}/recurringTemplates`),
+        where("date", "<=", monthEnd)
+    ));
     const existingTxQuery = getDocs(query(
         collection(db, `users/${userId}/transactions`),
         where("date", ">=", monthStart),
@@ -276,10 +321,10 @@ export const generateJitTransactions = async (userId, monthKey) => {
             continue;
         }
 
-        // Check if template is active for the given month
-        const endM = template.endDate ? template.endDate.substring(0, 7) : null;
-        const startM = template.date.substring(0, 7);
-        if (monthKey < startM || (endM && monthKey > endM)) {
+        // Check if template is active for the given month.
+        // The Firestore query already ensures `template.date <= monthEnd`.
+        // We only need to check if the template has already ended before this month started.
+        if (template.endDate && template.endDate < monthStart) {
             continue;
         }
 
@@ -292,10 +337,7 @@ export const generateJitTransactions = async (userId, monthKey) => {
             // 4. Check against the lookup set. If not present, it's a new transaction.
             const lookupKey = `${template.id}_${date}`;
             if (!existingTxSet.has(lookupKey)) {
-                const txId = generateId();
-                const txRef = doc(db, `users/${userId}/transactions`, txId);
-                batch.set(txRef, {
-                    id: txId,
+                const txData = {
                     label: template.label,
                     amount: template.amount,
                     date: date,
@@ -303,6 +345,12 @@ export const generateJitTransactions = async (userId, monthKey) => {
                     source: template.source,
                     destination: template.destination,
                     Model: template.id,
+                };
+                const txId = generateDeterministicTransactionId(txData);
+                const txRef = doc(db, `users/${userId}/transactions`, txId);
+                batch.set(txRef, {
+                    id: txId,
+                    ...txData,
                     updated_at: serverTimestamp()
                 });
                 hasNewTxs = true;

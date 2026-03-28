@@ -18,7 +18,7 @@ export let state = {
     viewDate: new Date(),
     accounts: [],
     records: {},
-    recurring: [],
+    recurringTemplates: [],
     categories: [],
     months: {} // Stores month statuses
 };

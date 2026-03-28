@@ -1,28 +1,9 @@
 import { state } from './state.js';
 import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './utils.js';
+import { calculateBalances, calculateMonthlyIncome } from './calculations.js';
 import { currentUserId } from './storage.js';
 import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
 import { showNotification, render, setViewDate } from './ui.js';
-
-export const getBalances = () => {
-    let balances = {};
-    state.accounts.forEach(a => { balances[a.id] = a.initialBalance || 0; });
-
-    const currentMonthKey = getMonthKey(state.viewDate);
-    Object.keys(state.records).sort().forEach(monthKey => {
-        if (monthKey <= currentMonthKey && state.records[monthKey]) {
-            state.records[monthKey].items.forEach(item => {
-                if (item.source !== 'external' && item.source !== '' && balances[item.source] !== undefined) {
-                    balances[item.source] -= item.amount;
-                }
-                if (item.destination !== 'external' && item.destination !== '' && balances[item.destination] !== undefined) {
-                    balances[item.destination] += item.amount;
-                }
-            });
-        }
-    });
-    return balances;
-};
 
 export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
@@ -205,16 +186,14 @@ export const renderDashboard = () => {
         sortOrderSelect.value = savedSortOrder;
     }
 
-    const balances = getBalances();
+    const balances = calculateBalances(state.viewDate);
     const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);
     document.getElementById('dash-total-balance').textContent = formatCurrency(totalBalance);
 
-    let monthIncome = 0, monthExpense = 0;
-    currentMonthData.items.forEach(item => {
-        const txInfo = getTxDisplayInfo(item.source, item.destination);
-        if (txInfo.isIncome) monthIncome += item.amount;
-        else if (txInfo.isExpense) monthExpense += item.amount;
-    });
+    const monthIncome = calculateMonthlyIncome(state.viewDate);
+    const monthExpense = currentMonthData.items
+        .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+        .reduce((sum, item) => sum + item.amount, 0);
 
     document.getElementById('dash-month-income').textContent = formatCurrency(monthIncome);
     document.getElementById('dash-month-expense').textContent = formatCurrency(monthExpense);
@@ -280,13 +259,16 @@ export const clotureMois = async () => {
 
     if (confirm(`Êtes-vous sûr de vouloir clôturer le mois de ${new Intl.DateTimeFormat('fr-BE', { month: 'long', year: 'numeric' }).format(state.viewDate)} ? Cette action est irréversible.`)) {
         try {
-            const balances = getBalances();
+            const balances = calculateBalances(state.viewDate);
             const updates = [];
+            const closingDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 0);
+            const closingDateStr = closingDate.toISOString().split('T')[0];
             
             // Update all accounts with new initial balances based on the closed month
             state.accounts.forEach(acc => {
                 const newBalance = balances[acc.id] || 0;
-                updates.push(updateAccountInFirestore(currentUserId, { ...acc, initialBalance: newBalance }));
+                // Also update the initialBalanceDate to create a new checkpoint
+                updates.push(updateAccountInFirestore(currentUserId, { ...acc, initialBalance: newBalance, initialBalanceDate: closingDateStr }));
             });
 
             // Mark current month as closed

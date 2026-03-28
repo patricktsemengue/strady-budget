@@ -77,7 +77,7 @@ export const handleUpdateAccount = async (e) => {
  */
 export const renderAccountsList = () => {
     const container = document.getElementById('mgmt-accounts-list');
-    if (!container || !state.transactions) return;
+    if (!container || !state.transactions || !state.recurringTemplates) return;
 
     const usedAccountIds = new Set();
     // Check all transactions

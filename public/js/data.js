@@ -37,20 +37,18 @@ export const handleReset = async () => {
 
 export const exportCSV = () => {
     // Header based on public/strady-budget-export-2026-03-08.csv
-    let csv = "date,label,amount,source,destination,reccuring,startdate,endate,periodicity,category\n";
+    let csv = "date,label,amount,source,destination,recurring,startdate,endate,periodicity,category\n";
     
-    // First, Export Templates as "recurring"
+    // 1. Export Templates as "recurring"
     state.recurringTemplates.forEach(tpl => {
         csv += `${tpl.date},"${tpl.label}",${tpl.amount},"${tpl.source || ''}","${tpl.destination || ''}",1,${tpl.date},${tpl.endDate || ''},${tpl.periodicity},${tpl.category}\n`;
     });
     
-    // Then, Export Standalone Transactions (those without a Model)
-    Object.values(state.records).forEach(monthData => {
-        monthData.items.forEach(item => {
-            if (!item.Model) {
-                csv += `${item.date},"${item.label}",${item.amount},"${item.source || ''}","${item.destination || ''}",0,,,,"${item.Category || item.category || ''}"\n`;
-            }
-        });
+    // 2. Export Standalone Transactions (those without a Model) from the flat list
+    state.transactions.forEach(item => {
+        if (!item.Model) {
+            csv += `${item.date},"${item.label}",${item.amount},"${item.source || ''}","${item.destination || ''}",0,,,,"${item.Category || item.category || ''}"\n`;
+        }
     });
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -76,9 +74,9 @@ export const importCSV = (event) => {
 
         // User requested validation: "date,label,amount,source,destination,reccuring,endate,periodicity,category"
         // The provided CSV has "startdate" between reccuring and endate. We'll handle both.
-        const headerCols = header.split(',').map(c => c.trim().toLowerCase());
-        const requiredCols = ["date", "label", "amount", "source", "destination", "reccuring", "endate", "periodicity", "category"];
-        const missing = requiredCols.filter(c => !headerCols.includes(c));
+        const headerCols = header.split(',').map(c => c.trim().toLowerCase().replace('reccuring', 'recurring'));
+        const requiredCols = ["date", "label", "amount", "source", "destination", "recurring", "endate", "periodicity", "category"];
+        const missing = requiredCols.filter(c => !headerCols.includes(c.toLowerCase()));
 
         if (missing.length > 0) {
             showNotification(`L'en-tête du fichier est invalide. Colonnes manquantes: ${missing.join(', ')}`, 'error');
@@ -86,7 +84,7 @@ export const importCSV = (event) => {
         }
 
         const colIdx = {};
-        headerCols.forEach((col, idx) => colIdx[col] = idx);
+        headerCols.forEach((col, idx) => colIdx[col.toLowerCase()] = idx);
 
         const dataLines = lines.slice(1);
         const accountMap = {};
@@ -116,24 +114,27 @@ export const importCSV = (event) => {
             const amount = getValue("amount");
             const sourceName = getValue("source");
             const destName = getValue("destination");
-            const recurringFlag = getValue("reccuring");
+            const recurringFlag = getValue("recurring");
             const endDate = getValue("endate");
             const periodicity = getValue("periodicity");
             const category = getValue("category");
 
-            const getAccountId = (name) => {
-                if (!name) return '';
-                const id = accountMap[name.toLowerCase()];
-                return id || name; 
-            };
-
             try {
+                const getAccountId = (name, field) => {
+                    if (!name) return '';
+                    const id = accountMap[name.toLowerCase()];
+                    if (!id) {
+                        throw new Error(`Le compte "${name}" utilisé comme ${field} n'existe pas.`);
+                    }
+                    return id; 
+                };
+
                 if (!sourceName && !destName) {
                     throw new Error(`La transaction "${label}" doit avoir au moins un compte source ou destination.`);
                 }
 
-                const source = getAccountId(sourceName);
-                const destination = getAccountId(destName);
+                const source = getAccountId(sourceName, 'source');
+                const destination = getAccountId(destName, 'destination');
                 const isRecurring = recurringFlag === '1' || recurringFlag === 'true';
                 const finalCategory = category || 'Autre';
 

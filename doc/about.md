@@ -20,8 +20,7 @@ The system revolves around the following data entities, all of which are scoped 
   - `color`: string (hex code)
   - `index-order`: integer (for sorting)
 - **TRANSACTION**: A single, non-recurring financial event.
-  - `id`: string (unique)
-  - `date`: string (YYYY-MM-DD)
+  - `id`: string (unique-MM-DD)
   - `label`: string
   - `amount`: float
   - `source`: string (either an `ACCOUNT.id` or an empty string `""` for external income)
@@ -176,10 +175,10 @@ The system revolves around the following data entities, all of which are scoped 
 - **Trigger**: The user navigates to a new month (`setViewDate`) or logs in (`init`).
 - **Function**: `generateJitTransactions(userId, monthKey)`
 - **Process**:
-  1. Fetches all `RECURRING_TEMPLATE` documents.
+  1. **Optimized Fetch**: Instead of fetching all templates, it queries Firestore for only those templates that could possibly be active. It retrieves templates whose start date (`date`) is on or before the last day of the `monthKey`.
   2. Fetches all existing transactions for the given `monthKey` that were generated from a template (`Model != null`).
-  3. For each template, it calculates the expected occurrence dates within the `monthKey` based on `periodicity` and the anchor `date`.
-  4. It checks if the template is active for the month (i.e., `monthKey` is between the template's start and end dates).
+  3. For each retrieved template, it performs a final check to see if it has an `endDate` that falls before the start of the `monthKey`.
+  4. If the template is active for the month, it calculates the expected occurrence dates within the `monthKey` based on `periodicity` and the anchor `date`.
   5. It compares the list of expected occurrences against the list of existing JIT transactions for that month.
   6. If an expected transaction does not exist, it is created in a batch write to Firestore. This ensures that if a template is created or updated, the corresponding transactions appear in the correct months when viewed.
 
@@ -187,10 +186,10 @@ The system revolves around the following data entities, all of which are scoped 
 
 #### 2.5.1 Export Transactions & Templates
 - **Trigger**: User clicks "Export Transactions" button.
-- **Format**: CSV with header: `date,label,amount,source,destination,reccuring,startdate,endate,periodicity,category`
+- **Format**: CSV with header: `date,label,amount,source,destination,recurring,startdate,endate,periodicity,category`
 - **Process**:
-  - All `RECURRING_TEMPLATE` documents are written as rows with `reccuring: 1`.
-  - All `TRANSACTION` documents with `Model: null` are written as rows with `reccuring: 0`.
+  - All `RECURRING_TEMPLATE` documents are written as rows with `recurring: 1`.
+  - All `TRANSACTION` documents with `Model: null` are written as rows with `recurring: 0`.
 
 #### 2.5.2 Import Transactions & Templates
 - **Trigger**: User selects a CSV file via the "Import Transactions" input.
@@ -199,14 +198,15 @@ The system revolves around the following data entities, all of which are scoped 
   2. The CSV is parsed row by row.
   3. Account `source` and `destination` names are mapped to their corresponding `ACCOUNT.id`s.
   4. If a category name in the CSV does not exist, a new `CATEGORY` document is created.
-  5. Rows with `reccuring: 1` are imported as new `RECURRING_TEMPLATE` documents.
-  6. Rows with `reccuring: 0` are imported as new `TRANSACTION` documents.
+  5. Rows with `recurring: 1` are imported as new `RECURRING_TEMPLATE` documents.
+  6. Rows with `recurring: 0` are imported as new `TRANSACTION` documents.
 
 #### 2.5.3 Export/Import Accounts
 - **Trigger**: User clicks "Export Accounts" or selects a file for "Import Accounts".
 - **Process**:
   - **Export**: Writes all `ACCOUNT` documents to a CSV with header: `Account,balance,date,saving`.
-  - **Import**: **DESTRUCTIVE ACTION**. Deletes all existing `ACCOUNT` documents before creating new ones from the CSV file. This also implicitly deletes all transactions.
+  - **Import**: **DESTRUCTIVE ACTION**. Deletes all existing `ACCOUNT` documents before creating new ones from the CSV file.
+  - **Note**: This action does **not** delete existing transactions or recurring templates.
 
 ---
 
