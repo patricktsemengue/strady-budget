@@ -7,16 +7,32 @@ import { showNotification, render, setViewDate } from './ui.js';
 
 export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
+    const tableBody = document.getElementById('transactions-table-body');
+    
+    // Support both desktop and mobile filters
     const categoryFilter = document.getElementById('filter-category').value;
+    const categoryFilterMobile = document.getElementById('filter-category-mobile').value;
+    const activeCategoryFilter = categoryFilter !== 'all' ? categoryFilter : categoryFilterMobile;
+
     const accountFilter = document.getElementById('filter-account').value;
+    const accountFilterMobile = document.getElementById('filter-account-mobile').value;
+    const activeAccountFilter = accountFilter !== 'all' ? accountFilter : accountFilterMobile;
+
     const monthData = state.records[getMonthKey(state.viewDate)] || { items: [] };
     
     let filteredItems = monthData.items;
-    if (categoryFilter !== 'all') filteredItems = filteredItems.filter(item => item.Category === categoryFilter);
-    if (accountFilter !== 'all') filteredItems = filteredItems.filter(item => item.source === accountFilter || item.destination === accountFilter);
+    if (activeCategoryFilter !== 'all') filteredItems = filteredItems.filter(item => item.Category === activeCategoryFilter);
+    if (activeAccountFilter !== 'all') filteredItems = filteredItems.filter(item => item.source === activeAccountFilter || item.destination === activeAccountFilter);
 
+    // Support both desktop and mobile sorting
     const sortOrder = document.getElementById('sort-order').value;
-    localStorage.setItem('transactionSortOrder', sortOrder);
+    const sortOrderMobile = document.getElementById('sort-order-mobile').value;
+    
+    // We prioritize the one that was last changed or just use the desktop one as primary if both are default
+    // For simplicity, if they differ, we sync them. But here we just pick the non-default or desktop.
+    const activeSortOrder = (sortOrder !== 'date-desc') ? sortOrder : sortOrderMobile;
+
+    localStorage.setItem('transactionSortOrder', activeSortOrder);
 
     const getType = (tx) => {
         const txInfo = getTxDisplayInfo(tx.source, tx.destination);
@@ -66,34 +82,77 @@ export const renderTransactions = () => {
         }
     });
 
+    // Render mobile cards
     container.innerHTML = filteredItems.map((item, index) => {
         const category = state.categories.find(c => c.id === item.Category);
         const txInfo = getTxDisplayInfo(item.source, item.destination);
         const isMonthClosed = monthData.status === 'closed';
         const isRecurring = !!item.Model;
         return `
-            <li class="p-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 group transaction-item-animate" style="animation-delay: ${index * 30}ms">
-                <div class="flex items-center gap-4 flex-grow">
+            <li class="p-4 flex items-center justify-between gap-4 group transaction-item-animate" style="animation-delay: ${index * 30}ms">
+                <div class="flex items-center gap-4 flex-grow truncate">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                    <div class="flex-1">
+                    <div class="flex-1 truncate">
                         <div class="flex items-center gap-2">
-                            <p class="font-semibold">${item.label}</p>
+                            <p class="font-semibold text-slate-800 truncate">${item.label}</p>
                             ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
                         </div>
-                        <p class="text-sm text-slate-500">${txInfo.src.name} -> ${txInfo.dst.name}</p>
+                        <p class="text-xs text-slate-500 font-medium truncate">${txInfo.src.name} <i class="fa-solid fa-arrow-right mx-1 opacity-50"></i> ${txInfo.dst.name}</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="text-right"><p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p><p class="text-sm text-slate-500">${formatDateStr(item.date)}</p></div>
-                    <div class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        ${!isMonthClosed ? `
-                        <button onclick="window.app.editTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-blue-600"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-green-600"><i class="fa-solid fa-copy"></i></button>
-                        <button onclick="window.app.deleteTransaction('${item.id}')" class="p-1 text-slate-500 hover:text-red-600"><i class="fa-solid fa-trash-can"></i></button>
-                        ` : ''}
+                <div class="flex items-center gap-3">
+                    <div class="text-right whitespace-nowrap">
+                        <p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${formatDateStr(item.date)}</p>
                     </div>
+                    ${!isMonthClosed ? `
+                    <button onclick="window.app.openMobileActions('${item.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Plus d'actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    ` : ''}
                 </div>
             </li>`;
+    }).join('');
+
+    // Render desktop table
+    tableBody.innerHTML = filteredItems.map((item, index) => {
+        const category = state.categories.find(c => c.id === item.Category);
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
+        const isMonthClosed = monthData.status === 'closed';
+        const isRecurring = !!item.Model;
+        return `
+            <tr class="group hover:bg-slate-50 transition-colors transaction-item-animate" style="animation-delay: ${index * 20}ms">
+                <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatDateStr(item.date)}</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0 text-xs" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
+                        <span class="text-sm font-medium text-slate-700">${category?.label || 'Sans catégorie'}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-slate-800">${item.label}</span>
+                        ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-[10px] text-slate-400" title="Transaction récurrente"></i>' : ''}
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                        <span class="max-w-[100px] truncate" title="${txInfo.src.name}">${txInfo.src.name}</span>
+                        <i class="fa-solid fa-arrow-right opacity-30"></i>
+                        <span class="max-w-[100px] truncate" title="${txInfo.dst.name}">${txInfo.dst.name}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-right whitespace-nowrap">
+                    <span class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${!isMonthClosed ? `
+                        <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Dupliquer"><i class="fa-solid fa-copy text-xs"></i></button>
+                        <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Supprimer"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>`;
     }).join('');
 };
 
@@ -149,29 +208,37 @@ export const renderAnticipatedExpenses = () => {
 };
 
 export const populateCategoryFilter = () => {
-    const select = document.getElementById('filter-category');
-    if (!select) return;
-
-    select.innerHTML = '<option value="all">Toutes les catégories</option>';
-    for (const category of state.categories) {
-        const option = document.createElement('option');
-        option.value = category.id;
-        option.textContent = category.label;
-        select.appendChild(option);
-    }
+    const selects = [document.getElementById('filter-category'), document.getElementById('filter-category-mobile')];
+    
+    selects.forEach(select => {
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '<option value="all">Toutes les catégories</option>';
+        for (const category of state.categories) {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.label;
+            select.appendChild(option);
+        }
+        if (currentVal) select.value = currentVal;
+    });
 };
 
 export const populateAccountFilter = () => {
-    const select = document.getElementById('filter-account');
-    if (!select) return;
-
-    select.innerHTML = '<option value="all">Tous les comptes</option>';
-    for (const account of state.accounts) {
-        const option = document.createElement('option');
-        option.value = account.id;
-        option.textContent = account.name;
-        select.appendChild(option);
-    }
+    const selects = [document.getElementById('filter-account'), document.getElementById('filter-account-mobile')];
+    
+    selects.forEach(select => {
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '<option value="all">Tous les comptes</option>';
+        for (const account of state.accounts) {
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.name;
+            select.appendChild(option);
+        }
+        if (currentVal) select.value = currentVal;
+    });
 };
 
 export const renderDashboard = () => {
@@ -184,6 +251,10 @@ export const renderDashboard = () => {
     const sortOrderSelect = document.getElementById('sort-order');
     if (sortOrderSelect) {
         sortOrderSelect.value = savedSortOrder;
+    }
+    const sortOrderMobile = document.getElementById('sort-order-mobile');
+    if (sortOrderMobile) {
+        sortOrderMobile.value = savedSortOrder;
     }
 
     const balances = calculateBalances(state.viewDate);
@@ -239,14 +310,18 @@ export const renderDashboard = () => {
     }
 
     const addTxBtn = document.querySelector('button[onclick="window.app.openTransactionModal()"]');
+    const mobileFab = document.getElementById('mobile-fab');
+
     if (isMonthClosed) {
         document.getElementById('filter-category').disabled = true;
         document.getElementById('filter-account').disabled = true;
         if (addTxBtn) addTxBtn.disabled = true;
+        if (mobileFab) mobileFab.classList.add('hidden');
     } else {
         document.getElementById('filter-category').disabled = false;
         document.getElementById('filter-account').disabled = false;
         if (addTxBtn) addTxBtn.disabled = false;
+        if (mobileFab) mobileFab.classList.remove('hidden');
     }
 };
 

@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { generateId } from './utils.js';
 import { currentUserId } from './storage.js';
-import { addCategoryToFirestore, updateCategoryInFirestore, deleteCategoryFromFirestore, updateTransactionInFirestore, updateCategoryOrderInFirestore } from './firestore-service.js';
+import { addCategoryToFirestore, updateCategoryInFirestore, deleteCategoryFromFirestore, updateCategoryOrderInFirestore } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
 let sortableInstance = null;
@@ -37,11 +37,11 @@ export const initSortableCategories = () => {
 };
 
 export const renderCategoriesList = () => {
-    const container = document.getElementById('mgmt-categories-list');
-    if (!container || !state.transactions) return;
+    const list = document.getElementById('mgmt-categories-list');
+    const tableBody = document.getElementById('mgmt-categories-table-body');
+    if ((!list && !tableBody) || !state.transactions) return;
 
     const usedCategoryIds = new Set();
-    // Check for usage in all transactions and templates for a robust check
     state.transactions.forEach(tx => {
         if (tx.Category) usedCategoryIds.add(tx.Category);
     });
@@ -52,25 +52,118 @@ export const renderCategoriesList = () => {
     const sortedCategories = [...state.categories].sort((a, b) => {
         const orderA = a['index-order'] !== undefined ? a['index-order'] : Infinity;
         const orderB = b['index-order'] !== undefined ? b['index-order'] : Infinity;
-        if (orderA === orderB) return a.label.localeCompare(b.label); // Secondary sort by label if order is same
-        return orderA - orderB; // Primary sort by index-order
+        if (orderA === orderB) return a.label.localeCompare(b.label);
+        return orderA - orderB;
     });
-    container.innerHTML = sortedCategories.map(cat => {
-        const isUsed = usedCategoryIds.has(cat.id);
-        const isDefaultOther = cat.id === 'Autre';
-        const isDisabled = isUsed || isDefaultOther;
-        const disabledTitle = isDefaultOther ? "Cette catégorie par défaut ne peut pas être supprimée." : "Catégorie utilisée par des transactions.";
 
+    const renderActions = (cat, isDisabled, disabledTitle, isMobile = false) => {
+        if (isMobile) {
+            if (isDisabled) return '';
+            return `<button onclick="window.app.openCategoryActions('${cat.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>`;
+        }
         return `
-            <li data-id="${cat.id}" class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 group ${isDisabled ? 'opacity-70' : ''}">
-                <div class="flex items-center gap-3">
-                    <div class="drag-handle cursor-move text-slate-400 p-1" title="Glisser pour réorganiser"><i class="fa-solid fa-grip-vertical"></i></div>
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white" style="background-color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i></div><span class="font-medium">${cat.label}</span></div>
-                <div class="opacity-0 group-hover:opacity-100"><button onclick="window.app.openEditCategory('${cat.id}')" class="p-1 text-slate-500 hover:text-blue-600"><i class="fa-solid fa-pen"></i></button><button onclick="window.app.deleteCategory('${cat.id}')" class="p-1 text-slate-500 hover:text-red-600 disabled:text-slate-300 disabled:cursor-not-allowed" ${isDisabled ? `disabled title="${disabledTitle}"` : 'title="Supprimer la catégorie"'}><i class="fa-solid fa-trash-can"></i></button></div>
-            </li>`;
-    }).join('');
+            <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="window.app.openEditCategory('${cat.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button onclick="window.app.deleteCategory('${cat.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors disabled:text-slate-200" ${isDisabled ? `disabled title="${disabledTitle}"` : 'title="Supprimer"'}><i class="fa-solid fa-trash-can text-xs"></i></button>
+            </div>`;
+    };
+
+    // Render mobile cards
+    if (list) {
+        list.innerHTML = sortedCategories.map(cat => {
+            const isUsed = usedCategoryIds.has(cat.id);
+            const isDefaultOther = cat.id === 'Autre';
+            const isDisabled = isUsed || isDefaultOther;
+            const disabledTitle = isDefaultOther ? "Catégorie système" : "Catégorie utilisée";
+
+            return `
+                <li data-id="${cat.id}" class="p-4 flex items-center justify-between gap-4 group">
+                    <div class="flex items-center gap-4 flex-grow truncate">
+                        <div class="drag-handle cursor-move text-slate-300 p-1 hover:text-slate-500"><i class="fa-solid fa-grip-vertical"></i></div>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style="background-color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i></div>
+                        <span class="font-semibold text-slate-800 truncate">${cat.label}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${renderActions(cat, isDisabled, disabledTitle, true)}
+                    </div>
+                </li>`;
+        }).join('');
+    }
+
+    // Render desktop table
+    if (tableBody) {
+        tableBody.innerHTML = sortedCategories.map(cat => {
+            const isUsed = usedCategoryIds.has(cat.id);
+            const isDefaultOther = cat.id === 'Autre';
+            const isDisabled = isUsed || isDefaultOther;
+            const disabledTitle = isDefaultOther ? "Cette catégorie par défaut ne peut pas être supprimée." : "Catégorie utilisée par des transactions.";
+
+            return `
+                <tr data-id="${cat.id}" class="group hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="drag-handle cursor-move text-slate-300 hover:text-slate-500 transition-colors">
+                            <i class="fa-solid fa-grip-vertical"></i>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs" style="background-color: ${cat.color}">
+                            <i class="fa-solid ${cat.icon}"></i>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm font-medium text-slate-700">${cat.label}</td>
+                    <td class="px-6 py-4">
+                        ${renderActions(cat, isDisabled, disabledTitle, false)}
+                    </td>
+                </tr>`;
+        }).join('');
+    }
     
     initSortableCategories();
+};
+
+let currentCategoryActionId = null;
+
+export const openCategoryActions = (id) => {
+    const cat = state.categories.find(c => c.id === id);
+    if (!cat) return;
+
+    currentCategoryActionId = id;
+    const modal = document.getElementById('category-actions-modal');
+    const content = document.getElementById('category-actions-content');
+    const title = document.getElementById('category-actions-title');
+
+    title.textContent = cat.label;
+    modal.classList.remove('hidden');
+    
+    setTimeout(() => {
+        content.style.transform = 'translateY(0)';
+    }, 10);
+
+    const setupAction = (btnId, actionFn) => {
+        const btn = document.getElementById(btnId);
+        btn.onclick = () => {
+            closeCategoryActions();
+            actionFn(currentCategoryActionId);
+        };
+    };
+
+    setupAction('category-action-edit', openEditCategory);
+    setupAction('category-action-delete', deleteCategory);
+
+    modal.onclick = (e) => {
+        if (e.target === modal) closeCategoryActions();
+    };
+};
+
+export const closeCategoryActions = () => {
+    const modal = document.getElementById('category-actions-modal');
+    const content = document.getElementById('category-actions-content');
+    
+    content.style.transform = 'translateY(100%)';
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        currentCategoryActionId = null;
+    }, 300);
 };
 
 export const openAddCategoryDrawer = () => {

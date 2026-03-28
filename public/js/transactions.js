@@ -1,14 +1,12 @@
 import { state } from './state.js';
-import { generateId, getMonthKey, getTxDisplayInfo } from './utils.js';
+import { generateId, getMonthKey, getTxDisplayInfo, generateDeterministicTransactionId, generateDeterministicTemplateId } from './utils.js';
 import { currentUserId } from './storage.js';
 import { 
     addTransactionToFirestore, 
-    updateTransactionInFirestore, 
     deleteTransactionFromFirestore, 
     addRecurringTemplate,
     updateRecurringSeriesInFirestore,
-    deleteRecurringSeriesInFirestore,
-    generateJitTransactions
+    deleteRecurringSeriesInFirestore
 } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
@@ -20,13 +18,6 @@ const fieldsToWatchForDuplication = [
     'transaction-source', 
     'transaction-destination'
 ];
-
-const generateDeterministicTransactionId = (txData) => {
-    // ID is based on the core properties that define a unique transaction.
-    const key = `${txData.date}|${txData.label}|${txData.amount}|${txData.source}|${txData.destination}`;
-    // Use btoa for a simple, URL-safe "hash". Encode to handle UTF-8.
-    return `tx_${btoa(unescape(encodeURIComponent(key)))}`;
-};
 
 export const openTransactionModal = (id = null, duplicateData = null) => {
     const modal = document.getElementById('transaction-modal');
@@ -244,6 +235,14 @@ export const handleSaveTransaction = async (e) => {
                     // "deletes the old transaction, and creates a new transaction"
                     const newTxData = { label, amount, date, Category, source, destination, Model: null };
                     const newId = generateDeterministicTransactionId(newTxData);
+
+                    // Check for duplicate (if the new ID already exists and it's not the one we are editing)
+                    const existingTx = Object.values(state.records).flatMap(r => r.items).find(t => t.id === newId);
+                    if (existingTx && newId !== id) {
+                        showNotification('Cette transaction existe déjà.', 'error');
+                        return;
+                    }
+
                     await deleteTransactionFromFirestore(currentUserId, id);
                     await addTransactionToFirestore(currentUserId, {
                         id: newId, ...newTxData
@@ -257,17 +256,36 @@ export const handleSaveTransaction = async (e) => {
             // CREATION CASE
             if (isRecurring) {
                 // RECURRING CREATION: Align with TODO.litcoffee
-                const template = {
-                    id: `rec_${generateId()}`,
+                const templateData = {
                     date, label, amount, source, destination, category: Category,
                     recurring: true, endDate, periodicity
                 };
-                await addRecurringTemplate(currentUserId, template);
+                const templateId = generateDeterministicTemplateId(templateData);
+
+                // Check if template already exists
+                const existingTemplate = state.recurringTemplates.find(tpl => tpl.id === templateId);
+                if (existingTemplate) {
+                    showNotification('Cette série récurrente existe déjà.', 'error');
+                    return;
+                }
+
+                await addRecurringTemplate(currentUserId, {
+                    id: templateId,
+                    ...templateData
+                });
                 showNotification('Transaction récurrente créée !');
             } else {
                 // SINGLE CREATION: Align with TODO.litcoffee
                 const newTxData = { label, amount, date, Category, source, destination, Model: null };
                 const newId = generateDeterministicTransactionId(newTxData);
+
+                // Check if transaction already exists
+                const existingTx = Object.values(state.records).flatMap(r => r.items).find(t => t.id === newId);
+                if (existingTx) {
+                    showNotification('Cette transaction existe déjà.', 'error');
+                    return;
+                }
+
                 await addTransactionToFirestore(currentUserId, {
                     id: newId, ...newTxData
                 });
@@ -321,4 +339,54 @@ export const deleteTransaction = async (id) => {
             }
         }
     }
+};
+
+let currentMobileActionId = null;
+
+export const openMobileActions = (id) => {
+    const onFocusMonthKey = getMonthKey(state.viewDate);
+    const tx = state.records[onFocusMonthKey]?.items.find(t => t.id === id);
+    if (!tx) return;
+
+    currentMobileActionId = id;
+    const modal = document.getElementById('mobile-actions-modal');
+    const content = document.getElementById('mobile-actions-content');
+    const title = document.getElementById('mobile-actions-title');
+
+    title.textContent = tx.label;
+    modal.classList.remove('hidden');
+    
+    // Animation
+    setTimeout(() => {
+        content.style.transform = 'translateY(0)';
+    }, 10);
+
+    // Setup action button listeners (once)
+    const setupAction = (btnId, actionFn) => {
+        const btn = document.getElementById(btnId);
+        btn.onclick = () => {
+            closeMobileActions();
+            actionFn(currentMobileActionId);
+        };
+    };
+
+    setupAction('mobile-action-edit', editTransaction);
+    setupAction('mobile-action-duplicate', duplicateTransaction);
+    setupAction('mobile-action-delete', deleteTransaction);
+
+    // Close on overlay click
+    modal.onclick = (e) => {
+        if (e.target === modal) closeMobileActions();
+    };
+};
+
+export const closeMobileActions = () => {
+    const modal = document.getElementById('mobile-actions-modal');
+    const content = document.getElementById('mobile-actions-content');
+    
+    content.style.transform = 'translateY(100%)';
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        currentMobileActionId = null;
+    }, 300);
 };

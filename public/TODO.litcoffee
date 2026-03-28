@@ -1,162 +1,172 @@
-# Single Transaction Datamodel
-    {
-        "date" : "2026-01-01", // effective date
-        "label" : "string",
-        "amount" : 0,
-        "source" : "string",
-        "destination" : "string",
-        "Category" : "string",
-        "Model": null
-    }
 
- # Template to Reccuring transaction Datamodel
-
-    {
-    "date" : "2026-01-01", // Anchor and start date
-    "label" : "string",
-    "amount" : 0,
-    "source" : "string",
-    "destination" : "string",
-    "reccuring" : true,
-    "endDate": null 
-    "periodicity": "string"
-    "category": "string" 
-    }
+# Requirement 2026-03-28_2100
+To remove the JIT transaction generation approach for reccuring transactions
+To implement a batch generation approach for reccuring transactions:
+ * The system will batch create all the periodic transactions within a 36-month interval, starting from the anchor date, and limited at the enddate.
 
 
-    
-# Logical ID
-* date, label, amount, source, destination.
 
-When the system compare two single transactions T0 and T1, 
 
-     IF T0.date = T1.date and
+
+## Datamodel.
+
+Unchanged!
+
+## Create transaction 
+The user clicks on the button to add a new transaction via the GUI.
+
+The system displays the Create Form : 
+ * Date
+ * Label
+ * Amount
+ * Source account (drop down list of existing account. Keep empty for external account)
+ * Destination account (drop down list of existing accounts. Keep empty for external account)
+ * Category (Drop down list of know categories)
+ * Reccuring checkbox (to mention it when a transaction is a reccuring)
+ * endDate (only available for reccuring transaction)
+ * Periodicity (only for reccuring transaction)
+
+
+The user edits the form and save.
+
+Upon saving, the system display a toaster for error or success creation.
+
+### Handling single transactions
+THe system creates the single transaction in firestone.
+```
+Given two transaction T0 and T1, 
+    IF T0.date = T1.date and
         T0.label = T1.label and 
         T0.amount = T1.amount and
         T0.source = T1.source and 
         T0.destination = T1.destination
      Then 
-       T0 and T1 are the same transaction.
+       T0 and T1 are the same transaction, and must have the same UUID.
 
-# Transaction Creation
-The user clicks on the button to add a new transaction via the GUI, 
+The system cannot create duplicates of the same transaction.
 
-The system displays the Create Form:
+```
 
-**Mandatory fields to edit**:
- * Date // default value = current date
- * label, 
- * amount, // default value = 0
 
- **Optional fields to edit**:
- * source,
-    * Default value = "" to indicates the transaction is a revenu from an external account.
- * destination
-    * Default value = "" to inidicate the transaction is a payment to an external account.
- * Category. Default value =
-    * "Revenu" if source is empty
-    * "Autre" if destination is empty
+### Handling reccuring transactions
+The system create a reccuring_template in firestore : 
+
+The system bacth creates all the periodic transaction within a 36-month interval from the starting date, and link them all to their parent reccuring template.
+
+```
+    Example, the user creates a monthly reccuring transaction starting on January 1st 2026:
+     The system generates a reccuring template reccTemplateT0
+        If no enddate is edited, the system generates 36 monthly single transactions linked to reccTemplateT0. THe system also forces reccTemplateT0.enddate to 31 December 2028 (36 months).
+
+        if the endate was edited, 31st december 2026 for instance, the system generates only 12 monthly single transactions linked to the parent reccTemplateT0.
+
+
+        Transaction cannot be duplicated based on the rule:       
+        two transactions T0 and T1,  IF T0.date = T1.date and
+        T0.label = T1.label and 
+        T0.amount = T1.amount and
+        T0.source = T1.source and 
+        T0.destination = T1.destination 
+     Then 
+       T0 and T1 are the same transaction, and must have the same UUID.
+```
+
+
+## Update transaction 
+The user click on a transaction "edit" button at the UI
+
+The system displays the update transaction form prefilled, with the following fields:
+For a single transaction (i.e. Model = null):
+ * Date
+ * Label
+ * Amount
+ * Source account
+ * Destination account
+ * Category
+ 
+
+ For a reccuring transaction (i.e. Model != null):
+ * Date
+ * Label
+ * Amount
+ * Source account
+ * Destination account
+ * Category
+ * Reccuring checkbox
+ * endDate
+ * Periodicity
+
+
+
+The user edits the form and save.
+
+The system updates the transaction in firestore.
+
+The system displays a toaster for error or success creation.
+
+
+### Handling single transaction
+To update a single transaction, the system triggers:
+- the Deletion of the selected transaction
+- the creation of a new single transaction.
+    The system cannot create duplicates of the same transaction(same date, amount, source, destination, label). "The transaction already exist" warnng message would be triggered.
+
+
+### Handling reccuring transactions
+
+``` 
+ Rule: two reccuring templates reccT0 and reccT1 are the same
+ IF reccT0.date = reccT1.date and
+        reccT0.label = reccT1.label and 
+        reccT0.amount = reccT1.amount and
+        reccT0.source = reccT1.source and 
+        reccT0.destination = reccT1.destination and
+        reccT0.periodicity = reccT1.periodicity and
+        reccT0.category = reccT1.category
+     Then 
+       reccT0 and reccT1 are the same transaction, and must have the same UUID.
+```
+
+To update a reccuring transaction, i.e Model!= reccTempateT0, 
+
+ the system generates a new tempate (reccTemplateT1)
+ if reccTemplateT1 = reccTemplateT0, the system continues with reccTemplateT0.
+ if reccTemplateT1 != reccTemplateT0, then
+   * case 1:  reccTemplateT1.date > reccTemplateT0.date
+    The system updates reccTemplateT0 end Date: `reccTemplateT0.endDate = reccTemplateT1.date - 1 day`. 
+    The system batch deletes all reccTemplateT0 child transaction having a date after the new reccTemplateT0.endDate.
     
-* Both source and destination cannot be empty at the same time.
+    The system initiates the reccuring transaction function with reccTempateT1:
+      - Persists the reccTempateT1 in firestore.
+      - Batch creates all periodic child transactions in a 36-month windows, from reccTempateT1.date to `(reccTempateT1.endDate != null ? MIN( reccTempateT1.endDate, reccTemplateT1.date + 36 months) : reccTempateT1.date + 36 months)`
+      - reccTempateT1.endDate is null (infinity) ? The system calculates the boundary of 36 months based on anchor date, in order the batch generate the initial transactions.
+      - reccTempateT1.endDate is not null ? The system generates the periodic child transactions between the anchor date and end date, Limiting always to a 36 months interval.
 
-**Reccuring transaction only**:
-* periodicity
-    * Default = M. 
-    * Expected Values: M=Month, Y=Year, Q = Quarter
-* EndDate
-    * Default is empty string.
+    * Case 2: reccTemplateT1.date < reccTemplateT0.date
+    The system deletes reccTemplateT0 and all child transactions.
+    The system persist reccTemplateT1 in firestone and batch generate all periodic child transaction in a 36-month intervalle, from reccTemplate.date to `(reccTempateT1.endDate != null ? MIN( reccTempateT1.endDate, reccTemplateT1.date + 36 months) : reccTempateT1.date + 36 months)`
 
-## Case: Single Transaction
-The user edits the form and submits, the system creates a new transaction.
+  
 
-## Case: Reccuring Transaction
-The user edits the form.
-When the user checks the "reccuring transaction" checkbox, reccuring transaction fieds ALSO appear on the screen.
+## Delete transaction
+The user click on a transaction "delete" button at the UI
 
-The user edits the fields and submits.
+The system show a confirmation message (danger)
 
-The system creates:
-*  The transaction template if not exists
-    
-    e.g.
+Upon confirmation, the system delete the transaction.
 
-        TemplateT0 = 
-        {
-            date : "2026-01-01",
-            label : "Salaire",
-            amount : 3000,
-            source :"",
-            destination : "Compte principal",
-            endate : null, //null is considered infinite
-            periodicity: "M",
-            category : "Revenu"
-        }
-* The system creates a Single transaction 
-    ```
-     onFocusMonth = the month the user has selected
-     iF onFocusMonth is not within TemplateT0.date - TemplateT0.endate range, 
-     then SkIP
-
-     New Single transaction T = (){
-        date.day = TemplateT0.date.day,
-        date.month = onFocusMonth.day,
-        date.Year = onFocusMonth.year
-        label = TemplateT0.label,
-        amount = TemplateT0.amount,
-        source = TemplateT0.source,
-        destination = TemplateT0.destination
-        periodicity = TemplateT0.periodicity
-        category = TemplateT0.category
-        model = TemplateT0
-
-     }
-     If t already exist, skip
-     Else
-      Create a single transaction T in the selected month "OnFocus".
-    ```
-
-
-    Remark: a Template will be assigned
-    * 1 transaction per month in the case of Montly template.  
-    * 0 or 1 transaction per month in the case of Quaterly, and yearly template.
-## Case: Reccuring Transaction - The user navigate to another month.
-When the user navigates another month,
-THe system autogenerate single transaction for valid templates.
-
-A valid template is one that the user selected month is within the "date" and "endate" interval.
-
-# Transaction Update
-The user selects a transaction, and clicks on the update button.
-The system displays the update transaction form.
-## CASE: Single transaction
-The system identifies single transaction when the "Model" field is null/empty.
-
-When the user submits the form, the system deletes the old transaction, and creates a new transaction.
-
-## CASE: reccuring transaction
-The system identifies single transaction when the "Model" field is assigned an existing template.
-
-When the user submits the form, 
-* the system updates the enddate of the old Template (e.g. TemplateT0)
-* Clean all single transaction linked to the old Template, having a date out of the old Template's date and endDate interval.
-* the system create a new template (e.g. TemplateT1)
-* the system creates the single transaction of TemplateT1 for the onfocused month.
+For reccuring transaction, the system delete the template and all child transactions.
 
 
 
-# Transaction deletion
-The user selects a transaction, and clicks on the delete button, 
+## Key indicators
+Key indicators (Account Balance, Emergency Fund, Monthly Income, Monthly Spending) are calculated on a monthly basis, on existing transactions on the selected month, and arithmetic series formula for reccuring transactions.
 
-## CASE: Single transaction
-The system displays a confirmation box (danger)
-The user confirms
-The system deletes the transaction.
 
-## CASE: reccuring transaction
-The system displays a confirmation box (danger)
-The user confirms
-The system deletes the template and linked transactions.
+e.g. Forcasting Account Balance with reccuring transactions after the initial 36 months transactions, 
+The system must calculate arithmetic series formula on reccuring transactions.
 
 
 
-## 
+
+

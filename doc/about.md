@@ -139,8 +139,8 @@ The system revolves around the following data entities, all of which are scoped 
 - **Inputs**: Same as a single transaction, plus `periodicity` and optional `endDate`.
 - **Process**:
   1. A new `RECURRING_TEMPLATE` document is created. The `id` is prefixed with `rec_`.
-  2. **No initial `TRANSACTION` is created by this action.** Transactions are generated Just-In-Time (see 2.4).
-  3. The `generateJitTransactions` function is called for the new template's starting month to ensure it appears immediately if relevant.
+  2. If no `endDate` is provided, it is automatically set to 36 months from the start `date`.
+  3. The system immediately **batch-creates** all `TRANSACTION` documents for the entire series, from the start `date` to the `endDate`. Each transaction is linked to the template via its `Model` ID.
 
 #### 2.3.3 Edit a Single Transaction
 - **Trigger**: User edits a transaction that has `Model: null`.
@@ -153,10 +153,10 @@ The system revolves around the following data entities, all of which are scoped 
 - **Trigger**: User edits a transaction that has a `Model` ID.
 - **Process**: This action "splits" the recurring series to preserve history.
   1. A confirmation dialog is shown explaining the split.
-  2. The original `RECURRING_TEMPLATE` is updated: its `endDate` is set to the day before the edited transaction's new date.
-  3. All `TRANSACTION` documents linked to the old template (`Model` ID) with a `date` on or after the new start date are deleted.
+  2. **Case 1 (New Start Date is Later):** If the transaction's new date is after the series' original start date, the original `RECURRING_TEMPLATE` is updated: its `endDate` is set to the day before the edited transaction's new date. All `TRANSACTION` documents linked to the old template with a `date` on or after the new start date are deleted.
+  3. **Case 2 (New Start Date is Earlier or Same):** If the new date is on or before the original start date, the entire original `RECURRING_TEMPLATE` and all its child `TRANSACTION` documents are deleted.
   4. A **new** `RECURRING_TEMPLATE` is created with the updated details. Its `date` (start date) is the date of the transaction being edited.
-  5. The `generateJitTransactions` function is called for the current month to generate the new transaction instance immediately.
+  5. The system immediately **batch-creates** all `TRANSACTION` documents for this new series.
 
 #### 2.3.5 Delete a Single Transaction
 - **Trigger**: User deletes a transaction with `Model: null`.
@@ -170,28 +170,16 @@ The system revolves around the following data entities, all of which are scoped 
      - The `RECURRING_TEMPLATE` document is deleted.
      - **ALL** `TRANSACTION` documents (past, present, and future) that have the matching `Model` ID are deleted.
 
-### 2.4 Just-In-Time (JIT) Transaction Generation
+### 2.4 Data Import / Export
 
-- **Trigger**: The user navigates to a new month (`setViewDate`) or logs in (`init`).
-- **Function**: `generateJitTransactions(userId, monthKey)`
-- **Process**:
-  1. **Optimized Fetch**: Instead of fetching all templates, it queries Firestore for only those templates that could possibly be active. It retrieves templates whose start date (`date`) is on or before the last day of the `monthKey`.
-  2. Fetches all existing transactions for the given `monthKey` that were generated from a template (`Model != null`).
-  3. For each retrieved template, it performs a final check to see if it has an `endDate` that falls before the start of the `monthKey`.
-  4. If the template is active for the month, it calculates the expected occurrence dates within the `monthKey` based on `periodicity` and the anchor `date`.
-  5. It compares the list of expected occurrences against the list of existing JIT transactions for that month.
-  6. If an expected transaction does not exist, it is created in a batch write to Firestore. This ensures that if a template is created or updated, the corresponding transactions appear in the correct months when viewed.
-
-### 2.5 Data Import / Export
-
-#### 2.5.1 Export Transactions & Templates
+##### 2.4.1 Export Transactions & Templates
 - **Trigger**: User clicks "Export Transactions" button.
 - **Format**: CSV with header: `date,label,amount,source,destination,recurring,startdate,endate,periodicity,category`
 - **Process**:
   - All `RECURRING_TEMPLATE` documents are written as rows with `recurring: 1`.
   - All `TRANSACTION` documents with `Model: null` are written as rows with `recurring: 0`.
 
-#### 2.5.2 Import Transactions & Templates
+##### 2.4.2 Import Transactions & Templates
 - **Trigger**: User selects a CSV file via the "Import Transactions" input.
 - **Process**:
   1. **DESTRUCTIVE ACTION**: Before importing, all existing `TRANSACTION` and `RECURRING_TEMPLATE` documents for the user are **deleted**.
@@ -201,7 +189,7 @@ The system revolves around the following data entities, all of which are scoped 
   5. Rows with `recurring: 1` are imported as new `RECURRING_TEMPLATE` documents.
   6. Rows with `recurring: 0` are imported as new `TRANSACTION` documents.
 
-#### 2.5.3 Export/Import Accounts
+##### 2.4.3 Export/Import Accounts
 - **Trigger**: User clicks "Export Accounts" or selects a file for "Import Accounts".
 - **Process**:
   - **Export**: Writes all `ACCOUNT` documents to a CSV with header: `Account,balance,date,saving`.
@@ -212,20 +200,21 @@ The system revolves around the following data entities, all of which are scoped 
 
 ## 3. Key Indicator Calculations
 
-This section describes how key financial indicators like monthly income, account balances (`solde`), and the emergency fund (`fond d'urgence`) are calculated. The calculations rely on the Just-In-Time (JIT) generation of transactions from recurring templates.
+This section describes how key financial indicators are calculated.
 
-### The Role of Recurring Templates & JIT Generation
+### Calculation Model
 
-When calculating indicators for any given month, the system first calls the `generateJitTransactions` function (see section 2.4). This function ensures that all expected transactions from active `RECURRING_TEMPLATE`s for that month exist as actual `TRANSACTION` documents in the database.
+With the batch creation approach, all instances of recurring transactions exist as standard `TRANSACTION` documents in the database from the moment they are created. This greatly simplifies calculations. The system no longer needs to generate transactions "Just-In-Time" or distinguish between single and recurring transactions during calculations.
 
-This means that for any calculation within a specific month (past or present), the logic does not need to distinguish between single-entry transactions and recurring ones. It can simply query the unified set of `TRANSACTION` documents for that period, greatly simplifying the calculations.
+For any calculation (e.g., balance, income), the logic can simply query the unified set of `TRANSACTION` documents for the relevant period.
 
 ### 3.1 Monthly Income (Revenu du mois)
 
 - **Process**:
   1. The system queries all `TRANSACTION` documents where the `date` falls within the selected month.
-  2. It filters these transactions to find those representing income. An income transaction is identified by its `source` field being empty (`""`).
-  3. The monthly income is the sum of the `amount` field for all these filtered income transactions.
+  2. It filters these transactions to find those representing income (empty `source` field).
+  3. **Forecasting**: If the selected month is beyond the 36-month batch-generation window for any `RECURRING_TEMPLATE` with an empty `source`, the system calculates the forecasted income for that month using an arithmetic series (counting occurrences of the template within that specific month).
+  4. The total monthly income is the sum of existing transaction amounts and forecasted recurring amounts.
 
 ### 3.2 Account Balance (Solde)
 
@@ -233,9 +222,10 @@ The balance of any single account at a given point in time is calculated as foll
 
 - **Process**:
   1. Start with the account's `initialBalance` as of its `initialBalanceDate`.
-  2. Query all `TRANSACTION` documents with a `date` after the `initialBalanceDate`.
+  2. Query all `TRANSACTION` documents with a `date` after the `initialBalanceDate` and up to the target date.
   3. Add the `amount` of every transaction where the account is the `destination`.
   4. Subtract the `amount` of every transaction where the account is the `source`.
+  5. **Forecasting**: If the target date is beyond the 36-month window of batch-generated transactions for any active `RECURRING_TEMPLATE`, the system calculates the additional impact using an arithmetic series formula (counting occurrences of the recurring template between the end of the batch window and the target date) and adjusts the balance accordingly.
 
 ### 3.3 Emergency Fund (Fond d'urgence)
 
@@ -243,5 +233,13 @@ The emergency fund represents the total amount held in all savings accounts.
 
 - **Process**:
   1. The system identifies all `ACCOUNT` documents where the `isSavings` flag is `true`.
-  2. For each of these savings accounts, it calculates its current balance using the method described in section 3.2.
+  2. For each of these savings accounts, it calculates its current balance using the method described in section 3.2 (including forecasting).
   3. The total emergency fund is the sum of the balances of all these designated savings accounts.
+
+### 3.4 Monthly Spending (Dépenses du mois)
+
+- **Process**:
+  1. The system queries all `TRANSACTION` documents where the `date` falls within the selected month.
+  2. It filters these transactions to find those representing expenses (empty `destination` field).
+  3. **Forecasting**: If the selected month is beyond the 36-month batch-generation window for any `RECURRING_TEMPLATE` with an empty `destination`, the system calculates the forecasted spending for that month using an arithmetic series (counting occurrences of the template within that specific month).
+  4. The total monthly spending is the sum of existing transaction amounts and forecasted recurring amounts.

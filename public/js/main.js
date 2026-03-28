@@ -10,7 +10,9 @@ import {
     handleUpdateCategory, 
     deleteCategory,
     openAddCategoryDrawer,
-    closeAddCategoryDrawer
+    closeAddCategoryDrawer,
+    openCategoryActions,
+    closeCategoryActions
 } from './categories.js';
 import { 
     handleAddAccount, 
@@ -19,19 +21,23 @@ import {
     handleUpdateAccount, 
     deleteAccount,
     openAddAccountDrawer,
-    closeAddAccountDrawer
+    closeAddAccountDrawer,
+    openAccountActions,
+    closeAccountActions
 } from './accounts.js';
 import { 
     openTransactionModal, 
     closeTransactionModal, 
     handleSaveTransaction, 
-    editTransaction, 
-    duplicateTransaction, 
-    deleteTransaction 
+    editTransaction,
+    duplicateTransaction,
+    deleteTransaction,
+    openMobileActions,
+    closeMobileActions
 } from './transactions.js';
 import { handleReset, exportCSV, importCSV, exportAccountsCSV, importAccountsCSV } from './data.js';
 import { login, logout, onUserChanged } from './auth.js';
-import { subscribeToAppData, generateJitTransactions } from './firestore-service.js';
+import { subscribeToAppData } from './firestore-service.js';
 
 const init = () => {
     setupEventListeners();
@@ -74,10 +80,6 @@ const init = () => {
                 rebuildRecords(cachedData.transactions || [], cachedData.months || {});
                 render(); // Render immediately with cached data
             }
-
-            // Trigger JIT generation for current month
-            const initialMonthKey = getMonthKey(state.viewDate);
-            await generateJitTransactions(user.uid, initialMonthKey);
 
             // 2. Subscribe to Firestore for live data and updates
             let isFirstFirestoreUpdate = true;
@@ -225,6 +227,30 @@ const setupEventListeners = () => {
     addSafeListener('reset-button', 'click', handleReset);
     addSafeListener('btn-cloture', 'click', clotureMois);
 
+    // Mobile Filters Modal
+    const openFilters = () => {
+        document.getElementById('mobile-filters-modal').classList.remove('hidden');
+    };
+    const closeFilters = () => {
+        document.getElementById('mobile-filters-modal').classList.add('hidden');
+    };
+
+    addSafeListener('btn-mobile-filters', 'click', openFilters);
+    addSafeListener('btn-close-filters-modal', 'click', closeFilters);
+    addSafeListener('btn-close-filters-cancel', 'click', closeFilters);
+    addSafeListener('btn-apply-filters', 'click', () => {
+        renderTransactions();
+        closeFilters();
+    });
+
+    // Close on overlay click (if user clicks the backdrop)
+    const filtersModal = document.getElementById('mobile-filters-modal');
+    if (filtersModal) {
+        filtersModal.addEventListener('click', (e) => {
+            if (e.target === filtersModal) closeFilters();
+        });
+    }
+
     // Transaction Modal
     addSafeListener('transaction-form', 'submit', handleSaveTransaction);
     addSafeListener('btn-cancel-transaction', 'click', closeTransactionModal);
@@ -266,7 +292,13 @@ window.app = {
     openEditAccount,
     deleteAccount,
     openAddAccountDrawer,
-    openAddCategoryDrawer
+    openAddCategoryDrawer,
+    openMobileActions,
+    closeMobileActions,
+    openCategoryActions,
+    closeCategoryActions,
+    openAccountActions,
+    closeAccountActions
 };
 
 document.addEventListener('DOMContentLoaded', init);

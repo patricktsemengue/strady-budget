@@ -2,7 +2,6 @@ import { state, updateState } from './state.js';
 import { renderDashboard } from './dashboard.js';
 import { renderSettings } from './settings.js';
 import { renderEmergencyFund, renderMonthlyIncome } from './dashboard-widgets.js';
-import { generateJitTransactions } from './firestore-service.js';
 import { currentUserId } from './storage.js';
 import { getMonthKey } from './utils.js';
 
@@ -97,10 +96,6 @@ export const setView = (view, isInitial = false) => {
 export const setViewDate = async (date) => {
     const newDate = new Date(date);
     updateState({ viewDate: newDate });
-    const monthKey = getMonthKey(newDate);
-    if (currentUserId) {
-        await generateJitTransactions(currentUserId, monthKey);
-    }
     render();
 };
 
@@ -116,10 +111,12 @@ export const render = () => {
 
     const dashboardView = document.getElementById('view-dashboard');
     const settingsView = document.getElementById('view-settings');
+    const mobileFab = document.getElementById('mobile-fab');
     
     if(state.currentView === 'dashboard') {
         dashboardView.classList.remove('hidden');
         settingsView.classList.add('hidden');
+        if (mobileFab) mobileFab.classList.remove('hidden');
         renderDashboard();
 
         // Render the new dashboard widgets
@@ -128,6 +125,7 @@ export const render = () => {
     } else if (state.currentView === 'settings') {
         dashboardView.classList.add('hidden');
         settingsView.classList.remove('hidden');
+        if (mobileFab) mobileFab.classList.add('hidden');
         renderSettings();
     }
 };

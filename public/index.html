@@ -137,32 +137,58 @@
             
             <!-- Monthly Transactions -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-5 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <h3 class="font-bold text-lg text-slate-800 self-start md:self-center">Transactions du mois</h3>
-                    <div class="flex flex-wrap items-center justify-start md:justify-end gap-2 w-full md:w-auto">
-                        <button onclick="window.app.openTransactionModal()" class="bg-slate-800 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 flex items-center">
-                            <i class="fa-solid fa-plus md:mr-2"></i><span class="hidden md:inline">Ajouter</span>
-                        </button>
-                        <select id="filter-category" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                            <option value="all">Toutes les catégories</option>
-                        </select>
-                        <select id="filter-account" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                            <option value="all">Tous les comptes</option>
-                        </select>
-                        <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
-                            <label for="sort-order" class="text-sm font-medium text-slate-500 whitespace-nowrap">Trier par :</label>
-                            <select id="sort-order" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm font-medium text-slate-800" title="Trier les transactions">
-                                <option value="date-desc">Date (plus récent)</option>
-                                <option value="category">Catégorie</option>
-                                <option value="account">Compte</option>
-                                <option value="type">Type</option>
-                                <option value="amount-desc">Montant (décroissant)</option>
-                                <option value="amount-asc">Montant (croissant)</option>
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center gap-4">
+                    <h3 class="font-bold text-lg text-slate-800">Transactions du mois</h3>
+                    <div class="flex items-center gap-2">
+                        <!-- Desktop Filters -->
+                        <div class="hidden md:flex items-center gap-2">
+                            <button onclick="window.app.openTransactionModal()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 flex items-center">
+                                <i class="fa-solid fa-plus mr-2"></i>Ajouter
+                            </button>
+                            <select id="filter-category" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                                <option value="all">Toutes les catégories</option>
                             </select>
+                            <select id="filter-account" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                                <option value="all">Tous les comptes</option>
+                            </select>
+                            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                                <label for="sort-order" class="text-sm font-medium text-slate-500 whitespace-nowrap">Trier :</label>
+                                <select id="sort-order" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm font-medium text-slate-800">
+                                    <option value="date-desc">Date (récent)</option>
+                                    <option value="category">Catégorie</option>
+                                    <option value="account">Compte</option>
+                                    <option value="type">Type</option>
+                                    <option value="amount-desc">Montant ↓</option>
+                                    <option value="amount-asc">Montant ↑</option>
+                                </select>
+                            </div>
                         </div>
+                        <!-- Mobile Kebab for Filters -->
+                        <button id="btn-mobile-filters" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg" title="Filtres et tri">
+                            <i class="fa-solid fa-filter"></i>
+                        </button>
                     </div>
                 </div>
-                <ul id="transactions-container" class="divide-y divide-slate-100"></ul>
+                <div class="overflow-x-auto">
+                    <!-- Desktop Table View -->
+                    <table id="transactions-table" class="hidden md:table w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">Date</th>
+                                <th class="px-6 py-4 font-semibold">Catégorie</th>
+                                <th class="px-6 py-4 font-semibold">Libellé</th>
+                                <th class="px-6 py-4 font-semibold">Compte</th>
+                                <th class="px-6 py-4 font-semibold text-right">Montant</th>
+                                <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body" class="divide-y divide-slate-100 bg-white">
+                            <!-- Rows Injected -->
+                        </tbody>
+                    </table>
+                    <!-- Mobile Card View -->
+                    <ul id="transactions-container" class="md:hidden divide-y divide-slate-100"></ul>
+                </div>
             </div>
 
             <!-- Anticipated Expenses -->
@@ -208,8 +234,23 @@
                         <i class="fa-solid fa-plus text-xs"></i> Ajouter
                     </button>
                 </div>
-                <div class="p-5">
-                    <ul id="mgmt-categories-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></ul>
+                <div class="p-0 md:p-5">
+                    <!-- Desktop Table View -->
+                    <table class="hidden md:table w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold w-12"></th>
+                                <th class="px-6 py-4 font-semibold">Icône</th>
+                                <th class="px-6 py-4 font-semibold">Libellé</th>
+                                <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mgmt-categories-table-body" class="divide-y divide-slate-100 bg-white">
+                            <!-- Rows Injected -->
+                        </tbody>
+                    </table>
+                    <!-- Mobile Card View -->
+                    <ul id="mgmt-categories-list" class="md:hidden divide-y divide-slate-100"></ul>
                 </div>
             </div>
 
@@ -221,8 +262,22 @@
                         <i class="fa-solid fa-plus text-xs"></i> Ajouter
                     </button>
                 </div>
-                <div class="p-5">
-                    <ul id="mgmt-accounts-list" class="space-y-3"></ul>
+                <div class="p-0 md:p-5">
+                    <!-- Desktop Table View -->
+                    <table class="hidden md:table w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">Nom du compte</th>
+                                <th class="px-6 py-4 font-semibold">Type</th>
+                                <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mgmt-accounts-table-body" class="divide-y divide-slate-100 bg-white">
+                            <!-- Rows Injected -->
+                        </tbody>
+                    </table>
+                    <!-- Mobile Card View -->
+                    <ul id="mgmt-accounts-list" class="md:hidden divide-y divide-slate-100"></ul>
                 </div>
             </div>
 
@@ -342,6 +397,67 @@
         </div>
     </div>
 
+    <!-- Category Actions Modal (Mobile) -->
+    <div id="category-actions-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-end items-end">
+        <div class="bg-white w-full rounded-t-2xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="category-actions-content">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <h3 id="category-actions-title" class="font-bold text-lg text-slate-800 mb-6 truncate">Actions Catégorie</h3>
+            <div class="space-y-3">
+                <button id="category-action-edit" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-pen"></i></div>
+                    Modifier la catégorie
+                </button>
+                <button id="category-action-delete" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-red-600 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center"><i class="fa-solid fa-trash-can"></i></div>
+                    Supprimer la catégorie
+                </button>
+            </div>
+            <button onclick="window.app.closeCategoryActions()" class="w-full mt-6 p-4 text-slate-500 font-medium hover:text-slate-800 transition-colors">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Account Actions Modal (Mobile) -->
+    <div id="account-actions-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-end items-end">
+        <div class="bg-white w-full rounded-t-2xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="account-actions-content">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <h3 id="account-actions-title" class="font-bold text-lg text-slate-800 mb-6 truncate">Actions Compte</h3>
+            <div class="space-y-3">
+                <button id="account-action-edit" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-pen"></i></div>
+                    Modifier le compte
+                </button>
+                <button id="account-action-delete" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-red-600 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center"><i class="fa-solid fa-trash-can"></i></div>
+                    Supprimer le compte
+                </button>
+            </div>
+            <button onclick="window.app.closeAccountActions()" class="w-full mt-6 p-4 text-slate-500 font-medium hover:text-slate-800 transition-colors">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Transaction Actions Modal (Mobile) -->
+    <div id="mobile-actions-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-end items-end">
+        <div class="bg-white w-full rounded-t-2xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="mobile-actions-content">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <h3 id="mobile-actions-title" class="font-bold text-lg text-slate-800 mb-6 truncate">Actions</h3>
+            <div class="space-y-3">
+                <button id="mobile-action-edit" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-pen"></i></div>
+                    Modifier la transaction
+                </button>
+                <button id="mobile-action-duplicate" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-copy"></i></div>
+                    Dupliquer la transaction
+                </button>
+                <button id="mobile-action-delete" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-red-600 font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center"><i class="fa-solid fa-trash-can"></i></div>
+                    Supprimer la transaction
+                </button>
+            </div>
+            <button onclick="window.app.closeMobileActions()" class="w-full mt-6 p-4 text-slate-500 font-medium hover:text-slate-800 transition-colors">Fermer</button>
+        </div>
+    </div>
+
     <!-- Recurring Choice Modal -->
     <div id="recurring-choice-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
@@ -357,6 +473,50 @@
 
     <!-- Drawer Overlay -->
     <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <!-- Mobile Filters Modal -->
+    <div id="mobile-filters-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Filtres et Tri</h2>
+                <button id="btn-close-filters-modal" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Catégorie</label>
+                    <select id="filter-category-mobile" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">Toutes les catégories</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Compte</label>
+                    <select id="filter-account-mobile" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">Tous les comptes</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Trier par</label>
+                    <select id="sort-order-mobile" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="date-desc">Date (plus récent)</option>
+                        <option value="category">Catégorie</option>
+                        <option value="account">Compte</option>
+                        <option value="type">Type</option>
+                        <option value="amount-desc">Montant (décroissant)</option>
+                        <option value="amount-asc">Montant (croissant)</option>
+                    </select>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button id="btn-close-filters-cancel" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
+                    <button id="btn-apply-filters" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Appliquer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile FAB -->
+    <button onclick="window.app.openTransactionModal()" id="mobile-fab" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center z-40 hover:bg-slate-900 transition-transform active:scale-95">
+        <i class="fa-solid fa-plus text-xl"></i>
+    </button>
 
     <!-- Account Edit Drawer -->
     <div id="account-edit-drawer" class="bottom-drawer shadow-2xl">

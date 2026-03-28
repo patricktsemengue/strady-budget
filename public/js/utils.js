@@ -24,6 +24,16 @@ export const generateDeterministicId = (obj) => {
     return Math.abs(hash).toString(36) + str.length.toString(36);
 };
 
+export const generateDeterministicTransactionId = (txData) => {
+    const key = `${txData.date}|${txData.label}|${txData.amount}|${txData.source}|${txData.destination}`;
+    return `tx_${btoa(unescape(encodeURIComponent(key)))}`;
+};
+
+export const generateDeterministicTemplateId = (tplData) => {
+    const key = `${tplData.date}|${tplData.label}|${tplData.amount}|${tplData.source}|${tplData.destination}|${tplData.periodicity}|${tplData.category}`;
+    return `rec_${btoa(unescape(encodeURIComponent(key)))}`;
+};
+
 export const getTxDisplayInfo = (source, destination) => {
     const isSrcExt = source === '' || source === 'external';
     const isDstExt = destination === '' || destination === 'external';
