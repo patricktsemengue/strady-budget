@@ -23,7 +23,8 @@ import {
     openAddAccountDrawer,
     closeAddAccountDrawer,
     openAccountActions,
-    closeAccountActions
+    closeAccountActions,
+    renderAccountsList
 } from './accounts.js';
 import { 
     openTransactionModal, 
@@ -160,21 +161,40 @@ const setupEventListeners = () => {
     };
 
     addSafeListener('nav-dashboard', 'click', () => {
-        console.log("Menu click: Dashboard");
         setView('dashboard');
     });
+    addSafeListener('nav-transactions', 'click', () => {
+        setView('transactions');
+    });
+    addSafeListener('nav-accounts', 'click', () => {
+        setView('accounts');
+    });
+    addSafeListener('nav-categories', 'click', () => {
+        setView('categories');
+    });
     addSafeListener('nav-settings', 'click', () => {
-        console.log("Menu click: Settings");
         setView('settings');
     });
+
     addSafeListener('.mobile-menu-button', 'click', () => document.querySelector('.mobile-menu').classList.toggle('hidden'), true);
+    
     addSafeListener('nav-dashboard-mobile', 'click', () => { 
-        console.log("Mobile Menu click: Dashboard");
         setView('dashboard'); 
         document.querySelector('.mobile-menu').classList.add('hidden'); 
     });
+    addSafeListener('nav-transactions-mobile', 'click', () => { 
+        setView('transactions'); 
+        document.querySelector('.mobile-menu').classList.add('hidden'); 
+    });
+    addSafeListener('nav-accounts-mobile', 'click', () => { 
+        setView('accounts'); 
+        document.querySelector('.mobile-menu').classList.add('hidden'); 
+    });
+    addSafeListener('nav-categories-mobile', 'click', () => { 
+        setView('categories'); 
+        document.querySelector('.mobile-menu').classList.add('hidden'); 
+    });
     addSafeListener('nav-settings-mobile', 'click', () => { 
-        console.log("Mobile Menu click: Settings");
         setView('settings'); 
         document.querySelector('.mobile-menu').classList.add('hidden'); 
     });
@@ -182,13 +202,31 @@ const setupEventListeners = () => {
     addSafeListener('filter-category', 'change', renderTransactions);
     addSafeListener('filter-account', 'change', renderTransactions);
     addSafeListener('sort-order', 'change', renderTransactions);
+    addSafeListener('search-transactions', 'input', renderTransactions);
+
+    // Account view listeners
+    addSafeListener('search-accounts', 'input', () => {
+        const { renderAccountsList } = window.app;
+        if (renderAccountsList) renderAccountsList();
+    });
+    addSafeListener('filter-account-type', 'change', () => {
+        const { renderAccountsList } = window.app;
+        if (renderAccountsList) renderAccountsList();
+    });
+    addSafeListener('sort-accounts', 'change', () => {
+        const { renderAccountsList } = window.app;
+        if (renderAccountsList) renderAccountsList();
+    });
+
     addSafeListener('prev-month', 'click', () => { 
-        const newDate = new Date(state.viewDate.setMonth(state.viewDate.getMonth() - 1));
-        setViewDate(newDate); 
+        const d = new Date(state.viewDate);
+        d.setMonth(d.getMonth() - 1);
+        setViewDate(d); 
     });
     addSafeListener('next-month', 'click', () => { 
-        const newDate = new Date(state.viewDate.setMonth(state.viewDate.getMonth() + 1));
-        setViewDate(newDate); 
+        const d = new Date(state.viewDate);
+        d.setMonth(d.getMonth() + 1);
+        setViewDate(d); 
     });
 
     // Category Drawers
@@ -298,7 +336,8 @@ window.app = {
     openCategoryActions,
     closeCategoryActions,
     openAccountActions,
-    closeAccountActions
+    closeAccountActions,
+    renderAccountsList
 };
 
 document.addEventListener('DOMContentLoaded', init);

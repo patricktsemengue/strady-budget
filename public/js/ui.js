@@ -1,5 +1,5 @@
 import { state, updateState } from './state.js';
-import { renderDashboard } from './dashboard.js';
+import { renderDashboard, renderTransactions } from './dashboard.js';
 import { renderSettings } from './settings.js';
 import { renderEmergencyFund, renderMonthlyIncome } from './dashboard-widgets.js';
 import { currentUserId } from './storage.js';
@@ -96,10 +96,22 @@ export const setView = (view, isInitial = false) => {
 export const setViewDate = async (date) => {
     const newDate = new Date(date);
     updateState({ viewDate: newDate });
+    localStorage.setItem('viewDate', newDate.toISOString());
     render();
 };
 
 export const render = () => {
+    const sharedMonthSelection = document.getElementById('shared-month-selection');
+    const viewsWithMonthSelection = ['dashboard', 'transactions', 'accounts'];
+    
+    if (sharedMonthSelection) {
+        if (viewsWithMonthSelection.includes(state.currentView)) {
+            sharedMonthSelection.classList.remove('hidden');
+        } else {
+            sharedMonthSelection.classList.add('hidden');
+        }
+    }
+
     document.querySelectorAll('nav button').forEach(button => {
         const viewName = button.id.split('-')[1];
         if (viewName === state.currentView) {
@@ -109,22 +121,43 @@ export const render = () => {
         }
     });
 
-    const dashboardView = document.getElementById('view-dashboard');
-    const settingsView = document.getElementById('view-settings');
+    const views = {
+        dashboard: document.getElementById('view-dashboard'),
+        transactions: document.getElementById('view-transactions'),
+        accounts: document.getElementById('view-accounts'),
+        categories: document.getElementById('view-categories'),
+        settings: document.getElementById('view-settings')
+    };
+
     const mobileFab = document.getElementById('mobile-fab');
     
-    if(state.currentView === 'dashboard') {
-        dashboardView.classList.remove('hidden');
-        settingsView.classList.add('hidden');
+    // Hide all views first
+    Object.values(views).forEach(view => {
+        if (view) view.classList.add('hidden');
+    });
+
+    // Show current view and render its content
+    if (views[state.currentView]) {
+        views[state.currentView].classList.remove('hidden');
+    }
+
+    if (state.currentView === 'dashboard') {
         if (mobileFab) mobileFab.classList.remove('hidden');
         renderDashboard();
-
-        // Render the new dashboard widgets
         renderEmergencyFund();
         renderMonthlyIncome();
+    } else if (state.currentView === 'transactions') {
+        if (mobileFab) mobileFab.classList.remove('hidden');
+        import('./dashboard.js').then(m => m.renderTimeline());
+        renderTransactions();
+    } else if (state.currentView === 'accounts') {
+        if (mobileFab) mobileFab.classList.add('hidden');
+        import('./dashboard.js').then(m => m.renderTimeline());
+        renderSettings(); // renderSettings handles both accounts and categories rendering in the current logic
+    } else if (state.currentView === 'categories') {
+        if (mobileFab) mobileFab.classList.add('hidden');
+        renderSettings();
     } else if (state.currentView === 'settings') {
-        dashboardView.classList.add('hidden');
-        settingsView.classList.remove('hidden');
         if (mobileFab) mobileFab.classList.add('hidden');
         renderSettings();
     }

@@ -13,9 +13,10 @@ export const defaultCategories = [
     { id: 'Autre', label: 'Autre', icon: 'fa-tag', color: '#94a3b8' }
 ];
 
+const savedViewDate = localStorage.getItem('viewDate');
 export let state = {
     currentView: 'dashboard',
-    viewDate: new Date(),
+    viewDate: savedViewDate ? new Date(savedViewDate) : new Date(),
     accounts: [],
     records: {},
     recurringTemplates: [],

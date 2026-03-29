@@ -217,29 +217,30 @@ const batchGenerateAndSaveTransactions = (batch, userId, template) => {
 export const addRecurringTemplate = async (userId, template) => {
     const batch = writeBatch(db);
 
-    // Create a separate template for generation logic.
-    // This one will have a concrete end date for the batch-generation loop.
+    const startDate = new Date(template.date + 'T00:00:00');
+    // Boundary of 36 months
+    const boundaryDate = new Date(startDate.getFullYear() + 3, startDate.getMonth(), startDate.getDate() - 1);
+    const boundaryDateStr = boundaryDate.toISOString().split('T')[0];
+
     const generationTemplate = { ...template };
 
-    // If the user did not provide an end date, the template is open-ended.
-    if (!generationTemplate.endDate) {
-        // Set a 36-month boundary for the initial transaction generation.
-        const startDate = new Date(generationTemplate.date);
-        const futureDate = new Date(startDate.getFullYear() + 3, startDate.getMonth(), startDate.getDate() - 1);
-        generationTemplate.endDate = futureDate.toISOString().split('T')[0];
-        
-        // But ensure the template saved to Firestore has a null end date to mark it as 'infinite'.
+    if (!template.endDate) {
+        // Case: User did NOT edit endDate -> Store as NULL, generate up to boundary
+        generationTemplate.endDate = boundaryDateStr;
         template.endDate = null;
+    } else {
+        // Case: User HAS edited endDate -> Store as edited, generate up to MIN(edited, boundary)
+        generationTemplate.endDate = template.endDate > boundaryDateStr ? boundaryDateStr : template.endDate;
     }
     
-    // 1. Save the original template itself (with endDate: null if it was open-ended).
+    // 1. Save the original template itself
     const templateRef = doc(db, `users/${userId}/recurringTemplates`, template.id);
     batch.set(templateRef, { 
         ...template, 
         updated_at: serverTimestamp() 
     });
 
-    // 2. Generate and save child transactions using the template with the 36-month boundary.
+    // 2. Generate and save child transactions using the template with the boundary.
     batchGenerateAndSaveTransactions(batch, userId, generationTemplate);
 
     await batch.commit();
@@ -308,13 +309,19 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
         id: newTemplateId,
     };
     
+    const startDate = new Date(newTemplate.date + 'T00:00:00');
+    const boundaryDate = new Date(startDate.getFullYear() + 3, startDate.getMonth(), startDate.getDate() - 1);
+    const boundaryDateStr = boundaryDate.toISOString().split('T')[0];
+
     const generationTemplate = { ...newTemplate };
 
-    if (!generationTemplate.endDate) {
-        const startDate = new Date(generationTemplate.date);
-        const futureDate = new Date(startDate.getFullYear() + 3, startDate.getMonth(), startDate.getDate() - 1);
-        generationTemplate.endDate = futureDate.toISOString().split('T')[0];
+    if (!newTemplate.endDate) {
+        // Case: User did NOT edit endDate -> Store as NULL, generate up to boundary
+        generationTemplate.endDate = boundaryDateStr;
         newTemplate.endDate = null;
+    } else {
+        // Case: User HAS edited endDate -> Store as edited, generate up to MIN(edited, boundary)
+        generationTemplate.endDate = newTemplate.endDate > boundaryDateStr ? boundaryDateStr : newTemplate.endDate;
     }
 
     const newTemplateRef = doc(db, `users/${userId}/recurringTemplates`, newTemplateId);

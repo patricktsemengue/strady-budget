@@ -61,6 +61,15 @@
                         <button id="nav-dashboard" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
                             <i class="fa-solid fa-chart-pie mr-2"></i>Tableau de bord
                         </button>
+                        <button id="nav-transactions" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
+                            <i class="fa-solid fa-list-check mr-2"></i>Transactions
+                        </button>
+                        <button id="nav-accounts" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
+                            <i class="fa-solid fa-building-columns mr-2"></i>Comptes
+                        </button>
+                        <button id="nav-categories" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
+                            <i class="fa-solid fa-tags mr-2"></i>Catégories
+                        </button>
                         <button id="nav-settings" class="px-4 h-full border-b-2 border-transparent flex items-center text-sm font-medium transition-colors hover:text-blue-600">
                             <i class="fa-solid fa-cog mr-2"></i>Réglages
                         </button>
@@ -90,6 +99,9 @@
                 </div>
             </div>
             <button id="nav-dashboard-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-chart-pie mr-3 text-slate-400"></i>Tableau de bord</button>
+            <button id="nav-transactions-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-list-check mr-3 text-slate-400"></i>Transactions</button>
+            <button id="nav-accounts-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-building-columns mr-3 text-slate-400"></i>Comptes</button>
+            <button id="nav-categories-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-tags mr-3 text-slate-400"></i>Catégories</button>
             <button id="nav-settings-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-slate-50 flex items-center text-slate-700"><i class="fa-solid fa-cog mr-3 text-slate-400"></i>Réglages</button>
             <div class="border-t border-slate-100 mt-2 pt-2">
                 <button id="btn-logout-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-red-50 flex items-center text-red-600 font-medium"><i class="fa-solid fa-right-from-bracket mr-3"></i>Déconnexion</button>
@@ -100,20 +112,22 @@
     <div id="data-status-indicator" class="hidden fixed top-[68px] md:top-[100px] left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300">
     </div>
 
+    <!-- Shared Month Selection -->
+    <div id="shared-month-selection" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-2">
+            <div class="flex items-center gap-2">
+                <button id="prev-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="flex-1 overflow-x-auto hide-scroll flex gap-2 px-2" id="month-timeline">
+                    <!-- Timeline Items Injected -->
+                </div>
+                <button id="next-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+
     <main class="py-6 hidden">
         <div id="view-dashboard" class="space-y-6 max-w-6xl mx-auto px-4">
             <h1 class="text-2xl font-bold text-slate-800">Tableau de bord</h1>
-
-            <!-- Month Selection -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-2">
-                <div class="flex items-center gap-2">
-                    <button id="prev-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="flex-1 overflow-x-auto hide-scroll flex gap-2 px-2" id="month-timeline">
-                        <!-- Timeline Items Injected -->
-                    </div>
-                    <button id="next-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-            </div>
 
             <!-- KPI Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -134,14 +148,66 @@
                     <div id="dash-emergency-fund">--</div>
                 </div>
             </div>
-            
+
+            <!-- Anticipated Non-Recurring Transactions -->
+            <div id="anticipated-highlight" class="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Transactions à venir (3 mois, non-récurrentes)</h3>
+                <div id="anticipated-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Budget Analysis -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">Analyse du Budget</h3>
+                    <button id="btn-cloture" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-300"><i class="fa-solid fa-lock mr-2"></i>Clôturer le mois</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-2">Répartition des dépenses</h4>
+                        <!-- Chart Placeholder -->
+                        <div class="w-full bg-slate-50 rounded-lg border border-slate-100 h-48 flex items-center justify-center text-slate-400 text-sm italic">
+                            Graphique de répartition (en attente de données)
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2">Pourcentage des dépenses par rapport aux revenus</h4>
+                            <div class="w-full bg-slate-200 rounded-full h-4">
+                                <div id="expense-percentage-bar" class="bg-danger h-4 rounded-full" style="width: 0%;"></div>
+                            </div>
+                            <p class="text-right text-sm font-medium text-slate-500 mt-1"><span id="expense-percentage-text">0%</span></p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2">Prévisions</h4>
+                            <div class="flex items-center gap-4">
+                                <p class="text-sm text-slate-500">Solde prévu à la fin du mois:</p>
+                                <p class="text-lg font-bold text-slate-800" id="forecast-balance">--</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-transactions" class="space-y-6 max-w-6xl mx-auto px-4 hidden">
+            <h1 class="text-2xl font-bold text-slate-800">Transactions</h1>
             <!-- Monthly Transactions -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center gap-4">
-                    <h3 class="font-bold text-lg text-slate-800">Transactions du mois</h3>
-                    <div class="flex items-center gap-2">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <h3 class="font-bold text-lg text-slate-800">Transactions du mois</h3>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Search Box -->
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            </span>
+                            <input type="text" id="search-transactions" placeholder="Rechercher..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64">
+                        </div>
+
                         <!-- Desktop Filters -->
-                        <div class="hidden md:flex items-center gap-2">
+                        <div class="hidden md:flex items-center gap-2" id="transaction-list-filters">
                             <button onclick="window.app.openTransactionModal()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 flex items-center">
                                 <i class="fa-solid fa-plus mr-2"></i>Ajouter
                             </button>
@@ -155,9 +221,9 @@
                                 <label for="sort-order" class="text-sm font-medium text-slate-500 whitespace-nowrap">Trier :</label>
                                 <select id="sort-order" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm font-medium text-slate-800">
                                     <option value="date-desc">Date (récent)</option>
-                                    <option value="category">Catégorie</option>
                                     <option value="account">Compte</option>
                                     <option value="type">Type</option>
+                                    <option value="category">Catégorie</option>
                                     <option value="amount-desc">Montant ↓</option>
                                     <option value="amount-asc">Montant ↑</option>
                                 </select>
@@ -169,16 +235,17 @@
                         </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                
+                <div id="list-view-container" class="overflow-x-auto">
                     <!-- Desktop Table View -->
                     <table id="transactions-table" class="hidden md:table w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
                                 <th class="px-6 py-4 font-semibold">Date</th>
+                                <th class="px-6 py-4 font-semibold">Type</th>
                                 <th class="px-6 py-4 font-semibold">Catégorie</th>
-                                <th class="px-6 py-4 font-semibold">Libellé</th>
-                                <th class="px-6 py-4 font-semibold">Compte</th>
                                 <th class="px-6 py-4 font-semibold text-right">Montant</th>
+                                <th class="px-6 py-4 font-semibold">Libellé</th>
                                 <th class="px-6 py-4 font-semibold text-center">Actions</th>
                             </tr>
                         </thead>
@@ -190,46 +257,68 @@
                     <ul id="transactions-container" class="md:hidden divide-y divide-slate-100"></ul>
                 </div>
             </div>
-
-            <!-- Anticipated Expenses -->
-            <div id="anticipated-highlight" class="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
-                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Dépenses à venir (Prochains 3 mois, non-récurrentes)</h3>
-                <div id="anticipated-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-            </div>
-
-            <!-- Budget Analysis -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-                <div class="flex justify-between items-start">
-                    <h3 class="font-bold text-lg text-slate-800 mb-4">Analyse du Budget</h3>
-                    <button id="btn-cloture" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-300"><i class="fa-solid fa-lock mr-2"></i>Clôturer le mois</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-bold text-slate-700 mb-2">Pourcentage des dépenses par rapport aux revenus</h4>
-                        <div class="w-full bg-slate-200 rounded-full h-4">
-                            <div id="expense-percentage-bar" class="bg-danger h-4 rounded-full" style="width: 0%;"></div>
-                        </div>
-                        <p class="text-right text-sm font-medium text-slate-500 mt-1"><span id="expense-percentage-text">0%</span></p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-700 mb-2">Prévisions</h4>
-                        <div class="flex items-center gap-4">
-                            <p class="text-sm text-slate-500">Solde prévu à la fin du mois:</p>
-                            <p class="text-lg font-bold text-slate-800" id="forecast-balance">--</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
-        <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 hidden">
-            <h1 class="text-2xl font-bold text-slate-800">Réglages</h1>
+        <div id="view-accounts" class="space-y-6 max-w-6xl mx-auto px-4 hidden">
+            <h1 class="text-2xl font-bold text-slate-800">Comptes</h1>
+            <!-- Accounts CRUD -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
+                    <h3 class="font-bold text-lg text-slate-800">Gérer les comptes</h3>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Search Box -->
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            </span>
+                            <input type="text" id="search-accounts" placeholder="Rechercher..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64">
+                        </div>
 
+                        <select id="filter-account-type" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                            <option value="all">Tous les types</option>
+                            <option value="current">Courant</option>
+                            <option value="savings">Épargne</option>
+                        </select>
+
+                        <select id="sort-accounts" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                            <option value="name-asc">Nom (A-Z)</option>
+                            <option value="type">Type</option>
+                            <option value="balance-desc">Solde ↓</option>
+                            <option value="balance-asc">Solde ↑</option>
+                        </select>
+
+                        <button onclick="window.app.openAddAccountDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Ajouter
+                        </button>
+                    </div>
+                </div>
+                <div class="p-0 md:p-5">
+                    <!-- Desktop Table View -->
+                    <table class="hidden md:table w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">Libellé</th>
+                                <th class="px-6 py-4 font-semibold">Tag</th>
+                                <th class="px-6 py-4 font-semibold text-right">Solde</th>
+                                <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mgmt-accounts-table-body" class="divide-y divide-slate-100 bg-white">
+                            <!-- Rows Injected -->
+                        </tbody>
+                    </table>
+                    <!-- Mobile Card View -->
+                    <ul id="mgmt-accounts-list" class="md:hidden divide-y divide-slate-100"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-categories" class="space-y-6 max-w-6xl mx-auto px-4 hidden">
+            <h1 class="text-2xl font-bold text-slate-800">Catégories</h1>
             <!-- Categories CRUD -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <h3 class="font-bold text-lg text-slate-800">Catégories</h3>
+                    <h3 class="font-bold text-lg text-slate-800">Gérer les catégories</h3>
                     <button onclick="window.app.openAddCategoryDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2">
                         <i class="fa-solid fa-plus text-xs"></i> Ajouter
                     </button>
@@ -253,34 +342,10 @@
                     <ul id="mgmt-categories-list" class="md:hidden divide-y divide-slate-100"></ul>
                 </div>
             </div>
+        </div>
 
-            <!-- Accounts CRUD -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <h3 class="font-bold text-lg text-slate-800">Comptes</h3>
-                    <button onclick="window.app.openAddAccountDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2">
-                        <i class="fa-solid fa-plus text-xs"></i> Ajouter
-                    </button>
-                </div>
-                <div class="p-0 md:p-5">
-                    <!-- Desktop Table View -->
-                    <table class="hidden md:table w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
-                                <th class="px-6 py-4 font-semibold">Nom du compte</th>
-                                <th class="px-6 py-4 font-semibold">Type</th>
-                                <th class="px-6 py-4 font-semibold text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mgmt-accounts-table-body" class="divide-y divide-slate-100 bg-white">
-                            <!-- Rows Injected -->
-                        </tbody>
-                    </table>
-                    <!-- Mobile Card View -->
-                    <ul id="mgmt-accounts-list" class="md:hidden divide-y divide-slate-100"></ul>
-                </div>
-            </div>
-
+        <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 hidden">
+            <h1 class="text-2xl font-bold text-slate-800">Réglages</h1>
             <!-- Data Management -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-lg text-slate-800 mb-4">Données</h3>

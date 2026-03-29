@@ -9,30 +9,36 @@ export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
     const tableBody = document.getElementById('transactions-table-body');
     
-    // Support both desktop and mobile filters
-    const categoryFilter = document.getElementById('filter-category').value;
-    const categoryFilterMobile = document.getElementById('filter-category-mobile').value;
-    const activeCategoryFilter = categoryFilter !== 'all' ? categoryFilter : categoryFilterMobile;
+    // Filters & Search
+    const categoryFilter = document.getElementById('filter-category')?.value || 'all';
+    const accountFilter = document.getElementById('filter-account')?.value || 'all';
+    const searchFilter = (document.getElementById('search-transactions')?.value || '').toLowerCase();
+    const sortOrder = document.getElementById('sort-order')?.value || 'date-desc';
 
-    const accountFilter = document.getElementById('filter-account').value;
-    const accountFilterMobile = document.getElementById('filter-account-mobile').value;
-    const activeAccountFilter = accountFilter !== 'all' ? accountFilter : accountFilterMobile;
-
-    const monthData = state.records[getMonthKey(state.viewDate)] || { items: [] };
+    const monthKey = getMonthKey(state.viewDate);
+    const monthData = state.records[monthKey] || { items: [] };
     
-    let filteredItems = monthData.items;
-    if (activeCategoryFilter !== 'all') filteredItems = filteredItems.filter(item => item.Category === activeCategoryFilter);
-    if (activeAccountFilter !== 'all') filteredItems = filteredItems.filter(item => item.source === activeAccountFilter || item.destination === activeAccountFilter);
+    let filteredItems = [...monthData.items];
 
-    // Support both desktop and mobile sorting
-    const sortOrder = document.getElementById('sort-order').value;
-    const sortOrderMobile = document.getElementById('sort-order-mobile').value;
-    
-    // We prioritize the one that was last changed or just use the desktop one as primary if both are default
-    // For simplicity, if they differ, we sync them. But here we just pick the non-default or desktop.
-    const activeSortOrder = (sortOrder !== 'date-desc') ? sortOrder : sortOrderMobile;
+    // Apply Filters
+    if (categoryFilter !== 'all') {
+        filteredItems = filteredItems.filter(item => item.Category === categoryFilter);
+    }
+    if (accountFilter !== 'all') {
+        filteredItems = filteredItems.filter(item => item.source === accountFilter || item.destination === accountFilter);
+    }
 
-    localStorage.setItem('transactionSortOrder', activeSortOrder);
+    // Apply Search (Label, Category Label, Amount)
+    if (searchFilter) {
+        filteredItems = filteredItems.filter(item => {
+            const category = state.categories.find(c => c.id === item.Category);
+            const categoryLabel = category ? category.label.toLowerCase() : '';
+            const amountStr = item.amount.toString();
+            return item.label.toLowerCase().includes(searchFilter) || 
+                   categoryLabel.includes(searchFilter) || 
+                   amountStr.includes(searchFilter);
+        });
+    }
 
     const getType = (tx) => {
         const txInfo = getTxDisplayInfo(tx.source, tx.destination);
@@ -48,33 +54,25 @@ export const renderTransactions = () => {
         return txInfo.src.name; // Default for transfer
     };
 
+    // Sort Logic
     filteredItems.sort((a, b) => {
         switch (sortOrder) {
-            case 'category': {
-                const categoryA = state.categories.find(c => c.id === a.Category);
-                const categoryB = state.categories.find(c => c.id === b.Category);
-                
-                const orderA = categoryA ? (categoryA['index-order'] ?? Infinity) : Infinity;
-                const orderB = categoryB ? (categoryB['index-order'] ?? Infinity) : Infinity;
-
-                if (orderA !== orderB) {
-                    return orderA - orderB;
-                }
-                return new Date(b.date) - new Date(a.date); // Fallback to date sort
-            }
             case 'account': {
-                const accountA = getPrimaryAccountName(a);
-                const accountB = getPrimaryAccountName(b);
-                const accountCompare = accountA.localeCompare(accountB);
-                if (accountCompare !== 0) return accountCompare;
-                return new Date(b.date) - new Date(a.date);
+                const nameA = getPrimaryAccountName(a).toLowerCase();
+                const nameB = getPrimaryAccountName(b).toLowerCase();
+                return nameA.localeCompare(nameB) || new Date(b.date) - new Date(a.date);
             }
             case 'type': {
                 const typeA = getType(a);
                 const typeB = getType(b);
-                const typeCompare = typeA.localeCompare(typeB);
-                if (typeCompare !== 0) return typeCompare;
-                return new Date(b.date) - new Date(a.date);
+                return typeA.localeCompare(typeB) || new Date(b.date) - new Date(a.date);
+            }
+            case 'category': {
+                const catA = state.categories.find(c => c.id === a.Category);
+                const catB = state.categories.find(c => c.id === b.Category);
+                const orderA = catA ? (catA['index-order'] ?? Infinity) : Infinity;
+                const orderB = catB ? (catB['index-order'] ?? Infinity) : Infinity;
+                return orderA - orderB || new Date(b.date) - new Date(a.date);
             }
             case 'amount-desc': return b.amount - a.amount;
             case 'amount-asc': return a.amount - b.amount;
@@ -83,84 +81,90 @@ export const renderTransactions = () => {
     });
 
     // Render mobile cards
-    container.innerHTML = filteredItems.map((item, index) => {
-        const category = state.categories.find(c => c.id === item.Category);
-        const txInfo = getTxDisplayInfo(item.source, item.destination);
-        const isMonthClosed = monthData.status === 'closed';
-        const isRecurring = !!item.Model;
-        return `
-            <li class="p-4 flex items-center justify-between gap-4 group transaction-item-animate" style="animation-delay: ${index * 30}ms">
-                <div class="flex items-center gap-4 flex-grow truncate">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                    <div class="flex-1 truncate">
-                        <div class="flex items-center gap-2">
-                            <p class="font-semibold text-slate-800 truncate">${item.label}</p>
-                            ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
+    if (container) {
+        container.innerHTML = filteredItems.map((item, index) => {
+            const category = state.categories.find(c => c.id === item.Category);
+            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            const isMonthClosed = monthData.status === 'closed';
+            const isRecurring = !!item.Model;
+            return `
+                <li class="p-4 flex items-center justify-between gap-4 group transaction-item-animate" style="animation-delay: ${index * 30}ms">
+                    <div class="flex items-center gap-4 flex-grow truncate">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
+                        <div class="flex-1 truncate">
+                            <div class="flex items-center gap-2">
+                                <p class="font-semibold text-slate-800 truncate">${item.label}</p>
+                                ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-500 font-medium truncate">${txInfo.src.name} <i class="fa-solid fa-arrow-right mx-1 opacity-50"></i> ${txInfo.dst.name}</p>
                         </div>
-                        <p class="text-xs text-slate-500 font-medium truncate">${txInfo.src.name} <i class="fa-solid fa-arrow-right mx-1 opacity-50"></i> ${txInfo.dst.name}</p>
                     </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="text-right whitespace-nowrap">
-                        <p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${formatDateStr(item.date)}</p>
-                    </div>
-                    ${!isMonthClosed ? `
-                    <button onclick="window.app.openMobileActions('${item.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Plus d'actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                    ` : ''}
-                </div>
-            </li>`;
-    }).join('');
-
-    // Render desktop table
-    tableBody.innerHTML = filteredItems.map((item, index) => {
-        const category = state.categories.find(c => c.id === item.Category);
-        const txInfo = getTxDisplayInfo(item.source, item.destination);
-        const isMonthClosed = monthData.status === 'closed';
-        const isRecurring = !!item.Model;
-        return `
-            <tr class="group hover:bg-slate-50 transition-colors transaction-item-animate" style="animation-delay: ${index * 20}ms">
-                <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatDateStr(item.date)}</td>
-                <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0 text-xs" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                        <span class="text-sm font-medium text-slate-700">${category?.label || 'Sans catégorie'}</span>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-slate-800">${item.label}</span>
-                        ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-[10px] text-slate-400" title="Transaction récurrente"></i>' : ''}
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                        <span class="max-w-[100px] truncate" title="${txInfo.src.name}">${txInfo.src.name}</span>
-                        <i class="fa-solid fa-arrow-right opacity-30"></i>
-                        <span class="max-w-[100px] truncate" title="${txInfo.dst.name}">${txInfo.dst.name}</span>
-                    </div>
-                </td>
-                <td class="px-6 py-4 text-right whitespace-nowrap">
-                    <span class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</span>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="text-right whitespace-nowrap">
+                            <p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${formatDateStr(item.date)}</p>
+                        </div>
                         ${!isMonthClosed ? `
-                        <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>
-                        <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Dupliquer"><i class="fa-solid fa-copy text-xs"></i></button>
-                        <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Supprimer"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        <button onclick="window.app.openMobileActions('${item.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Plus d'actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                         ` : ''}
                     </div>
-                </td>
-            </tr>`;
-    }).join('');
+                </li>`;
+        }).join('');
+    }
+
+    // Render desktop table
+    if (tableBody) {
+        tableBody.innerHTML = filteredItems.map((item, index) => {
+            const category = state.categories.find(c => c.id === item.Category);
+            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            const isMonthClosed = monthData.status === 'closed';
+            const isRecurring = !!item.Model;
+            return `
+                <tr class="group hover:bg-slate-50 transition-colors transaction-item-animate" style="animation-delay: ${index * 20}ms">
+                    <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatDateStr(item.date)}</td>
+                    <td class="px-6 py-4">
+                        <span class="text-xs font-bold px-2 py-1 rounded-full ${txInfo.ui.color} bg-opacity-10" style="background-color: currentColor; background-clip: padding-box; color: inherit;">${getType(item)}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0 text-xs" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
+                            <span class="text-sm font-medium text-slate-700">${category?.label || 'Sans catégorie'}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap">
+                        <span class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-semibold text-slate-800">${item.label}</span>
+                            ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-[10px] text-slate-400" title="Transaction récurrente"></i>' : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                            ${txInfo.src.name} <i class="fa-solid fa-arrow-right opacity-30"></i> ${txInfo.dst.name}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                            ${!isMonthClosed ? `
+                            <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Dupliquer"><i class="fa-solid fa-copy text-xs"></i></button>
+                            <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Supprimer"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
 };
 
 export const renderTimeline = () => {
     const container = document.getElementById('month-timeline');
+    if (!container) return;
+    
     let html = '';
+    const now = new Date();
     for (let i = -12; i <= 12; i++) {
-        const d = new Date(new Date().setMonth(new Date().getMonth() + i));
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const isSelected = d.getMonth() === state.viewDate.getMonth() && d.getFullYear() === state.viewDate.getFullYear();
         html += `<button onclick="window.app.setViewDate('${d.toISOString()}')" class="flex-none px-4 py-2 rounded-lg text-sm font-medium ${isSelected ? 'bg-blue-600 text-white' : 'bg-white text-slate-500'}">${new Intl.DateTimeFormat('fr-BE', { month: 'short', year: '2-digit' }).format(d)}</button>`;
     }

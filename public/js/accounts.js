@@ -93,17 +93,62 @@ export const handleUpdateAccount = async (e) => {
     }
 };
 
+import { formatCurrency } from './utils.js';
+import { calculateBalances } from './calculations.js';
+
 /**
- * Renders the list of accounts in the settings view.
- * Disables the delete button for accounts that are in use.
+ * Renders the list of accounts in the accounts view.
  */
 export const renderAccountsList = () => {
     const list = document.getElementById('mgmt-accounts-list');
     const tableBody = document.getElementById('mgmt-accounts-table-body');
     if ((!list && !tableBody) || !state.transactions || !state.recurringTemplates) return;
 
+    // Filters & Search
+    const searchFilter = (document.getElementById('search-accounts')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('filter-account-type')?.value || 'all';
+    const sortOrder = document.getElementById('sort-accounts')?.value || 'name-asc';
+
+    const balances = calculateBalances(state.viewDate);
+
+    let filteredAccounts = [...state.accounts];
+
+    // Apply Filters
+    if (typeFilter === 'current') {
+        filteredAccounts = filteredAccounts.filter(acc => !acc.isSavings);
+    } else if (typeFilter === 'savings') {
+        filteredAccounts = filteredAccounts.filter(acc => acc.isSavings);
+    }
+
+    // Apply Search (Name, Balance)
+    if (searchFilter) {
+        filteredAccounts = filteredAccounts.filter(acc => {
+            const balance = balances[acc.id] || 0;
+            return acc.name.toLowerCase().includes(searchFilter) || 
+                   balance.toString().includes(searchFilter);
+        });
+    }
+
+    // Sort Logic
+    filteredAccounts.sort((a, b) => {
+        const balA = balances[a.id] || 0;
+        const balB = balances[b.id] || 0;
+        switch (sortOrder) {
+            case 'type':
+                return (a.isSavings === b.isSavings) ? a.name.localeCompare(b.name) : (a.isSavings ? 1 : -1);
+            case 'balance-desc':
+                return balB - balA || a.name.localeCompare(b.name);
+            case 'balance-asc':
+                return balA - balB || a.name.localeCompare(b.name);
+            default: // name-asc
+                return a.name.localeCompare(b.name);
+        }
+    });
+
     const usedAccountIds = new Set();
-    state.transactions.forEach(tx => {
+    // Use all transactions and templates for the 'in use' check
+    const allRecords = Object.values(state.records).flatMap(r => r.items);
+    allRecords.forEach(tx => {
         if (tx.source) usedAccountIds.add(tx.source);
         if (tx.destination) usedAccountIds.add(tx.destination);
     });
@@ -111,8 +156,6 @@ export const renderAccountsList = () => {
         if (tpl.source) usedAccountIds.add(tpl.source);
         if (tpl.destination) usedAccountIds.add(tpl.destination);
     });
-
-    const sortedAccounts = [...state.accounts].sort((a, b) => a.name.localeCompare(b.name));
 
     const renderActions = (acc, isDisabled, disabledTitle, isMobile = false) => {
         if (isMobile) {
@@ -127,9 +170,10 @@ export const renderAccountsList = () => {
 
     // Render mobile cards
     if (list) {
-        list.innerHTML = sortedAccounts.map(acc => {
+        list.innerHTML = filteredAccounts.map(acc => {
             const isUsed = usedAccountIds.has(acc.id);
             const disabledTitle = "Compte utilisé";
+            const balance = balances[acc.id] || 0;
 
             return `
                 <li data-id="${acc.id}" class="p-4 flex items-center justify-between gap-4 group">
@@ -137,7 +181,10 @@ export const renderAccountsList = () => {
                         <div class="w-10 h-10 rounded-full flex items-center justify-center text-white bg-blue-500 flex-shrink-0"><i class="fa-solid fa-landmark"></i></div>
                         <div class="flex-1 truncate">
                             <p class="font-semibold text-slate-800 truncate">${acc.name}</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${acc.isSavings ? 'Épargne' : 'Courant'}</p>
+                            <div class="flex items-center gap-2">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${acc.isSavings ? 'Épargne' : 'Courant'}</p>
+                                <p class="text-xs font-bold text-slate-700">${formatCurrency(balance)}</p>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -149,9 +196,10 @@ export const renderAccountsList = () => {
 
     // Render desktop table
     if (tableBody) {
-        tableBody.innerHTML = sortedAccounts.map(acc => {
+        tableBody.innerHTML = filteredAccounts.map(acc => {
             const isUsed = usedAccountIds.has(acc.id);
-            const disabledTitle = "Ce compte est utilisé et ne peut pas être supprimée.";
+            const disabledTitle = "Ce compte est utilisé et ne peut pas être supprimé.";
+            const balance = balances[acc.id] || 0;
 
             return `
                 <tr data-id="${acc.id}" class="group hover:bg-slate-50 transition-colors">
@@ -160,6 +208,9 @@ export const renderAccountsList = () => {
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${acc.isSavings ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">
                             ${acc.isSavings ? 'Épargne' : 'Courant'}
                         </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <span class="text-sm font-bold text-slate-700">${formatCurrency(balance)}</span>
                     </td>
                     <td class="px-6 py-4">
                         ${renderActions(acc, isUsed, disabledTitle, false)}
