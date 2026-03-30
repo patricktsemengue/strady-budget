@@ -8,6 +8,15 @@ erDiagram
     USER ||--o{ TRANSACTION : owns
     USER ||--o{ RECURRING_TEMPLATE : owns
     USER ||--o{ MONTH : owns
+    USER ||--o{ SETTINGS : has
+
+    SETTINGS {
+        string id PK "e.g., monthSelector"
+        string startDate
+        string endDate
+        string step
+        timestamp updated_at
+    }
 
     ACCOUNT {
         string id PK

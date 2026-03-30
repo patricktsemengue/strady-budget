@@ -29,13 +29,13 @@ import {
 import { 
     openTransactionModal, 
     closeTransactionModal, 
-    handleSaveTransaction, 
+    handleSaveTransaction,
     editTransaction,
-    duplicateTransaction,
     deleteTransaction,
     openMobileActions,
     closeMobileActions
 } from './transactions.js';
+
 import { handleReset, exportCSV, importCSV, exportAccountsCSV, importAccountsCSV } from './data.js';
 import { login, logout, onUserChanged } from './auth.js';
 import { subscribeToAppData } from './firestore-service.js';
@@ -220,12 +220,22 @@ const setupEventListeners = () => {
 
     addSafeListener('prev-month', 'click', () => { 
         const d = new Date(state.viewDate);
-        d.setMonth(d.getMonth() - 1);
+        const step = state.monthSelectorConfig.step;
+        if (step === 'month') {
+            d.setMonth(d.getMonth() - 1);
+        } else {
+            d.setMonth(d.getMonth() - 3);
+        }
         setViewDate(d); 
     });
     addSafeListener('next-month', 'click', () => { 
         const d = new Date(state.viewDate);
-        d.setMonth(d.getMonth() + 1);
+        const step = state.monthSelectorConfig.step;
+        if (step === 'month') {
+            d.setMonth(d.getMonth() + 1);
+        } else {
+            d.setMonth(d.getMonth() + 3);
+        }
         setViewDate(d); 
     });
 
@@ -233,6 +243,10 @@ const setupEventListeners = () => {
     addSafeListener('add-category-form', 'submit', handleAddCategory);
     addSafeListener('btn-close-add-cat-drawer', 'click', closeAddCategoryDrawer);
     addSafeListener('btn-cancel-add-cat', 'click', closeAddCategoryDrawer);
+    
+    addSafeListener('month-selector-config-form', 'submit', (e) => {
+        import('./settings.js').then(m => m.handleSaveMonthSelectorConfig(e));
+    });
 
     addSafeListener('edit-category-form', 'submit', handleUpdateCategory);
     addSafeListener('btn-close-cat-drawer', 'click', closeCategoryDrawer);
@@ -323,7 +337,6 @@ window.app = {
     openEditCategory,
     deleteCategory,
     editTransaction,
-    duplicateTransaction,
     deleteTransaction,
     openTransactionModal,
     clotureMois,

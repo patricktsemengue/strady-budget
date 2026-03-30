@@ -2,7 +2,12 @@ import { state } from './state.js';
 
 export const formatCurrency = (amount) => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(amount);
 
-export const formatDateStr = (dateStr) => dateStr ? new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'short' }).format(new Date(dateStr)) : '';
+export const formatDateStr = (dateStr) => {
+    if (!dateStr) return '';
+    // Use the UTC parts to avoid local timezone shifts
+    const d = new Date(dateStr + 'T00:00:00Z');
+    return new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(d);
+};
 
 export const getMonthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 

@@ -29,7 +29,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     unsubscribeFromData();
     if (!userId) return;
 
-    let initialLoadsPending = 5;
+    let initialLoadsPending = 6;
     const onInitialLoadComplete = () => {
         initialLoadsPending--;
         if (initialLoadsPending === 0) {
@@ -42,13 +42,25 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         categories: [],
         transactions: [],
         months: {},
-        recurringTemplates: []
+        recurringTemplates: [],
+        monthSelectorConfig: {
+            startDate: `${new Date().getFullYear()}-01-01`,
+            endDate: `${new Date().getFullYear()}-12-31`,
+            step: 'month'
+        }
     };
 
     const triggerUpdate = () => {
         onDataUpdate({ ...localState });
         saveDataToCache(userId, localState);
     };
+
+    const settingsUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'monthSelector'), (docSnap) => {
+        if (docSnap.exists()) {
+            localState.monthSelectorConfig = docSnap.data();
+        }
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
 
     const accUnsub = onSnapshot(collection(db, `users/${userId}/accounts`), (snapshot) => {
         localState.accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -154,28 +166,28 @@ export const updateMonthStatus = async (userId, monthKey, status) => {
  */
 const calculateAllOccurrences = (template) => {
     const occurrences = [];
-    let current = new Date(template.date + 'T00:00:00'); // Use T00:00:00 to avoid timezone issues
-    const endDate = new Date(template.endDate + 'T23:59:59');
-    const anchorDay = current.getDate();
+    let current = new Date(template.date + 'T00:00:00Z');
+    const endDate = new Date(template.endDate + 'T23:59:59Z');
+    const anchorDay = current.getUTCDate();
 
     while (current <= endDate) {
         occurrences.push(current.toISOString().split('T')[0]);
 
         switch (template.periodicity) {
             case 'M':
-                current = new Date(current.getFullYear(), current.getMonth() + 1, anchorDay);
-                if (current.getDate() !== anchorDay) {
-                    current = new Date(current.getFullYear(), current.getMonth(), 0);
+                current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, anchorDay));
+                if (current.getUTCDate() !== anchorDay) {
+                    current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0));
                 }
                 break;
             case 'Q':
-                current = new Date(current.getFullYear(), current.getMonth() + 3, anchorDay);
-                if (current.getDate() !== anchorDay) {
-                    current = new Date(current.getFullYear(), current.getMonth(), 0);
+                current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 3, anchorDay));
+                if (current.getUTCDate() !== anchorDay) {
+                    current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0));
                 }
                 break;
             case 'Y':
-                current = new Date(current.getFullYear() + 1, current.getMonth(), anchorDay);
+                current = new Date(Date.UTC(current.getUTCFullYear() + 1, current.getUTCMonth(), anchorDay));
                 break;
             default:
                 return occurrences; 
@@ -217,9 +229,9 @@ const batchGenerateAndSaveTransactions = (batch, userId, template) => {
 export const addRecurringTemplate = async (userId, template) => {
     const batch = writeBatch(db);
 
-    const startDate = new Date(template.date + 'T00:00:00');
+    const startDate = new Date(template.date + 'T00:00:00Z');
     // Boundary of 36 months
-    const boundaryDate = new Date(startDate.getFullYear() + 3, startDate.getMonth(), startDate.getDate() - 1);
+    const boundaryDate = new Date(Date.UTC(startDate.getUTCFullYear() + 3, startDate.getUTCMonth(), startDate.getUTCDate() - 1));
     const boundaryDateStr = boundaryDate.toISOString().split('T')[0];
 
     const generationTemplate = { ...template };
@@ -246,81 +258,66 @@ export const addRecurringTemplate = async (userId, template) => {
     await batch.commit();
 };
 
-export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, newTemplateValues) => {
-    // Generate the ID for the new state to check if it's actually a change in core fields
-    const newTemplateId = generateDeterministicTemplateId(newTemplateValues);
-    
-    // Rule: if reccTemplateT1 = reccTemplateT0, the system continues with reccTemplateT0.
-    if (newTemplateId === oldTemplateId) {
-        // Just update the existing template (non-core fields or just refresh timestamp)
-        const templateRef = doc(db, `users/${userId}/recurringTemplates`, oldTemplateId);
-        await setDoc(templateRef, { ...newTemplateValues, id: oldTemplateId, updated_at: serverTimestamp() }, { merge: true });
-        return;
-    }
+export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxData) => {
+    const newTxId = generateDeterministicTransactionId(newTxData);
+    const batch = writeBatch(db);
 
+    if (newTxId !== oldTxId) {
+        const oldTxRef = doc(db, `users/${userId}/transactions`, oldTxId);
+        batch.delete(oldTxRef);
+    }
+    
+    const newTxRef = doc(db, `users/${userId}/transactions`, newTxId);
+    batch.set(newTxRef, {
+        id: newTxId,
+        ...newTxData,
+        updated_at: serverTimestamp()
+    });
+    
+    await batch.commit();
+};
+
+export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, newTemplateValues) => {
     const batch = writeBatch(db);
     
-    const newStartDate = new Date(newTemplateValues.date);
-    const oldTemplateRef = doc(db, `users/${userId}/recurringTemplates`, oldTemplateId);
-    const oldTemplateSnap = await getDoc(oldTemplateRef); 
-    const oldTemplateData = oldTemplateSnap.data();
+    // 1. Create NEW template info to get ID
+    const newTemplateId = generateDeterministicTemplateId({
+        ...newTemplateValues,
+        category: newTemplateValues.category || newTemplateValues.Category // Handle case sensitivity if any
+    });
 
-    if (!oldTemplateData) {
-        throw new Error("Template non trouvé");
-    }
-
-    // CASE 1: New start date is LATER than the old one.
-    if (newStartDate > new Date(oldTemplateData.date)) {
-        // Update the old template: set its endDate to the day before the new series starts.
-        const prevDay = new Date(newStartDate);
-        prevDay.setDate(prevDay.getDate() - 1);
-        const oldTemplateEndDateStr = prevDay.toISOString().substring(0, 10);
-        
-        batch.update(oldTemplateRef, { endDate: oldTemplateEndDateStr, updated_at: serverTimestamp() });
-        
-        // Clean up future transactions from the old template.
-        const q = query(
-            collection(db, `users/${userId}/transactions`), 
-            where("Model", "==", oldTemplateId),
-            where("date", ">=", newTemplateValues.date)
-        );
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-
-    // CASE 2: New start date is EARLIER than or SAME as the old one.
-    } else {
-        // Delete the old template and all its children.
+    // 2. Delete old template if ID changed
+    if (newTemplateId !== oldTemplateId) {
+        const oldTemplateRef = doc(db, `users/${userId}/recurringTemplates`, oldTemplateId);
         batch.delete(oldTemplateRef);
-        const q = query(
-            collection(db, `users/${userId}/transactions`), 
-            where("Model", "==", oldTemplateId)
-        );
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
     }
+    
+    // 3. Delete ALL linked transactions of old template
+    const q = query(
+        collection(db, `users/${userId}/transactions`), 
+        where("Model", "==", oldTemplateId)
+    );
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
 
-    // --- CREATE THE NEW TEMPLATE ---
+    // 4. Create NEW template document
     const newTemplate = { 
         ...newTemplateValues,
         id: newTemplateId,
     };
     
-    const startDate = new Date(newTemplate.date + 'T00:00:00');
-    const boundaryDate = new Date(startDate.getFullYear() + 3, startDate.getMonth(), startDate.getDate() - 1);
+    const startDate = new Date(newTemplate.date + 'T00:00:00Z');
+    const boundaryDate = new Date(Date.UTC(startDate.getUTCFullYear() + 3, startDate.getUTCMonth(), startDate.getUTCDate() - 1));
     const boundaryDateStr = boundaryDate.toISOString().split('T')[0];
 
     const generationTemplate = { ...newTemplate };
 
     if (!newTemplate.endDate) {
-        // Case: User did NOT edit endDate -> Store as NULL, generate up to boundary
         generationTemplate.endDate = boundaryDateStr;
         newTemplate.endDate = null;
     } else {
-        // Case: User HAS edited endDate -> Store as edited, generate up to MIN(edited, boundary)
         generationTemplate.endDate = newTemplate.endDate > boundaryDateStr ? boundaryDateStr : newTemplate.endDate;
     }
 
@@ -330,6 +327,7 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
         updated_at: serverTimestamp()
     });
     
+    // 5. Generate and save child transactions
     batchGenerateAndSaveTransactions(batch, userId, generationTemplate);
 
     await batch.commit();
@@ -398,4 +396,9 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         categories.forEach(cat => promises.push(setDoc(doc(db, `users/${userId}/categories`, cat.id), { ...cat, updated_at: serverTimestamp() })));
     }
     await Promise.all(promises);
+};
+
+export const updateSettingsInFirestore = async (userId, settingsId, data) => {
+    const docRef = doc(db, `users/${userId}/settings`, settingsId);
+    await setDoc(docRef, { ...data, updated_at: serverTimestamp() });
 };

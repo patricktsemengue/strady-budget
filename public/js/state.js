@@ -14,6 +14,8 @@ export const defaultCategories = [
 ];
 
 const savedViewDate = localStorage.getItem('viewDate');
+const currentYear = new Date().getFullYear();
+
 export let state = {
     currentView: 'dashboard',
     viewDate: savedViewDate ? new Date(savedViewDate) : new Date(),
@@ -21,7 +23,12 @@ export let state = {
     records: {},
     recurringTemplates: [],
     categories: [],
-    months: {} // Stores month statuses
+    months: {}, // Stores month statuses
+    monthSelectorConfig: {
+        startDate: `${currentYear}-01-01`,
+        endDate: `${currentYear}-12-31`,
+        step: 'month'
+    }
 };
 
 export const updateState = (newState) => {

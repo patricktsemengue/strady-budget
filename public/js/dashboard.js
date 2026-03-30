@@ -147,8 +147,8 @@ export const renderTransactions = () => {
                         <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
                             ${!isMonthClosed ? `
                             <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>
-                            <button onclick="window.app.duplicateTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Dupliquer"><i class="fa-solid fa-copy text-xs"></i></button>
-                            <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Supprimer"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                            <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-rose-600 transition-colors" title="Supprimer"><i class="fa-solid fa-trash text-xs"></i></button>
+
                             ` : ''}
                         </div>
                     </td>
@@ -161,13 +161,51 @@ export const renderTimeline = () => {
     const container = document.getElementById('month-timeline');
     if (!container) return;
     
+    const config = state.monthSelectorConfig;
+    const startDate = new Date(config.startDate + 'T00:00:00Z');
+    const endDate = new Date(config.endDate + 'T23:59:59Z');
+    const step = config.step;
+
     let html = '';
+    let current = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+
     const now = new Date();
-    for (let i = -12; i <= 12; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const isSelected = d.getMonth() === state.viewDate.getMonth() && d.getFullYear() === state.viewDate.getFullYear();
-        html += `<button onclick="window.app.setViewDate('${d.toISOString()}')" class="flex-none px-4 py-2 rounded-lg text-sm font-medium ${isSelected ? 'bg-blue-600 text-white' : 'bg-white text-slate-500'}">${new Intl.DateTimeFormat('fr-BE', { month: 'short', year: '2-digit' }).format(d)}</button>`;
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth();
+
+    while (current <= endDate) {
+        const isSelected = (step === 'month') 
+            ? (current.getUTCMonth() === state.viewDate.getUTCMonth() && current.getUTCFullYear() === state.viewDate.getUTCFullYear())
+            : (Math.floor(current.getUTCMonth() / 3) === Math.floor(state.viewDate.getUTCMonth() / 3) && current.getUTCFullYear() === state.viewDate.getUTCFullYear());
+
+        const isToday = (step === 'month')
+            ? (current.getUTCMonth() === currentMonth && current.getUTCFullYear() === currentYear)
+            : (Math.floor(current.getUTCMonth() / 3) === Math.floor(currentMonth / 3) && current.getUTCFullYear() === currentYear);
+
+        let label = '';
+        if (step === 'month') {
+            label = new Intl.DateTimeFormat('fr-BE', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(current);
+        } else {
+            const quarter = Math.floor(current.getUTCMonth() / 3) + 1;
+            label = `T${quarter} ${current.getUTCFullYear().toString().slice(-2)}`;
+        }
+
+        let bgClass = 'bg-white text-slate-500 hover:bg-slate-50';
+        if (isSelected) {
+            bgClass = 'bg-blue-600 text-white shadow-md';
+        } else if (isToday) {
+            bgClass = 'bg-blue-50 text-blue-600 border border-blue-200';
+        }
+
+        html += `<button onclick="window.app.setViewDate('${current.toISOString()}')" class="flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all ${bgClass}">${label}</button>`;
+
+        if (step === 'month') {
+            current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 1));
+        } else {
+            current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 3, 1));
+        }
     }
+
     container.innerHTML = html;
     setTimeout(() => {
         const selectedBtn = container.querySelector('.bg-blue-600');
@@ -273,6 +311,18 @@ export const renderDashboard = () => {
     document.getElementById('dash-month-income').textContent = formatCurrency(monthIncome);
     document.getElementById('dash-month-expense').textContent = formatCurrency(monthExpense);
 
+    const diff = monthIncome - monthExpense;
+    const diffEl = document.getElementById('dash-month-diff');
+    if (diffEl) {
+        if (diff >= 0) {
+            diffEl.textContent = `${formatCurrency(diff)} restant à dépenser`;
+            diffEl.className = 'text-xs font-medium mt-2 text-green-600';
+        } else {
+            diffEl.textContent = `${formatCurrency(Math.abs(diff))} de dépassement`;
+            diffEl.className = 'text-xs font-medium mt-2 text-red-600';
+        }
+    }
+
     const savingsBalance = state.accounts.filter(a => a.isSavings).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
     const targetFund = monthExpense * 3;
     const progressPct = targetFund > 0 ? Math.min((savingsBalance / targetFund) * 100, 100) : 0;
@@ -314,18 +364,15 @@ export const renderDashboard = () => {
     }
 
     const addTxBtn = document.querySelector('button[onclick="window.app.openTransactionModal()"]');
-    const mobileFab = document.getElementById('mobile-fab');
 
     if (isMonthClosed) {
         document.getElementById('filter-category').disabled = true;
         document.getElementById('filter-account').disabled = true;
         if (addTxBtn) addTxBtn.disabled = true;
-        if (mobileFab) mobileFab.classList.add('hidden');
     } else {
         document.getElementById('filter-category').disabled = false;
         document.getElementById('filter-account').disabled = false;
         if (addTxBtn) addTxBtn.disabled = false;
-        if (mobileFab) mobileFab.classList.remove('hidden');
     }
 };
 

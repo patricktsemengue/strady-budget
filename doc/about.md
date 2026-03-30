@@ -99,10 +99,14 @@ The system revolves around the following data entities, all of which are scoped 
      - The system batch-generates child transactions from `startDate` to `MIN(userEndDate, boundaryDate)`.
 
 #### 2.3.3 Edit a Single Transaction
-- **Process**: The original `TRANSACTION` document is deleted and a new one is created with updated details.
+- **Process**: Updading a single transaction consists in delete-old and create-new. The system deletes the old transaction and creates a new one based on the updated details.
 
-#### 2.3.4 Edit a Recurring Transaction (Series Split)
-- **Process**: This action splits the recurring series. The original template's `endDate` is updated, and a new template is created for the remaining occurrences.
+#### 2.3.4 Edit a Recurring Transaction
+- **Process**: Updading a recurring transaction consists in delete-old and create-new.
+  1. The system retrieves the parent `RECURRING_TEMPLATE`.
+  2. It batch deletes the template and ALL its associated child transactions.
+  3. It creates a new `RECURRING_TEMPLATE` with updated details.
+  4. It batch-generates new child transactions for the new template (up to the 36-month boundary).
 
 #### 2.3.5 Delete a Single Transaction
 - **Process**: The `TRANSACTION` document is deleted from Firestore.
@@ -135,9 +139,20 @@ The application is organized into five main sections:
 - **Settings**: CSV import/export and data reset options.
 
 #### Shared Month Selection Component
-A horizontal selectable bar ranging from **-12 months to +12 months** from the current date.
-- **Visibility**: Visible in Dashboard, Transactions, and Accounts views. Hidden in Category and Settings views.
-- **Persistence**: The selected month is stored in `localStorage` and persists across sessions and view changes.
+A horizontal selectable bar displayed at the top of the Dashboard and Transactions views.
+- **Visibility**: Visible in Dashboard and Transactions views ONLY. Hidden in Accounts, Category, and Settings views.
+- **Persistence**: The selected month is stored in `localStorage`.
+- **Configuration**: User can configure the range and step in the Settings view:
+  - **Start Date**: Defines the first month/quarter shown.
+  - **End Date**: Defines the last month/quarter shown.
+  - **Step**: Can be set to "Mensuel" (monthly) or "Trimestriel" (quarterly).
+- **Sticky Display**: The selector remains visible at the top of the screen when scrolling for better usability.
+
+---
+
+### Mobile Floating Action Button (FAB)
+- **Purpose**: Quick access to "Add Transaction".
+- **Visibility**: Visible on the Transactions view ONLY, and only if the current selected month is NOT closed.
 
 ---
 

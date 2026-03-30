@@ -113,8 +113,8 @@
     </div>
 
     <!-- Shared Month Selection -->
-    <div id="shared-month-selection" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-2">
+    <div id="shared-month-selection" class="max-w-6xl mx-auto px-4 mt-6 hidden sticky top-[68px] z-40">
+        <div class="bg-white rounded-xl shadow-md border border-slate-100 p-2">
             <div class="flex items-center gap-2">
                 <button id="prev-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="flex-1 overflow-x-auto hide-scroll flex gap-2 px-2" id="month-timeline">
@@ -142,6 +142,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <p class="text-sm text-slate-500 font-medium mb-1">Dépenses (Ce mois)</p>
                     <h2 class="text-3xl font-bold text-danger" id="dash-month-expense">--</h2>
+                    <p id="dash-month-diff" class="text-xs font-medium mt-2"></p>
                 </div>
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <p class="text-sm text-slate-500 font-medium mb-1">Fond d'urgence</p>
@@ -346,6 +347,34 @@
 
         <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 hidden">
             <h1 class="text-2xl font-bold text-slate-800">Réglages</h1>
+
+            <!-- Month Selector Configuration -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                <h3 class="font-bold text-lg text-slate-800 mb-4">Sélecteur de Période</h3>
+                <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date de début</label>
+                        <input type="date" id="config-month-start" required class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date de fin</label>
+                        <input type="date" id="config-month-end" required class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Pas (Étape)</label>
+                        <select id="config-month-step" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
+                            <option value="month">Mensuel</option>
+                            <option value="quarter">Trimestriel</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-3 flex justify-end">
+                        <button type="submit" class="bg-slate-800 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 transition-colors shadow-md">
+                            Enregistrer la configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <!-- Data Management -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-lg text-slate-800 mb-4">Données</h3>
@@ -509,10 +538,6 @@
                 <button id="mobile-action-edit" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-semibold">
                     <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-pen"></i></div>
                     Modifier la transaction
-                </button>
-                <button id="mobile-action-duplicate" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-semibold">
-                    <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-copy"></i></div>
-                    Dupliquer la transaction
                 </button>
                 <button id="mobile-action-delete" class="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-red-600 font-semibold">
                     <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center"><i class="fa-solid fa-trash-can"></i></div>

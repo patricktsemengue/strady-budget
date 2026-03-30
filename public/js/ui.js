@@ -102,7 +102,7 @@ export const setViewDate = async (date) => {
 
 export const render = () => {
     const sharedMonthSelection = document.getElementById('shared-month-selection');
-    const viewsWithMonthSelection = ['dashboard', 'transactions', 'accounts'];
+    const viewsWithMonthSelection = ['dashboard', 'transactions'];
     
     if (sharedMonthSelection) {
         if (viewsWithMonthSelection.includes(state.currentView)) {
@@ -130,6 +130,16 @@ export const render = () => {
     };
 
     const mobileFab = document.getElementById('mobile-fab');
+    if (mobileFab) {
+        const monthKey = getMonthKey(state.viewDate);
+        const isMonthClosed = state.records[monthKey]?.status === 'closed';
+        
+        if (state.currentView === 'transactions' && !isMonthClosed) {
+            mobileFab.classList.remove('hidden');
+        } else {
+            mobileFab.classList.add('hidden');
+        }
+    }
     
     // Hide all views first
     Object.values(views).forEach(view => {
@@ -142,23 +152,17 @@ export const render = () => {
     }
 
     if (state.currentView === 'dashboard') {
-        if (mobileFab) mobileFab.classList.remove('hidden');
         renderDashboard();
         renderEmergencyFund();
         renderMonthlyIncome();
     } else if (state.currentView === 'transactions') {
-        if (mobileFab) mobileFab.classList.remove('hidden');
         import('./dashboard.js').then(m => m.renderTimeline());
         renderTransactions();
     } else if (state.currentView === 'accounts') {
-        if (mobileFab) mobileFab.classList.add('hidden');
-        import('./dashboard.js').then(m => m.renderTimeline());
-        renderSettings(); // renderSettings handles both accounts and categories rendering in the current logic
+        renderSettings();
     } else if (state.currentView === 'categories') {
-        if (mobileFab) mobileFab.classList.add('hidden');
         renderSettings();
     } else if (state.currentView === 'settings') {
-        if (mobileFab) mobileFab.classList.add('hidden');
         renderSettings();
     }
 };

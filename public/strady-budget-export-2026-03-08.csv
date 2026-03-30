@@ -1,8 +1,8 @@
 date,label,amount,source,destination,reccuring,endate,periodicity,category
 2026-01-01,Salaire,3000,,Compte Principal (CBC),1,2027-01-01,M,Revenu
 2026-01-01,Allocation,594,,Belfius (Mao),1,2027-01-01,M,Revenu
-2026-02-01,Ep_1_10eme_Mao,300,Compte Principal (CBC),1_10eme_Mao (ep),1,2026-02-01,2027-02-01,M,Épargne
-2026-02-01,c_etf_enfants,150,Compte Principal (CBC),etf_enfant(ep),1,2026-02-01,2026-12-01,M,Épargne
+2026-01-02,Ep_1_10eme_Mao,300,Compte Principal (CBC),1_10eme_Mao (ep),1,2026-02-01,M,Épargne
+2026-02-01,c_etf_enfants,150,Compte Principal (CBC),etf_enfant(ep),1,2026-02-01,M,Épargne
 2026-01-01,RP La Louvière,1152,Compte Principal (CBC),,1,2027-01-01,M,Logement
 2026-01-01,Assurance Solde Restant dû,63,Compte Principal (CBC),,1,2027-01-01,M,Assurance
 2026-01-01,Dette 30K,478,Compte Principal (CBC),,1,M,Charge diverse 

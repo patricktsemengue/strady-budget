@@ -5,21 +5,13 @@ import {
     addTransactionToFirestore, 
     deleteTransactionFromFirestore, 
     addRecurringTemplate,
+    updateSingleTransactionInFirestore,
     updateRecurringSeriesInFirestore,
     deleteRecurringSeriesInFirestore
 } from './firestore-service.js';
 import { showNotification, render } from './ui.js';
 
-let duplicationChangeChecker = null;
-const fieldsToWatchForDuplication = [
-    'transaction-label', 
-    'transaction-amount', 
-    'transaction-date', 
-    'transaction-source', 
-    'transaction-destination'
-];
-
-export const openTransactionModal = (id = null, duplicateData = null) => {
+export const openTransactionModal = (id = null) => {
     const modal = document.getElementById('transaction-modal');
     const form = document.getElementById('transaction-form');
     form.reset();
@@ -38,32 +30,17 @@ export const openTransactionModal = (id = null, duplicateData = null) => {
     document.getElementById('recurring-fields').classList.add('hidden');
     document.getElementById('transaction-is-recurring').checked = false;
 
-    // Clean up previous listener if it exists
-    if (duplicationChangeChecker) {
-        fieldsToWatchForDuplication.forEach(fieldId => {
-            const el = document.getElementById(fieldId);
-            if (el) {
-                el.removeEventListener('input', duplicationChangeChecker);
-                el.removeEventListener('change', duplicationChangeChecker);
-            }
-        });
-        duplicationChangeChecker = null;
-    }
-
-    const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : duplicateData;
+    const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : null;
 
     if (id) { // EDIT MODE
         document.getElementById('transaction-modal-title').textContent = 'Éditer la transaction';
         document.getElementById('transaction-edit-id').value = id;
-    } else if (duplicateData) { // DUPLICATE MODE
-        document.getElementById('transaction-modal-title').textContent = 'Dupliquer la transaction';
-        document.getElementById('transaction-edit-id').value = '';
     } else { // NEW MODE
         document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
         document.getElementById('transaction-edit-id').value = '';
     }
 
-    if (tx) { // Pre-fill for EDIT or DUPLICATE
+    if (tx) { // Pre-fill for EDIT
         document.getElementById('transaction-label').value = tx.label || '';
         document.getElementById('transaction-amount').value = tx.amount || 0;
         if (tx.date) {
@@ -138,45 +115,7 @@ export const openTransactionModal = (id = null, duplicateData = null) => {
     };
 
     const saveButton = form.querySelector('button[type="submit"]');
-    if (duplicateData) {
-        saveButton.disabled = true;
-
-        const initialData = {
-            label: document.getElementById('transaction-label').value,
-            amount: document.getElementById('transaction-amount').value,
-            date: document.getElementById('transaction-date').value,
-            source: document.getElementById('transaction-source').value,
-            destination: document.getElementById('transaction-destination').value
-        };
-
-        duplicationChangeChecker = () => {
-            const currentData = {
-                label: document.getElementById('transaction-label').value,
-                amount: document.getElementById('transaction-amount').value,
-                date: document.getElementById('transaction-date').value,
-                source: document.getElementById('transaction-source').value,
-                destination: document.getElementById('transaction-destination').value
-            };
-
-            const hasChanged = currentData.label !== initialData.label ||
-                               currentData.amount !== initialData.amount ||
-                               currentData.date !== initialData.date ||
-                               currentData.source !== initialData.source ||
-                               currentData.destination !== initialData.destination;
-            
-            saveButton.disabled = !hasChanged;
-        };
-
-        fieldsToWatchForDuplication.forEach(fieldId => {
-            const el = document.getElementById(fieldId);
-            if (el) {
-                el.addEventListener('input', duplicationChangeChecker);
-                el.addEventListener('change', duplicationChangeChecker);
-            }
-        });
-    } else {
-        saveButton.disabled = false;
-    }
+    saveButton.disabled = false;
 
     modal.classList.remove('hidden');
 };
@@ -218,36 +157,23 @@ export const handleSaveTransaction = async (e) => {
             const tx = state.records[onFocusMonthKey]?.items.find(t => t.id === id);
             
             if (tx && tx.Model) {
-                if (confirm("Vous modifiez une transaction récurrente. Pour préserver l'historique, cela va mettre fin à l'ancienne série et en créer une nouvelle à partir de cette date. Continuer ?")) {
-                    // RECURRING UPDATE: Align with TODO.litcoffee
+                if (confirm("Vous modifiez une transaction récurrente. Cette action va supprimer l'ancienne série et en créer une nouvelle avec ces paramètres. Continuer ?")) {
+                    // RECURRING UPDATE: delete-old and create-new
                     const newTemplateValues = { 
                         date, label, amount, source, destination, category: Category,
                         recurring: true, endDate, periodicity
                     };
                     await updateRecurringSeriesInFirestore(currentUserId, tx.Model, newTemplateValues);
-                    showNotification('Série récurrente mise à jour (Split).');
+                    showNotification('Série récurrente mise à jour.');
                 } else {
                     return; // User cancelled
                 }
             } else {
-                if (confirm("Êtes-vous sûr de vouloir remplacer cette transaction ? Cette action supprime l'ancienne et en crée une nouvelle.")) {
-                    // SINGLE UPDATE: Align with TODO.litcoffee
-                    // "deletes the old transaction, and creates a new transaction"
+                if (confirm("Êtes-vous sûr de vouloir modifier cette transaction ?")) {
+                    // SINGLE UPDATE: delete-old and create-new
                     const newTxData = { label, amount, date, Category, source, destination, Model: null };
-                    const newId = generateDeterministicTransactionId(newTxData);
-
-                    // Check for duplicate (if the new ID already exists and it's not the one we are editing)
-                    const existingTx = Object.values(state.records).flatMap(r => r.items).find(t => t.id === newId);
-                    if (existingTx && newId !== id) {
-                        showNotification('Cette transaction existe déjà.', 'error');
-                        return;
-                    }
-
-                    await deleteTransactionFromFirestore(currentUserId, id);
-                    await addTransactionToFirestore(currentUserId, {
-                        id: newId, ...newTxData
-                    });
-                    showNotification('Transaction mise à jour (Remplacée).');
+                    await updateSingleTransactionInFirestore(currentUserId, id, newTxData);
+                    showNotification('Transaction mise à jour.');
                 } else {
                     return; // User cancelled
                 }
@@ -303,14 +229,6 @@ export const editTransaction = (id) => {
     openTransactionModal(id);
 };
 
-export const duplicateTransaction = (id) => {
-    const monthKey = getMonthKey(state.viewDate);
-    const transaction = state.records[monthKey]?.items.find(item => item.id === id);
-    if (transaction) {
-        // Open the modal for a *new* transaction, but pre-filled with this data.
-        openTransactionModal(null, transaction);
-    }
-};
 export const deleteTransaction = async (id) => {
     const currentMonthKey = getMonthKey(state.viewDate);
     const tx = state.records[currentMonthKey]?.items.find(t => t.id === id);
@@ -371,7 +289,6 @@ export const openMobileActions = (id) => {
     };
 
     setupAction('mobile-action-edit', editTransaction);
-    setupAction('mobile-action-duplicate', duplicateTransaction);
     setupAction('mobile-action-delete', deleteTransaction);
 
     // Close on overlay click
