@@ -45,10 +45,9 @@ export default {
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <h4 class="font-bold text-slate-700 mb-2">Répartition des dépenses</h4>
-                        <!-- Chart Placeholder -->
-                        <div class="w-full bg-slate-50 rounded-lg border border-slate-100 h-48 flex items-center justify-center text-slate-400 text-sm italic">
-                            Graphique de répartition (en attente de données)
+                        <h4 class="font-bold text-slate-700 mb-2">Flux de trésorerie (Sankey)</h4>
+                        <div id="sankey-chart" class="w-full h-64 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center text-slate-400 text-sm italic">
+                            Chargement du graphique...
                         </div>
                     </div>
                     <div class="space-y-6">

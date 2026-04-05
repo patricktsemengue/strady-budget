@@ -389,7 +389,94 @@ export const renderDashboard = () => {
         if (filterAccountEl) filterAccountEl.disabled = false;
         if (addTxBtn) addTxBtn.disabled = false;
     }
+
+    renderSankeyChart();
 };
+
+let googleChartsLoaded = false;
+export const renderSankeyChart = () => {
+    const container = document.getElementById('sankey-chart');
+    if (!container) return;
+
+    if (!googleChartsLoaded) {
+        if (typeof google === 'undefined') {
+            container.innerHTML = 'Google Charts non chargé';
+            return;
+        }
+        google.charts.load('current', {packages:['sankey']});
+        google.charts.setOnLoadCallback(() => {
+            googleChartsLoaded = true;
+            renderSankeyChart();
+        });
+        return;
+    }
+
+    const monthKey = getMonthKey(state.viewDate);
+    const monthData = state.records[monthKey] || { items: [] };
+    const rows = [];
+
+    // Node names mapping to avoid duplicates and handle categories vs accounts
+    // Format: [From, To, Weight]
+    
+    monthData.items.forEach(item => {
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
+        const sourceName = txInfo.src.name || 'Revenus Externes';
+        const destName = txInfo.dst.name || 'Dépenses Externes';
+        
+        if (txInfo.isIncome) {
+            // Flow: External -> Account
+            rows.push(['Entrées', txInfo.dst.name, item.amount]);
+        } else if (txInfo.isExpense) {
+            // Flow: Account -> Category
+            const category = state.categories.find(c => c.id === item.Category);
+            const catLabel = category ? category.label : 'Sans catégorie';
+            rows.push([txInfo.src.name, catLabel, item.amount]);
+        } else if (item.source && item.destination) {
+            // Flow: Internal Account -> Internal Account (Transfer)
+            rows.push([txInfo.src.name, txInfo.dst.name + ' (Épargne)', item.amount]);
+        }
+    });
+
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="text-slate-400 italic">Aucune donnée pour ce mois</div>';
+        return;
+    }
+
+    const data = new google.visualization.DataTable();
+    data.addColumn('string', 'From');
+    data.addColumn('string', 'To');
+    data.addColumn('number', 'Weight');
+    data.addRows(rows);
+
+    // Sets chart options.
+    const options = {
+        width: container.offsetWidth,
+        height: 256,
+        sankey: {
+            node: { 
+                label: { fontName: 'Inter', fontSize: 11, color: '#475569', bold: true },
+                nodePadding: 20,
+                width: 15,
+                interactivity: true
+            },
+            link: {
+                colorMode: 'gradient',
+                fillOpacity: 0.15
+            }
+        }
+    };
+
+    // Instantiates and draws our chart, passing in some options.
+    const chart = new google.visualization.Sankey(container);
+    chart.draw(data, options);
+};
+
+// Handle window resize for chart responsiveness
+window.addEventListener('resize', () => {
+    if (googleChartsLoaded && document.getElementById('sankey-chart')) {
+        renderSankeyChart();
+    }
+});
 
 export const clotureMois = async () => {
     const currentMonthKey = getMonthKey(state.viewDate);
