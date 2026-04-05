@@ -3,7 +3,8 @@ import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './
 import { calculateBalances, calculateMonthlyIncome } from './calculations.js';
 import { currentUserId } from './storage.js';
 import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
-import { showNotification, render, setViewDate } from './ui.js';
+import { showNotification, setViewDate } from './ui.js';
+import { router } from './app-router.js';
 
 export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
@@ -301,15 +302,19 @@ export const renderDashboard = () => {
 
     const balances = calculateBalances(state.viewDate);
     const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);
-    document.getElementById('dash-total-balance').textContent = formatCurrency(totalBalance);
+    const totalBalanceEl = document.getElementById('dash-total-balance');
+    if (totalBalanceEl) totalBalanceEl.textContent = formatCurrency(totalBalance);
 
     const monthIncome = calculateMonthlyIncome(state.viewDate);
     const monthExpense = currentMonthData.items
         .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
         .reduce((sum, item) => sum + item.amount, 0);
 
-    document.getElementById('dash-month-income').textContent = formatCurrency(monthIncome);
-    document.getElementById('dash-month-expense').textContent = formatCurrency(monthExpense);
+    const dashMonthIncomeEl = document.getElementById('dash-month-income');
+    if (dashMonthIncomeEl) dashMonthIncomeEl.textContent = formatCurrency(monthIncome);
+    
+    const dashMonthExpenseEl = document.getElementById('dash-month-expense');
+    if (dashMonthExpenseEl) dashMonthExpenseEl.textContent = formatCurrency(monthExpense);
 
     const diff = monthIncome - monthExpense;
     const diffEl = document.getElementById('dash-month-diff');
@@ -327,22 +332,27 @@ export const renderDashboard = () => {
     const targetFund = monthExpense * 3;
     const progressPct = targetFund > 0 ? Math.min((savingsBalance / targetFund) * 100, 100) : 0;
     const isEmergencyOk = savingsBalance >= targetFund;
-    document.getElementById('dash-emergency-fund').innerHTML = `
-        <div class="flex items-baseline gap-2">
-            <h2 class="text-3xl font-bold ${isEmergencyOk ? 'text-green-600' : 'text-amber-600'}">${formatCurrency(savingsBalance)}</h2>
-            ${isEmergencyOk ? '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>' : ''}
-        </div>
-        <p class="text-xs text-slate-400 mt-1 mb-3">Objectif: ${formatCurrency(targetFund)}</p>
-        <div class="w-full bg-slate-100 rounded-full h-2"><div class="${isEmergencyOk ? 'bg-green-500' : 'bg-amber-500'} h-full rounded-full" style="width: ${progressPct}%"></div></div>`;
-    
+    const dashEmergencyFundEl = document.getElementById('dash-emergency-fund');
+    if (dashEmergencyFundEl) {
+        dashEmergencyFundEl.innerHTML = `
+            <div class="flex items-baseline gap-2">
+                <h2 class="text-3xl font-bold ${isEmergencyOk ? 'text-green-600' : 'text-amber-600'}">${formatCurrency(savingsBalance)}</h2>
+                ${isEmergencyOk ? '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>' : ''}
+            </div>
+            <p class="text-xs text-slate-400 mt-1 mb-3">Objectif: ${formatCurrency(targetFund)}</p>
+            <div class="w-full bg-slate-100 rounded-full h-2"><div class="${isEmergencyOk ? 'bg-green-500' : 'bg-amber-500'} h-full rounded-full" style="width: ${progressPct}%"></div></div>`;
+    }
+
     populateCategoryFilter();
     populateAccountFilter();
     renderTransactions();
     renderAnticipatedExpenses();
 
     const expensePercentage = monthIncome > 0 ? (monthExpense / monthIncome) * 100 : 0;
-    document.getElementById('expense-percentage-bar').style.width = `${expensePercentage}%`;
-    document.getElementById('expense-percentage-text').textContent = `${expensePercentage.toFixed(0)}%`;
+    const expensePercentageBar = document.getElementById('expense-percentage-bar');
+    if (expensePercentageBar) expensePercentageBar.style.width = `${expensePercentage}%`;
+    const expensePercentageText = document.getElementById('expense-percentage-text');
+    if (expensePercentageText) expensePercentageText.textContent = `${expensePercentage.toFixed(0)}%`;
 
     let nextMonthExpectedIncome = 0, nextMonthExpectedExpense = 0;
     const nextMonthKey = getMonthKey(new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 1));
@@ -352,26 +362,31 @@ export const renderDashboard = () => {
         if(txInfo.isExpense) nextMonthExpectedExpense += item.amount;
     });
     const forecastBalance = totalBalance + nextMonthExpectedIncome - nextMonthExpectedExpense;
-    document.getElementById('forecast-balance').textContent = formatCurrency(forecastBalance);
+    const forecastBalanceEl = document.getElementById('forecast-balance');
+    if (forecastBalanceEl) forecastBalanceEl.textContent = formatCurrency(forecastBalance);
 
     const clotureBtn = document.getElementById('btn-cloture');
     const isMonthClosed = currentMonthData.status === 'closed';
-    clotureBtn.disabled = isMonthClosed;
-    if(isMonthClosed) {
-        clotureBtn.innerHTML = `<i class="fa-solid fa-lock mr-2"></i>Mois clôturé`;
-    } else {
-        clotureBtn.innerHTML = `<i class="fa-solid fa-lock-open mr-2"></i>Clôturer le mois`;
+    if (clotureBtn) {
+        clotureBtn.disabled = isMonthClosed;
+        if(isMonthClosed) {
+            clotureBtn.innerHTML = `<i class="fa-solid fa-lock mr-2"></i>Mois clôturé`;
+        } else {
+            clotureBtn.innerHTML = `<i class="fa-solid fa-lock-open mr-2"></i>Clôturer le mois`;
+        }
     }
 
     const addTxBtn = document.querySelector('button[onclick="window.app.openTransactionModal()"]');
+    const filterCategoryEl = document.getElementById('filter-category');
+    const filterAccountEl = document.getElementById('filter-account');
 
     if (isMonthClosed) {
-        document.getElementById('filter-category').disabled = true;
-        document.getElementById('filter-account').disabled = true;
+        if (filterCategoryEl) filterCategoryEl.disabled = true;
+        if (filterAccountEl) filterAccountEl.disabled = true;
         if (addTxBtn) addTxBtn.disabled = true;
     } else {
-        document.getElementById('filter-category').disabled = false;
-        document.getElementById('filter-account').disabled = false;
+        if (filterCategoryEl) filterCategoryEl.disabled = false;
+        if (filterAccountEl) filterAccountEl.disabled = false;
         if (addTxBtn) addTxBtn.disabled = false;
     }
 };

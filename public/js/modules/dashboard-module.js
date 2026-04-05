@@ -1,0 +1,85 @@
+import { renderDashboard } from '../dashboard.js';
+
+export default {
+    id: 'dashboard',
+    label: 'Tableau de bord',
+    icon: 'fa-chart-pie',
+    order: 1,
+    showMonthSelection: true,
+    getTemplate: () => `
+        <div id="view-dashboard" class="space-y-6 max-w-6xl mx-auto px-4">
+            <h1 class="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Solde Global Actuel</p>
+                    <h2 class="text-3xl font-bold text-slate-800" id="dash-total-balance">--</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Revenus (Ce mois)</p>
+                    <h2 class="text-3xl font-bold text-success" id="dash-month-income">--</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Dépenses (Ce mois)</p>
+                    <h2 class="text-3xl font-bold text-danger" id="dash-month-expense">--</h2>
+                    <p id="dash-month-diff" class="text-xs font-medium mt-2"></p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-sm text-slate-500 font-medium mb-1">Fond d'urgence</p>
+                    <div id="dash-emergency-fund">--</div>
+                </div>
+            </div>
+
+            <!-- Anticipated Non-Recurring Transactions -->
+            <div id="anticipated-highlight" class="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Transactions à venir (3 mois, non-récurrentes)</h3>
+                <div id="anticipated-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Budget Analysis -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">Analyse du Budget</h3>
+                    <button id="btn-cloture" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-300"><i class="fa-solid fa-lock mr-2"></i>Clôturer le mois</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-2">Répartition des dépenses</h4>
+                        <!-- Chart Placeholder -->
+                        <div class="w-full bg-slate-50 rounded-lg border border-slate-100 h-48 flex items-center justify-center text-slate-400 text-sm italic">
+                            Graphique de répartition (en attente de données)
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2">Pourcentage des dépenses par rapport aux revenus</h4>
+                            <div class="w-full bg-slate-200 rounded-full h-4">
+                                <div id="expense-percentage-bar" class="bg-danger h-4 rounded-full" style="width: 0%;"></div>
+                            </div>
+                            <p class="text-right text-sm font-medium text-slate-500 mt-1"><span id="expense-percentage-text">0%</span></p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2">Prévisions</h4>
+                            <div class="flex items-center gap-4">
+                                <p class="text-sm text-slate-500">Solde prévu à la fin du mois:</p>
+                                <p class="text-lg font-bold text-slate-800" id="forecast-balance">--</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `,
+    render: () => {
+        renderDashboard();
+    },
+    init: () => {
+        // Shared listeners that might be specific to this view's buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#btn-cloture')) {
+                import('../dashboard.js').then(m => m.clotureMois());
+            }
+        });
+    }
+};

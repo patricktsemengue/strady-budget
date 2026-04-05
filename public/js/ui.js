@@ -1,9 +1,4 @@
-import { state, updateState } from './state.js';
-import { renderDashboard, renderTransactions } from './dashboard.js';
-import { renderSettings } from './settings.js';
-import { renderEmergencyFund, renderMonthlyIncome } from './dashboard-widgets.js';
-import { currentUserId } from './storage.js';
-import { getMonthKey } from './utils.js';
+import { updateState } from './state.js';
 
 export const showNotification = (message, type = 'success') => {
     const container = document.getElementById('notification-container');
@@ -12,7 +7,6 @@ export const showNotification = (message, type = 'success') => {
     const notif = document.createElement('div');
     const isSuccess = type === 'success';
     const isError = type === 'error';
-    const isInfo = type === 'info';
 
     let bgColor = 'bg-blue-50';
     let borderColor = 'border-blue-400';
@@ -70,15 +64,13 @@ export const setDataStatusIndicator = (status) => {
     } else if (status === 'live') {
         indicator.textContent = 'Données à jour';
         indicator.className = 'fixed top-[68px] md:top-[100px] left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300 bg-green-100 text-green-800';
-        indicator.classList.remove('hidden'); // Ensure it's visible before fading
-        // Fade out after a couple of seconds
+        indicator.classList.remove('hidden');
         setTimeout(() => {
             indicator.classList.add('opacity-0');
         }, 2000);
-        // Hide completely after fade out
         setTimeout(() => {
             indicator.classList.add('hidden');
-            indicator.classList.remove('opacity-0'); // reset for next time
+            indicator.classList.remove('opacity-0');
         }, 2500);
     } else {
         indicator.classList.add('hidden');
@@ -86,83 +78,16 @@ export const setDataStatusIndicator = (status) => {
 };
 
 export const setView = (view, isInitial = false) => {
-    updateState({ currentView: view });
-    if (!isInitial) {
-        window.location.hash = view;
-    }
-    render();
+    window.location.hash = view;
 };
 
 export const setViewDate = async (date) => {
     const newDate = new Date(date);
     updateState({ viewDate: newDate });
     localStorage.setItem('viewDate', newDate.toISOString());
-    render();
+    // The main app should listen for hash changes or explicit calls to render
 };
 
 export const render = () => {
-    const sharedMonthSelection = document.getElementById('shared-month-selection');
-    const viewsWithMonthSelection = ['dashboard', 'transactions'];
-    
-    if (sharedMonthSelection) {
-        if (viewsWithMonthSelection.includes(state.currentView)) {
-            sharedMonthSelection.classList.remove('hidden');
-        } else {
-            sharedMonthSelection.classList.add('hidden');
-        }
-    }
-
-    document.querySelectorAll('nav button').forEach(button => {
-        const viewName = button.id.split('-')[1];
-        if (viewName === state.currentView) {
-            button.classList.add('text-blue-600', 'border-blue-600');
-        } else {
-            button.classList.remove('text-blue-600', 'border-blue-600');
-        }
-    });
-
-    const views = {
-        dashboard: document.getElementById('view-dashboard'),
-        transactions: document.getElementById('view-transactions'),
-        accounts: document.getElementById('view-accounts'),
-        categories: document.getElementById('view-categories'),
-        settings: document.getElementById('view-settings')
-    };
-
-    const mobileFab = document.getElementById('mobile-fab');
-    if (mobileFab) {
-        const monthKey = getMonthKey(state.viewDate);
-        const isMonthClosed = state.records[monthKey]?.status === 'closed';
-        
-        if (state.currentView === 'transactions' && !isMonthClosed) {
-            mobileFab.classList.remove('hidden');
-        } else {
-            mobileFab.classList.add('hidden');
-        }
-    }
-    
-    // Hide all views first
-    Object.values(views).forEach(view => {
-        if (view) view.classList.add('hidden');
-    });
-
-    // Show current view and render its content
-    if (views[state.currentView]) {
-        views[state.currentView].classList.remove('hidden');
-    }
-
-    if (state.currentView === 'dashboard') {
-        renderDashboard();
-        renderEmergencyFund();
-        renderMonthlyIncome();
-    } else if (state.currentView === 'transactions') {
-        import('./dashboard.js').then(m => m.renderTimeline());
-        renderTransactions();
-    } else if (state.currentView === 'accounts') {
-        renderSettings();
-    } else if (state.currentView === 'categories') {
-        renderSettings();
-    } else if (state.currentView === 'settings') {
-        renderSettings();
-    }
+    // This will be overridden or called by main.js
 };
