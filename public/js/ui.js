@@ -81,13 +81,3 @@ export const setView = (view, isInitial = false) => {
     window.location.hash = view;
 };
 
-export const setViewDate = async (date) => {
-    const newDate = new Date(date);
-    updateState({ viewDate: newDate });
-    localStorage.setItem('viewDate', newDate.toISOString());
-    // The main app should listen for hash changes or explicit calls to render
-};
-
-export const render = () => {
-    // This will be overridden or called by main.js
-};

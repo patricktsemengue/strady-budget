@@ -3,16 +3,32 @@ import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './
 import { calculateBalances, calculateMonthlyIncome } from './calculations.js';
 import { currentUserId } from './storage.js';
 import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
-import { showNotification, setViewDate } from './ui.js';
+import { showNotification } from './ui.js';
 import { router } from './app-router.js';
 
 export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
     const tableBody = document.getElementById('transactions-table-body');
     
-    // Filters & Search
-    const categoryFilter = document.getElementById('filter-category')?.value || 'all';
-    const accountFilter = document.getElementById('filter-account')?.value || 'all';
+    // Filters & Search - Handling Multi-Select
+    const getSelectedValues = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return ['all'];
+        const values = Array.from(el.selectedOptions).map(opt => opt.value);
+        if (values.length === 0 || values.includes('all')) return ['all'];
+        return values;
+    };
+
+    const categoryFilters = getSelectedValues('filter-category');
+    const accountFilters = getSelectedValues('filter-account');
+    
+    // If we are on mobile, we might need to check the mobile filters too if the desktop ones aren't the source
+    const categoryFiltersMobile = getSelectedValues('filter-category-mobile');
+    const accountFiltersMobile = getSelectedValues('filter-account-mobile');
+    
+    const finalCategoryFilters = categoryFilters.includes('all') ? categoryFiltersMobile : categoryFilters;
+    const finalAccountFilters = accountFilters.includes('all') ? accountFiltersMobile : accountFilters;
+
     const searchFilter = (document.getElementById('search-transactions')?.value || '').toLowerCase();
     const sortOrder = document.getElementById('sort-order')?.value || 'date-desc';
 
@@ -21,12 +37,12 @@ export const renderTransactions = () => {
     
     let filteredItems = [...monthData.items];
 
-    // Apply Filters
-    if (categoryFilter !== 'all') {
-        filteredItems = filteredItems.filter(item => item.Category === categoryFilter);
+    // Apply Filters (Multi-select logic)
+    if (!finalCategoryFilters.includes('all')) {
+        filteredItems = filteredItems.filter(item => finalCategoryFilters.includes(item.Category));
     }
-    if (accountFilter !== 'all') {
-        filteredItems = filteredItems.filter(item => item.source === accountFilter || item.destination === accountFilter);
+    if (!finalAccountFilters.includes('all')) {
+        filteredItems = filteredItems.filter(item => finalAccountFilters.includes(item.source) || finalAccountFilters.includes(item.destination));
     }
 
     // Apply Search (Label, Category Label, Amount)
@@ -300,7 +316,8 @@ export const renderDashboard = () => {
         sortOrderMobile.value = savedSortOrder;
     }
 
-    const balances = calculateBalances(state.viewDate);
+    //const currentMonthKey = getMonthKey(state.viewDate);
+    const balances = state.months[currentMonthKey]?.balances || calculateBalances(state.viewDate);
     const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);
     const totalBalanceEl = document.getElementById('dash-total-balance');
     if (totalBalanceEl) totalBalanceEl.textContent = formatCurrency(totalBalance);
@@ -394,8 +411,9 @@ export const renderDashboard = () => {
 };
 
 let googleChartsLoaded = false;
-export const renderSankeyChart = () => {
-    const container = document.getElementById('sankey-chart');
+export const renderSankeyChart = (isExpanded = false) => {
+    const containerId = isExpanded ? 'sankey-chart-expanded' : 'sankey-chart';
+    const container = document.getElementById(containerId);
     if (!container) return;
 
     if (!googleChartsLoaded) {
@@ -406,34 +424,84 @@ export const renderSankeyChart = () => {
         google.charts.load('current', {packages:['sankey']});
         google.charts.setOnLoadCallback(() => {
             googleChartsLoaded = true;
-            renderSankeyChart();
+            renderSankeyChart(isExpanded);
         });
         return;
     }
 
     const monthKey = getMonthKey(state.viewDate);
     const monthData = state.records[monthKey] || { items: [] };
-    const rows = [];
-
-    // Node names mapping to avoid duplicates and handle categories vs accounts
-    // Format: [From, To, Weight]
+    
+    // First pass: Calculate totals for percentages
+    let totalIncome = 0;
+    const nodeIncomingSum = {};
     
     monthData.items.forEach(item => {
         const txInfo = getTxDisplayInfo(item.source, item.destination);
-        const sourceName = txInfo.src.name || 'Revenus Externes';
-        const destName = txInfo.dst.name || 'Dépenses Externes';
-        
         if (txInfo.isIncome) {
-            // Flow: External -> Account
-            rows.push(['Entrées', txInfo.dst.name, item.amount]);
+            totalIncome += item.amount;
+            nodeIncomingSum[txInfo.dst.name] = (nodeIncomingSum[txInfo.dst.name] || 0) + item.amount;
         } else if (txInfo.isExpense) {
-            // Flow: Account -> Category
             const category = state.categories.find(c => c.id === item.Category);
             const catLabel = category ? category.label : 'Sans catégorie';
-            rows.push([txInfo.src.name, catLabel, item.amount]);
+            nodeIncomingSum[catLabel] = (nodeIncomingSum[catLabel] || 0) + item.amount;
         } else if (item.source && item.destination) {
-            // Flow: Internal Account -> Internal Account (Transfer)
-            rows.push([txInfo.src.name, txInfo.dst.name + ' (Épargne)', item.amount]);
+            const destLabel = txInfo.dst.name + ' (Épargne)';
+            nodeIncomingSum[destLabel] = (nodeIncomingSum[destLabel] || 0) + item.amount;
+        }
+    });
+
+    // Helper to format labels with percentages
+    const getLabel = (name) => {
+        if (name === 'Entrées' || totalIncome === 0) return name;
+        const sum = nodeIncomingSum[name] || 0;
+        const pct = ((sum / totalIncome) * 100).toFixed(0);
+        return `${name} (${pct}%)`;
+    };
+
+    const rows = [];
+    const colorsMap = {};
+
+    // Helper to get consistent colors
+    const INCOME_COLOR = '#10b981'; // Green
+    const CURRENT_ACC_COLOR = '#3b82f6'; // Blue
+    const SAVINGS_ACC_COLOR = '#8b5cf6'; // Purple
+    const OTHER_COLOR = '#94a3b8'; // Slate
+
+    colorsMap['Entrées'] = INCOME_COLOR;
+
+    // Second pass: Build rows with percentages
+    monthData.items.forEach(item => {
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
+        const sourceName = txInfo.src.name;
+        const destName = txInfo.dst.name;
+        
+        if (txInfo.isIncome) {
+            const labeledDest = getLabel(destName);
+            rows.push(['Entrées', labeledDest, item.amount]);
+            const acc = state.accounts.find(a => a.id === item.destination);
+            colorsMap[labeledDest] = acc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+        } else if (txInfo.isExpense) {
+            const category = state.categories.find(c => c.id === item.Category);
+            const catLabel = category ? category.label : 'Sans catégorie';
+            
+            const labeledSrc = getLabel(sourceName);
+            const labeledDest = getLabel(catLabel);
+            rows.push([labeledSrc, labeledDest, item.amount]);
+            
+            const acc = state.accounts.find(a => a.id === item.source);
+            colorsMap[labeledSrc] = acc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+            colorsMap[labeledDest] = category?.color || OTHER_COLOR;
+        } else if (item.source && item.destination) {
+            const destLabel = destName + ' (Épargne)';
+            const labeledSrc = getLabel(sourceName);
+            const labeledDest = getLabel(destLabel);
+            rows.push([labeledSrc, labeledDest, item.amount]);
+            
+            const srcAcc = state.accounts.find(a => a.id === item.source);
+            const dstAcc = state.accounts.find(a => a.id === item.destination);
+            colorsMap[labeledSrc] = srcAcc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+            colorsMap[labeledDest] = dstAcc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
         }
     });
 
@@ -448,20 +516,25 @@ export const renderSankeyChart = () => {
     data.addColumn('number', 'Weight');
     data.addRows(rows);
 
+    // Extract nodes in order to map colors
+    const uniqueNodes = Array.from(new Set(rows.flatMap(r => [r[0], r[1]])));
+    const nodeColors = uniqueNodes.map(node => colorsMap[node] || OTHER_COLOR);
+
     // Sets chart options.
     const options = {
         width: container.offsetWidth,
-        height: 256,
+        height: isExpanded ? container.offsetHeight : 320,
         sankey: {
             node: { 
-                label: { fontName: 'Inter', fontSize: 11, color: '#475569', bold: true },
-                nodePadding: 20,
+                label: { fontName: 'Inter', fontSize: isExpanded ? 12 : 10, color: '#475569', bold: true },
+                nodePadding: isExpanded ? 30 : 20,
                 width: 15,
+                colors: nodeColors,
                 interactivity: true
             },
             link: {
                 colorMode: 'gradient',
-                fillOpacity: 0.15
+                fillOpacity: 0.2
             }
         }
     };

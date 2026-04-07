@@ -261,15 +261,15 @@
             </div>
             <div class="space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-2">Catégorie</label>
-                    <select id="filter-category-mobile" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="all">Toutes les catégories</option>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Catégories (Sélection multiple)</label>
+                    <select id="filter-category-mobile" multiple size="5" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all" selected>Toutes les catégories</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-2">Compte</label>
-                    <select id="filter-account-mobile" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="all">Tous les comptes</option>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Comptes (Sélection multiple)</label>
+                    <select id="filter-account-mobile" multiple size="5" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all" selected>Tous les comptes</option>
                     </select>
                 </div>
                 <div>
@@ -381,18 +381,32 @@
                     <label class="block text-sm font-medium text-slate-600 mb-1">Nom de la catégorie</label>
                     <input type="text" id="edit-cat-name" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Icône (FontAwesome)</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm">fa-</span>
-                            <input type="text" id="edit-cat-icon" placeholder="star" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 pl-9 text-sm">
-                        </div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Icône</label>
+                        <select id="edit-cat-icon" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500 font-fontawesome">
+                            <option value="piggy-bank">&#xf4d3; Tirelire</option>
+                            <option value="wallet">&#xf555; Portefeuille</option>
+                            <option value="money-bill-trend-up">&#xe529; Investissement</option>
+                            <option value="coins">&#xf51e; Pièces</option>
+                            <option value="building">&#xf1ad; Bâtiment</option>
+                            <option value="house">&#xf015; Maison</option>
+                            <option value="layer-group">&#xf5fd; Groupe</option>
+                            <option value="box-archive">&#xf187; Archives</option>
+                            <option value="face-smile">&#xf118; Loisirs</option>
+                            <option value="gamepad">&#xf11b; Jeux</option>
+                            <option value="cart-shopping">&#xf07a; Courses</option>
+                            <option value="basket-shopping">&#xf291; Panier</option>
+                            <option value="receipt">&#xf543; Facture</option>
+                            <option value="file-shield">&#xf3ed; Assurance</option>
+                            <option value="shield-halved">&#xf3ed; Sécurité</option>
+                            <option value="hand-holding-heart">&#xf4be; Santé</option>
+                            <option value="gift">&#xf06b; Cadeau</option>
+                            <option value="arrow-right-arrow-left">&#xf0ec; Transfert</option>
+                            <option value="money-bill-transfer">&#xe528; Virement</option>
+                        </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Couleur</label>
-                        <input type="color" id="edit-cat-color" class="w-full h-[46px] border-slate-300 rounded-lg shadow-sm border p-1 cursor-pointer">
-                    </div>
+                    <input type="hidden" id="edit-cat-color">
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="btn-cancel-cat-edit" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
@@ -415,24 +429,54 @@
                     <label class="block text-sm font-medium text-slate-600 mb-1">Nom de la catégorie</label>
                     <input type="text" id="cat-name" required placeholder="Ex: Vacances" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Icône (FontAwesome)</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm">fa-</span>
-                            <input type="text" id="cat-icon" placeholder="star" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 pl-9 text-sm">
-                        </div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Icône</label>
+                        <select id="cat-icon" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500 font-fontawesome">
+                            <option value="piggy-bank">&#xf4d3; Tirelire</option>
+                            <option value="wallet">&#xf555; Portefeuille</option>
+                            <option value="money-bill-trend-up">&#xe529; Investissement</option>
+                            <option value="coins">&#xf51e; Pièces</option>
+                            <option value="building">&#xf1ad; Bâtiment</option>
+                            <option value="house">&#xf015; Maison</option>
+                            <option value="layer-group">&#xf5fd; Groupe</option>
+                            <option value="box-archive">&#xf187; Archives</option>
+                            <option value="face-smile">&#xf118; Loisirs</option>
+                            <option value="gamepad">&#xf11b; Jeux</option>
+                            <option value="cart-shopping">&#xf07a; Courses</option>
+                            <option value="basket-shopping">&#xf291; Panier</option>
+                            <option value="receipt">&#xf543; Facture</option>
+                            <option value="file-shield">&#xf3ed; Assurance</option>
+                            <option value="shield-halved">&#xf3ed; Sécurité</option>
+                            <option value="hand-holding-heart">&#xf4be; Santé</option>
+                            <option value="gift">&#xf06b; Cadeau</option>
+                            <option value="arrow-right-arrow-left">&#xf0ec; Transfert</option>
+                            <option value="money-bill-transfer">&#xe528; Virement</option>
+                        </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Couleur</label>
-                        <input type="color" id="cat-color" value="#3b82f6" class="w-full h-[46px] border-slate-300 rounded-lg shadow-sm border p-1 cursor-pointer">
-                    </div>
+                    <input type="hidden" id="cat-color">
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="btn-cancel-add-cat" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
                     <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Ajouter la catégorie</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Sankey Expanded Modal -->
+    <div id="sankey-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[70] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Analyse détaillée des flux</h2>
+                    <p class="text-sm text-slate-500">Visualisation complète des entrées et sorties</p>
+                </div>
+                <button id="btn-close-sankey-modal" class="text-slate-400 hover:text-slate-600 p-2 transition-colors"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div class="flex-1 p-8 overflow-auto bg-white flex items-center justify-center">
+                <div id="sankey-chart-expanded" class="w-full h-full min-h-[500px]"></div>
+            </div>
         </div>
     </div>
 

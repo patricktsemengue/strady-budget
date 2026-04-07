@@ -44,9 +44,12 @@ export default {
                     <button id="btn-cloture" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-300"><i class="fa-solid fa-lock mr-2"></i>Clôturer le mois</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-bold text-slate-700 mb-2">Flux de trésorerie (Sankey)</h4>
-                        <div id="sankey-chart" class="w-full h-64 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center text-slate-400 text-sm italic">
+                    <div class="relative">
+                        <h4 class="font-bold text-slate-700 mb-4">Flux de trésorerie (Sankey)</h4>
+                        <button id="btn-expand-sankey" class="absolute top-0 right-0 z-[30] text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md active:scale-95">
+                            <i class="fa-solid fa-maximize"></i> Agrandir
+                        </button>
+                        <div id="sankey-chart" class="w-full h-[320px] bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center text-slate-400 text-sm italic">
                             Chargement du graphique...
                         </div>
                     </div>
@@ -78,6 +81,13 @@ export default {
         document.addEventListener('click', (e) => {
             if (e.target.closest('#btn-cloture')) {
                 import('../dashboard.js').then(m => m.clotureMois());
+            }
+            if (e.target.closest('#btn-expand-sankey')) {
+                document.getElementById('sankey-modal').classList.remove('hidden');
+                import('../dashboard.js').then(m => m.renderSankeyChart(true));
+            }
+            if (e.target.closest('#btn-close-sankey-modal')) {
+                document.getElementById('sankey-modal').classList.add('hidden');
             }
         });
     }

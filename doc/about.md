@@ -38,9 +38,10 @@ The system revolves around the following data entities, all of which are scoped 
   - `recurring`: boolean (always `true`)
   - `endDate`: string (YYYY-MM-DD, optional)
   - `periodicity`: string (`M` for Monthly, `Q` for Quarterly, `Y` for Yearly)
-- **MONTH**: Stores metadata for a specific month.
+- **MONTH**: Stores metadata and pre-calculated balances for a specific month.
   - `id`: string (YYYY-MM)
   - `status`: string (e.g., "closed")
+  - `balances`: map (accountId: float, the running balance at the end of the month)
 
 ---
 
@@ -121,54 +122,70 @@ The system revolves around the following data entities, all of which are scoped 
 
 ### 2.5 Navigation Menu & UI Layout
 
-The application is organized into five main sections:
+The application uses a **Modular Plug-and-Play Architecture**. Each feature is a self-contained module that can be added or removed with minimal code changes. The UI is dynamically generated based on the registered modules.
 
-- **Dashboard**: Displays key financial indicators (Balance, Income, Expenses, Emergency Fund), visual charts, and anticipated one-off expenses. Includes the "Clôture du mois" feature.
+- **Dashboard**: Displays key financial indicators and advanced visualizations.
+  - **KPI Cards**: Global Balance, Monthly Income, Monthly Expenses, and Emergency Fund progress.
+  - **Sankey Diagram**: A graphical flow chart showing how "Entrées" (external income) are dispatched into accounts, and then filtered into expense categories or savings transfers.
+  - **Anticipated Expenses**: Highlights non-recurring expenses planned for the next 3 months.
+  - **Budget Analysis**: Percentage of spending vs. income and end-of-month balance forecasts.
+  - **Month Closure**: "Clôture du mois" feature to freeze a month and roll over balances.
 - **Transactions**: Dedicated list view for managing month-specific transactions.
-  - **Search**: By label, category, or amount.
+  - **Search**: Real-time filtering by label, category, or amount.
   - **Filters**: By category or account.
   - **Sorting**: By Date, Account, Type, Category, or Amount.
-  - **Columns**: Date, Type, Category, Amount, Label, Actions.
+  - **Views**: Responsive design with a detailed table for desktop and a card-based list for mobile.
 - **Accounts**: Centralized management of financial accounts.
-  - **Month Selection**: Affects the balance calculations shown.
-  - **Search**: By name or balance.
-  - **Filters**: By account type (Current/Savings).
-  - **Sorting**: By Name, Type, or Balance.
-  - **Columns**: Label, Tag (is savings), Balance, Actions.
-- **Categories**: Management of transaction categories and their visual ordering.
-- **Settings**: CSV import/export and data reset options.
+  - **Search & Filters**: Filter by account type (Current/Savings) and search by name.
+  - **Calculations**: Dynamically calculates balances for the selected period.
+- **Categories**: Management of transaction categories.
+  - **Customization**: Icons (FontAwesome) and color coding.
+  - **Visual Ordering**: Support for manual drag-and-drop reordering.
+- **Settings**: System configuration and data maintenance.
+  - **Period Configuration**: Set the start/end range and step (Monthly/Quarterly) for the global month selector.
+  - **Data Portability**: CSV import/export for both transactions and accounts.
+  - **Data Reset**: Options to wipe transactions or the entire account structure.
 
-#### Shared Month Selection Component
-A horizontal selectable bar displayed at the top of the Dashboard and Transactions views.
-- **Visibility**: Visible in Dashboard and Transactions views ONLY. Hidden in Accounts, Category, and Settings views.
-- **Persistence**: The selected month is stored in `localStorage`.
-- **Configuration**: User can configure the range and step in the Settings view:
-  - **Start Date**: Defines the first month/quarter shown.
-  - **End Date**: Defines the last month/quarter shown.
-  - **Step**: Can be set to "Mensuel" (monthly) or "Trimestriel" (quarterly).
-- **Sticky Display**: The selector remains visible at the top of the screen when scrolling for better usability.
+#### Shared UI System
+- **Global Router**: A centralized `AppRouter` handles view switching via URL hashes and manages the dynamic building of the navigation menu (desktop sidebar/top bar and mobile menu).
+- **Month Selector**: A sticky, horizontal timeline selector visible on the Dashboard and Transactions views. It allows for instant context switching between different financial periods.
+- **Dynamic Indicators**: Real-time data status indicator showing if the data is being served from local cache or is "Live" from Firestore.
+- **Mobile Floating Action Button (FAB)**: Provides quick access to "Add Transaction" on relevant views when the selected month is open.
 
----
 
-### Mobile Floating Action Button (FAB)
-- **Purpose**: Quick access to "Add Transaction".
-- **Visibility**: Visible on the Transactions view ONLY, and only if the current selected month is NOT closed.
+### 2.6 Account Balance Refresh (Background Job)
+- **Trigger**: Any addition, update, or deletion of an `ACCOUNT` or `TRANSACTION`.
+- **Process**: 
+  1. The system identifies the starting date `T.date` of the change.
+  2. It retrieves the balances of all accounts from the previous month (`T.date - 1 month`) from the `MONTH` collection.
+  3. It recalculates the balances for all accounts month-by-month from the current month up to the `FUNCTIONAL_BOUNDARY_DATE`.
+  4. Each month's balances are stored in the `MONTH` collection in Firestore.
+
+### 2.7 FUNCTIONAL_BOUNDARY_DATE
+- **Definition**: The fixed upper limit for all financial calculations and transaction generation.
+- **Rule**: Automatically set to December 31st of the current year + 3.
+- **Usage**:
+  - Sets the `endDate` for the global Month Selector.
+  - Defines the stop date for the background balance recalculation job.
+  - Used as the default `endDate` for recurring transaction generation if not specified by the user.
 
 ---
 
 ## 3. Key Indicator Calculations
 
 ### Calculation Model
-The system uses **Batch Generation** for recurring transactions, simplifying calculations as all future transactions within the generation window already exist as database records.
+The system uses **Batch Generation** for recurring transactions and **Pre-calculated Balances** for performance.
 
 ### 3.1 Monthly Income
-Sum of all `TRANSACTION` documents for the month where `source` is empty, plus forecasting for periods beyond the 36-month batch window using arithmetic series.
+Sum of all `TRANSACTION` documents for the month where `source` is empty.
 
 ### 3.2 Account Balance
-Calculated from the account's `initialBalance` at `initialBalanceDate`, plus all `destination` transactions and minus all `source` transactions up to the target date (including forecasting).
+The account balance for a selected month is retrieved from the `MONTH` collection. It represents:
+`(Sum of Credits in Month) - (Sum of Debits in Month) + (Previous Month Balance)`.
+The first month's balance is calculated relative to the account's `initialBalance` and `initialBalanceDate`.
 
 ### 3.3 Emergency Fund
 Sum of balances for all accounts marked `isSavings: true`.
 
 ### 3.4 Monthly Spending
-Sum of all `TRANSACTION` documents for the month where `destination` is empty, plus forecasting for periods beyond the 36-month batch window.
+Sum of all `TRANSACTION` documents for the month where `destination` is empty.

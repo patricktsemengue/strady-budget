@@ -65,6 +65,7 @@ erDiagram
     MONTH {
         string id PK "YYYY-MM"
         string status
+        map balances "accountId: balance"
         timestamp updated_at
     }
 

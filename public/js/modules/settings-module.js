@@ -13,7 +13,7 @@ export default {
             <!-- Month Selector Configuration -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-lg text-slate-800 mb-4">Sélecteur de Période</h3>
-                <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-slate-600 mb-1">Date de début</label>
                         <input type="date" id="config-month-start" required class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
@@ -22,14 +22,7 @@ export default {
                         <label class="block text-sm font-medium text-slate-600 mb-1">Date de fin</label>
                         <input type="date" id="config-month-end" required class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Pas (Étape)</label>
-                        <select id="config-month-step" class="w-full border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                            <option value="month">Mensuel</option>
-                            <option value="quarter">Trimestriel</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-3 flex justify-end">
+                    <div class="md:col-span-2 flex justify-end">
                         <button type="submit" class="bg-slate-800 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 transition-colors shadow-md">
                             Enregistrer la configuration
                         </button>

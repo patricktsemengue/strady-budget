@@ -100,3 +100,8 @@
     border-radius: 2px;
     margin: 12px auto;
 }
+
+.font-fontawesome {
+    font-family: 'Font Awesome 6 Free', 'Inter', sans-serif;
+    font-weight: 900;
+}

@@ -9,7 +9,8 @@ import {
     updateRecurringSeriesInFirestore,
     deleteRecurringSeriesInFirestore
 } from './firestore-service.js';
-import { showNotification, render } from './ui.js';
+import { showNotification } from './ui.js';
+import { router } from './app-router.js';
 
 export const openTransactionModal = (id = null) => {
     const modal = document.getElementById('transaction-modal');

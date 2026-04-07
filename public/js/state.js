@@ -14,7 +14,13 @@ export const defaultCategories = [
 ];
 
 const savedViewDate = localStorage.getItem('viewDate');
-const currentYear = new Date().getFullYear();
+const now = new Date();
+const currentYear = now.getFullYear();
+
+export const getFunctionalBoundaryDate = () => {
+    const year = new Date().getFullYear();
+    return `${year + 3}-12-31`;
+};
 
 export let state = {
     currentView: 'dashboard',
@@ -26,7 +32,7 @@ export let state = {
     months: {}, // Stores month statuses
     monthSelectorConfig: {
         startDate: `${currentYear}-01-01`,
-        endDate: `${currentYear}-12-31`,
+        endDate: getFunctionalBoundaryDate(),
         step: 'month'
     }
 };

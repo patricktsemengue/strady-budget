@@ -2,9 +2,44 @@ import { state } from './state.js';
 import { generateId } from './utils.js';
 import { currentUserId } from './storage.js';
 import { addCategoryToFirestore, updateCategoryInFirestore, deleteCategoryFromFirestore, updateCategoryOrderInFirestore } from './firestore-service.js';
-import { showNotification, render } from './ui.js';
+import { showNotification } from './ui.js';
+import { router } from './app-router.js';
 
 let sortableInstance = null;
+
+const friendlyColors = [
+    '#3b82f6', // blue-500
+    '#10b981', // emerald-500
+    '#6366f1', // indigo-500
+    '#8b5cf6', // violet-500
+    '#f59e0b', // amber-500
+    '#f43f5e', // rose-500
+    '#06b6d4', // cyan-500
+    '#14b8a6', // teal-500
+    '#f97316', // orange-500
+    '#ec4899', // pink-500
+    '#84cc16'  // lime-500
+];
+
+const assignRandomColor = (elementId) => {
+    const randomColor = friendlyColors[Math.floor(Math.random() * friendlyColors.length)];
+    const colorInput = document.getElementById(elementId);
+    if (colorInput) {
+        colorInput.value = randomColor;
+    }
+};
+
+export const initCategoryEvents = () => {
+    const catIconSelect = document.getElementById('cat-icon');
+    const editCatIconSelect = document.getElementById('edit-cat-icon');
+
+    if (catIconSelect) {
+        catIconSelect.addEventListener('change', () => assignRandomColor('cat-color'));
+    }
+    if (editCatIconSelect) {
+        editCatIconSelect.addEventListener('change', () => assignRandomColor('edit-cat-color'));
+    }
+};
 
 export const initSortableCategories = () => {
     const list = document.getElementById('mgmt-categories-list');
@@ -29,7 +64,7 @@ export const initSortableCategories = () => {
                     showNotification('Ordre des catégories mis à jour.');
                 } catch (err) {
                     showNotification("Erreur lors de la mise à jour de l'ordre.", 'error');
-                    render(); // Re-render to revert optimistic UI change
+                    router.render(); // Re-render to revert optimistic UI change
                 }
             }
         });
@@ -168,6 +203,10 @@ export const closeCategoryActions = () => {
 
 export const openAddCategoryDrawer = () => {
     document.getElementById('add-category-form').reset();
+    
+    // Assign an initial random color
+    assignRandomColor('cat-color');
+    
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('category-add-drawer').classList.add('active');
 };
@@ -181,12 +220,12 @@ export const closeAddCategoryDrawer = () => {
 export const handleAddCategory = async (e) => {
     e.preventDefault();
     const name = document.getElementById('cat-name').value.trim();
-    let icon = document.getElementById('cat-icon').value.trim();
+    let iconValue = document.getElementById('cat-icon').value;
     const color = document.getElementById('cat-color').value;
     
     if (!name) return;
-    if (!icon) icon = 'fa-tag';
-    if (!icon.startsWith('fa-')) icon = 'fa-' + icon;
+    if (!iconValue) iconValue = 'tag';
+    const icon = iconValue.startsWith('fa-') ? iconValue : 'fa-' + iconValue;
 
     if (state.categories.find(c => c.label === name)) {
         alert('Une catégorie avec ce nom existe déjà.');
@@ -212,7 +251,9 @@ export const openEditCategory = (id) => {
 
     document.getElementById('edit-cat-id').value = cat.id;
     document.getElementById('edit-cat-name').value = cat.label;
-    document.getElementById('edit-cat-icon').value = cat.icon.replace('fa-', '');
+    
+    const iconValue = cat.icon ? cat.icon.replace('fa-', '') : 'tag';
+    document.getElementById('edit-cat-icon').value = iconValue;
     document.getElementById('edit-cat-color').value = cat.color || '#94a3b8';
     
     document.getElementById('drawer-overlay').classList.add('active');
@@ -229,11 +270,10 @@ export const handleUpdateCategory = async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-cat-id').value;
     const name = document.getElementById('edit-cat-name').value.trim();
-    let icon = document.getElementById('edit-cat-icon').value.trim();
+    const iconValue = document.getElementById('edit-cat-icon').value;
     const color = document.getElementById('edit-cat-color').value;
 
-    if (!icon) icon = 'fa-tag';
-    if (!icon.startsWith('fa-')) icon = 'fa-' + icon;
+    const icon = iconValue.startsWith('fa-') ? iconValue : 'fa-' + iconValue;
 
     const existingCategory = state.categories.find(c => c.id === id);
     if (!existingCategory) return;
@@ -254,7 +294,7 @@ export const deleteCategory = async (id) => {
 
     if (isUsedInTransactions || isUsedInTemplates) {
         showNotification("Impossible de supprimer une catégorie actuellement utilisée.", "error");
-        render(); // Re-render to fix the UI
+        router.render(); // Re-render to fix the UI
         return;
     }
 

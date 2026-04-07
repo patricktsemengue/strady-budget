@@ -32,17 +32,23 @@ export default {
                         </div>
 
                         <!-- Desktop Filters -->
-                        <div class="hidden md:flex items-center gap-2" id="transaction-list-filters">
-                            <button id="btn-add-transaction-desktop" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 flex items-center">
+                        <div class="hidden md:flex items-end gap-2" id="transaction-list-filters">
+                            <button id="btn-add-transaction-desktop" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 flex items-center mb-[1px]">
                                 <i class="fa-solid fa-plus mr-2"></i>Ajouter
                             </button>
-                            <select id="filter-category" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                                <option value="all">Toutes les catégories</option>
-                            </select>
-                            <select id="filter-account" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">
-                                <option value="all">Tous les comptes</option>
-                            </select>
-                            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                            <div class="flex flex-col">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 mb-1">Catégories (Ctrl+clic)</label>
+                                <select id="filter-category" multiple size="3" class="border-slate-300 rounded-lg shadow-sm border p-1 text-xs min-w-[150px] focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="all" selected>Toutes les catégories</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 mb-1">Comptes (Ctrl+clic)</label>
+                                <select id="filter-account" multiple size="3" class="border-slate-300 rounded-lg shadow-sm border p-1 text-xs min-w-[150px] focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="all" selected>Tous les comptes</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2 pl-2 border-l border-slate-200 h-10">
                                 <label for="sort-order" class="text-sm font-medium text-slate-500 whitespace-nowrap">Trier :</label>
                                 <select id="sort-order" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm font-medium text-slate-800">
                                     <option value="date-desc">Date (récent)</option>

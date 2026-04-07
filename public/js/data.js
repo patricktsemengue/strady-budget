@@ -1,7 +1,8 @@
 import { state } from './state.js';
 import { currentUserId } from './storage.js';
 import { resetDataInFirestore, importDataToFirestore } from './firestore-service.js';
-import { render, showNotification } from './ui.js';
+import { showNotification } from './ui.js';
+import { router } from './app-router.js';
 import { generateId, generateDeterministicId } from './utils.js';
 
 export const handleReset = async () => {

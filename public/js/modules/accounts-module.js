@@ -1,11 +1,12 @@
 import { renderAccountsList } from '../accounts.js';
+import { renderTimeline } from '../dashboard.js';
 
 export default {
     id: 'accounts',
     label: 'Comptes',
     icon: 'fa-building-columns',
     order: 3,
-    showMonthSelection: false,
+    showMonthSelection: true,
     getTemplate: () => `
         <div id="view-accounts" class="space-y-6 max-w-6xl mx-auto px-4">
             <h1 class="text-2xl font-bold text-slate-800">Comptes</h1>
@@ -62,6 +63,7 @@ export default {
         </div>
     `,
     render: () => {
+        renderTimeline();
         renderAccountsList();
     },
     init: () => {

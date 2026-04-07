@@ -2,7 +2,8 @@ import { state } from './state.js';
 import { generateId } from './utils.js';
 import { currentUserId } from './storage.js';
 import { addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore } from './firestore-service.js';
-import { showNotification, render } from './ui.js';
+import { showNotification } from './ui.js';
+import { router } from './app-router.js';
 
 // NOTE: The following are basic implementations for CRUD operations.
 
@@ -93,7 +94,7 @@ export const handleUpdateAccount = async (e) => {
     }
 };
 
-import { formatCurrency } from './utils.js';
+import { formatCurrency, getMonthKey } from './utils.js';
 import { calculateBalances } from './calculations.js';
 
 /**
@@ -109,7 +110,9 @@ export const renderAccountsList = () => {
     const typeFilter = document.getElementById('filter-account-type')?.value || 'all';
     const sortOrder = document.getElementById('sort-accounts')?.value || 'name-asc';
 
-    const balances = calculateBalances(state.viewDate);
+    // Use pre-calculated balances if available for the selected month, otherwise fallback to on-the-fly calculation
+    const monthKey = getMonthKey(state.viewDate);
+    const balances = state.months[monthKey]?.balances || calculateBalances(state.viewDate);
 
     let filteredAccounts = [...state.accounts];
 
@@ -275,7 +278,7 @@ export const deleteAccount = async (id) => {
 
     if (isUsedInTransactions || isUsedInTemplates) {
         showNotification("Impossible de supprimer un compte actuellement utilisé.", "error");
-        render(); // Re-render to fix the UI state if it was incorrect
+        router.render(); // Re-render to fix the UI state if it was incorrect
         return;
     }
 

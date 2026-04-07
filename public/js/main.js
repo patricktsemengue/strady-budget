@@ -1,6 +1,6 @@
 import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
 import { setStorageUser, loadDataFromCache } from './storage.js';
-import { setView, setViewDate, render, showNotification, setDataStatusIndicator } from './ui.js';
+import { showNotification, setDataStatusIndicator, setView } from './ui.js';
 import { router } from './app-router.js';
 
 // Modules
@@ -15,7 +15,11 @@ import {
     closeCategoryDrawer, 
     handleUpdateCategory, 
     closeAddCategoryDrawer,
-    closeCategoryActions
+    closeCategoryActions,
+    openEditCategory,
+    deleteCategory,
+    openCategoryActions,
+    initCategoryEvents
 } from './categories.js';
 import { 
     handleAddAccount, 
@@ -23,7 +27,10 @@ import {
     handleUpdateAccount, 
     closeAddAccountDrawer,
     closeAccountActions,
-    renderAccountsList
+    renderAccountsList,
+    openEditAccount,
+    deleteAccount,
+    openAccountActions
 } from './accounts.js';
 import { 
     closeTransactionModal, 
@@ -48,6 +55,7 @@ const init = () => {
     router.register(settingsModule);
 
     setupEventListeners();
+    initCategoryEvents();
 
     // Firebase Auth listener
     onUserChanged(async (user) => {
@@ -85,7 +93,7 @@ const init = () => {
                     months: cachedData.months || {}
                 });
                 rebuildRecords(cachedData.transactions || [], cachedData.months || {});
-                render(); // Render immediately with cached data
+                router.render(); // Render immediately with cached data
             }
 
             // 2. Subscribe to Firestore for live data and updates
@@ -110,79 +118,80 @@ const init = () => {
                 }
 
                 rebuildRecords(newData.transactions || [], newData.months || {});
-            router.render();
-        });
+                router.render();
+            });
 
-        const initialView = window.location.hash.substring(1) || 'dashboard';
-        router.setView(initialView);
-        
-        // Show content
-        if (mainContent) mainContent.classList.remove('hidden');
-    } else {
-        // User is signed out, redirect to login page
-        setStorageUser(null);
-        if (mainContent) mainContent.classList.add('hidden');
-        window.location.href = 'login.html';
-    }
-});
+            const initialView = window.location.hash.substring(1) || 'dashboard';
+            router.setView(initialView);
+            
+            // Show content
+            if (mainContent) mainContent.classList.remove('hidden');
+        } else {
+            // User is signed out, redirect to login page
+            setStorageUser(null);
+            if (mainContent) mainContent.classList.add('hidden');
+            window.location.href = 'login.html';
+        }
+    });
 
-// Handle hash navigation
-window.addEventListener('hashchange', () => {
-    const view = window.location.hash.substring(1) || 'dashboard';
-    router.setView(view);
-});
+    // Handle hash navigation
+    window.addEventListener('hashchange', () => {
+        const view = window.location.hash.substring(1) || 'dashboard';
+        router.setView(view);
+    });
+};
+
+const setViewDate = (date) => {
+    const newDate = new Date(date);
+    updateState({ viewDate: newDate });
+    localStorage.setItem('viewDate', newDate.toISOString());
+    router.render();
 };
 
 const setupEventListeners = () => {
 
-const handleLogout = async () => {
-    if (confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
-        try {
-            await logout();
-            showNotification("Vous avez été déconnecté");
-        } catch (error) {
-            showNotification("Erreur lors de la déconnexion", "error");
+    const handleLogout = async () => {
+        if (confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
+            try {
+                await logout();
+                showNotification("Vous avez été déconnecté");
+            } catch (error) {
+                showNotification("Erreur lors de la déconnexion", "error");
+            }
         }
-    }
-};
+    };
 
-const addSafeListener = (selector, event, handler, isQuerySelector = false) => {
-    const element = isQuerySelector ? document.querySelector(selector) : document.getElementById(selector);
-    if (element) {
-        element.addEventListener(event, handler);
-    }
-};
+    const addSafeListener = (selector, event, handler, isQuerySelector = false) => {
+        const element = isQuerySelector ? document.querySelector(selector) : document.getElementById(selector);
+        if (element) {
+            element.addEventListener(event, handler);
+        }
+    };
 
-addSafeListener('btn-logout', 'click', handleLogout);
-addSafeListener('btn-logout-mobile', 'click', handleLogout);
-addSafeListener('.mobile-menu-button', 'click', () => document.querySelector('.mobile-menu').classList.toggle('hidden'), true);
+    addSafeListener('btn-logout', 'click', handleLogout);
+    addSafeListener('btn-logout-mobile', 'click', handleLogout);
+    addSafeListener('.mobile-menu-button', 'click', () => document.querySelector('.mobile-menu').classList.toggle('hidden'), true);
 
-addSafeListener('prev-month', 'click', () => { 
-    const d = new Date(state.viewDate);
-    const step = state.monthSelectorConfig.step;
-    if (step === 'month') {
-        d.setMonth(d.getMonth() - 1);
-    } else {
-        d.setMonth(d.getMonth() - 3);
-    }
-    const newDate = new Date(d);
-    updateState({ viewDate: newDate });
-    localStorage.setItem('viewDate', newDate.toISOString());
-    router.render();
-});
-addSafeListener('next-month', 'click', () => { 
-    const d = new Date(state.viewDate);
-    const step = state.monthSelectorConfig.step;
-    if (step === 'month') {
-        d.setMonth(d.getMonth() + 1);
-    } else {
-        d.setMonth(d.getMonth() + 3);
-    }
-    const newDate = new Date(d);
-    updateState({ viewDate: newDate });
-    localStorage.setItem('viewDate', newDate.toISOString());
-    router.render();
-});
+    addSafeListener('prev-month', 'click', () => { 
+        const d = new Date(state.viewDate);
+        const step = state.monthSelectorConfig.step;
+        if (step === 'month') {
+            d.setMonth(d.getMonth() - 1);
+        } else {
+            d.setMonth(d.getMonth() - 3);
+        }
+        setViewDate(d); 
+    });
+    addSafeListener('next-month', 'click', () => { 
+        const d = new Date(state.viewDate);
+        const step = state.monthSelectorConfig.step;
+        if (step === 'month') {
+            d.setMonth(d.getMonth() + 1);
+        } else {
+            d.setMonth(d.getMonth() + 3);
+        }
+        setViewDate(d); 
+    });
 
     // Forms and shared UI components
     addSafeListener('add-category-form', 'submit', handleAddCategory);
@@ -252,7 +261,13 @@ window.app = {
     closeMobileActions,
     closeCategoryActions,
     closeAccountActions,
-    renderAccountsList
+    renderAccountsList,
+    openEditCategory,
+    deleteCategory,
+    openCategoryActions,
+    openEditAccount,
+    deleteAccount,
+    openAccountActions
 };
 
 document.addEventListener('DOMContentLoaded', init);
