@@ -1,41 +1,6 @@
 import { getMonthKey, getTxDisplayInfo } from './utils.js';
 import { state } from './state.js';
 
-/**
- * Calculates all occurrence dates for a recurring template based on its periodicity (UTC).
- */
-const calculateAllOccurrencesUTC = (template, endDateLimit) => {
-    const occurrences = [];
-    let current = new Date(template.date + 'T00:00:00Z');
-    const endDate = new Date(endDateLimit.toISOString());
-    const anchorDay = current.getUTCDate();
-
-    while (current <= endDate) {
-        occurrences.push(new Date(current.toISOString()));
-
-        switch (template.periodicity) {
-            case 'M':
-                current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, anchorDay));
-                if (current.getUTCDate() !== anchorDay) {
-                    current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0));
-                }
-                break;
-            case 'Q':
-                current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 3, anchorDay));
-                if (current.getUTCDate() !== anchorDay) {
-                    current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0));
-                }
-                break;
-            case 'Y':
-                current = new Date(Date.UTC(current.getUTCFullYear() + 1, current.getUTCMonth(), anchorDay));
-                break;
-            default:
-                return occurrences; 
-        }
-    }
-    return occurrences;
-};
-
 export const calculateMonthlyIncome = (date) => {
     const monthKey = getMonthKey(date);
     const monthItems = state.records[monthKey]?.items || [];

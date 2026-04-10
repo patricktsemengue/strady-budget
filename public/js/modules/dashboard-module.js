@@ -83,11 +83,13 @@ export default {
                 import('../dashboard.js').then(m => m.clotureMois());
             }
             if (e.target.closest('#btn-expand-sankey')) {
-                document.getElementById('sankey-modal').classList.remove('hidden');
+                const modal = document.getElementById('sankey-modal');
+                if (modal) modal.classList.remove('hidden');
                 import('../dashboard.js').then(m => m.renderSankeyChart(true));
             }
             if (e.target.closest('#btn-close-sankey-modal')) {
-                document.getElementById('sankey-modal').classList.add('hidden');
+                const modal = document.getElementById('sankey-modal');
+                if (modal) modal.classList.add('hidden');
             }
         });
     }

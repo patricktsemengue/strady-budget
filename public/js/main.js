@@ -170,9 +170,12 @@ const setupEventListeners = () => {
 
     addSafeListener('btn-logout', 'click', handleLogout);
     addSafeListener('btn-logout-mobile', 'click', handleLogout);
-    addSafeListener('.mobile-menu-button', 'click', () => document.querySelector('.mobile-menu').classList.toggle('hidden'), true);
+    addSafeListener('.mobile-menu-button', 'click', () => {
+        const mobileMenu = document.querySelector('.mobile-menu');
+        if (mobileMenu) mobileMenu.classList.toggle('hidden');
+    }, true);
 
-    addSafeListener('prev-month', 'click', () => { 
+    addSafeListener('prev-month', 'click', () => {
         const d = new Date(state.viewDate);
         const step = state.monthSelectorConfig.step;
         if (step === 'month') {
@@ -180,9 +183,9 @@ const setupEventListeners = () => {
         } else {
             d.setMonth(d.getMonth() - 3);
         }
-        setViewDate(d); 
+        setViewDate(d);
     });
-    addSafeListener('next-month', 'click', () => { 
+    addSafeListener('next-month', 'click', () => {
         const d = new Date(state.viewDate);
         const step = state.monthSelectorConfig.step;
         if (step === 'month') {
@@ -190,22 +193,22 @@ const setupEventListeners = () => {
         } else {
             d.setMonth(d.getMonth() + 3);
         }
-        setViewDate(d); 
+        setViewDate(d);
     });
 
     // Forms and shared UI components
     addSafeListener('add-category-form', 'submit', handleAddCategory);
     addSafeListener('btn-close-add-cat-drawer', 'click', closeAddCategoryDrawer);
     addSafeListener('btn-cancel-add-cat', 'click', closeAddCategoryDrawer);
-    
+
     addSafeListener('edit-category-form', 'submit', handleUpdateCategory);
     addSafeListener('btn-close-cat-drawer', 'click', closeCategoryDrawer);
     addSafeListener('btn-cancel-cat-edit', 'click', closeCategoryDrawer);
-    
+
     addSafeListener('edit-account-form', 'submit', handleUpdateAccount);
     addSafeListener('btn-close-acc-drawer', 'click', closeAccountDrawer);
     addSafeListener('btn-cancel-acc-edit', 'click', closeAccountDrawer);
-    
+
     addSafeListener('add-account-form', 'submit', handleAddAccount);
     addSafeListener('btn-close-add-acc-drawer', 'click', closeAddAccountDrawer);
     addSafeListener('btn-cancel-add-acc', 'click', closeAddAccountDrawer);
@@ -224,30 +227,37 @@ const setupEventListeners = () => {
         const sourceWrapper = document.getElementById('source-account-wrapper');
         const destWrapper = document.getElementById('destination-account-wrapper');
         if (type === 'income') {
-            sourceWrapper.classList.add('hidden');
-            destWrapper.classList.remove('hidden');
+            if (sourceWrapper) sourceWrapper.classList.add('hidden');
+            if (destWrapper) destWrapper.classList.remove('hidden');
             document.getElementById('transaction-source').value = '';
         } else if (type === 'expense') {
-            sourceWrapper.classList.remove('hidden');
-            destWrapper.classList.add('hidden');
+            if (sourceWrapper) sourceWrapper.classList.remove('hidden');
+            if (destWrapper) destWrapper.classList.add('hidden');
             document.getElementById('transaction-destination').value = '';
         } else { // transfer
-            sourceWrapper.classList.remove('hidden');
-            destWrapper.classList.remove('hidden');
+            if (sourceWrapper) sourceWrapper.classList.remove('hidden');
+            if (destWrapper) destWrapper.classList.remove('hidden');
         }
     });
 
     addSafeListener('transaction-is-recurring', 'change', (e) => {
-        document.getElementById('recurring-fields').classList.toggle('hidden', !e.target.checked);
+        const recurringFields = document.getElementById('recurring-fields');
+        if (recurringFields) recurringFields.classList.toggle('hidden', !e.target.checked);
     });
 
-    addSafeListener('btn-close-filters-modal', 'click', () => document.getElementById('mobile-filters-modal').classList.add('hidden'));
-    addSafeListener('btn-close-filters-cancel', 'click', () => document.getElementById('mobile-filters-modal').classList.add('hidden'));
+    addSafeListener('btn-close-filters-modal', 'click', () => {
+        const modal = document.getElementById('mobile-filters-modal');
+        if (modal) modal.classList.add('hidden');
+    });
+    addSafeListener('btn-close-filters-cancel', 'click', () => {
+        const modal = document.getElementById('mobile-filters-modal');
+        if (modal) modal.classList.add('hidden');
+    });
     addSafeListener('btn-apply-filters', 'click', () => {
         import('./dashboard.js').then(m => m.renderTransactions());
-        document.getElementById('mobile-filters-modal').classList.add('hidden');
-    });
-};
+        const modal = document.getElementById('mobile-filters-modal');
+        if (modal) modal.classList.add('hidden');
+    });};
 
 // Expose app to window for HTML event handlers
 window.app = {

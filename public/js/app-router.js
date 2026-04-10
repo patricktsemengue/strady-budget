@@ -55,7 +55,8 @@ class AppRouter {
             const mobileBtn = document.getElementById(`nav-${m.id}-mobile`);
             if (mobileBtn) mobileBtn.onclick = () => {
                 this.setView(m.id);
-                document.querySelector('.mobile-menu').classList.add('hidden');
+                const mobileMenu = document.querySelector('.mobile-menu');
+                if (mobileMenu) mobileMenu.classList.add('hidden');
             };
         });
     }

@@ -13,6 +13,7 @@ The system revolves around the following data entities, all of which are scoped 
   - `initialBalance`: float
   - `initialBalanceDate`: string (YYYY-MM-DD)
   - `isSavings`: boolean
+  - `balanceDirty`: boolean (true if balance needs background recalculation)
 - **CATEGORY**: A user-defined category for transactions.
   - `id`: string (unique)
   - `label`: string
@@ -91,7 +92,7 @@ The system revolves around the following data entities, all of which are scoped 
 - **Trigger**: User submits the form with "Is Recurring" checked.
 - **Process**:
   1. A new `RECURRING_TEMPLATE` document is created.
-  2. The system calculates an end date boundary for generation: `boundaryDate = startDate + 36 months`.
+  2. The system calculates an end date boundary for generation: `boundaryDate = FUNCTIONAL_BOUNDARY_DATE`.
   3. **Case 1: User has NOT edited the end date**:
      - `RECURRING_TEMPLATE.endDate` remains `null` in Firestore.
      - The system batch-generates child transactions from `startDate` to `boundaryDate`.
@@ -107,7 +108,7 @@ The system revolves around the following data entities, all of which are scoped 
   1. The system retrieves the parent `RECURRING_TEMPLATE`.
   2. It batch deletes the template and ALL its associated child transactions.
   3. It creates a new `RECURRING_TEMPLATE` with updated details.
-  4. It batch-generates new child transactions for the new template (up to the 36-month boundary).
+  4. It batch-generates new child transactions for the new template (up to the `FUNCTIONAL_BOUNDARY_DATE`).
 
 #### 2.3.5 Delete a Single Transaction
 - **Process**: The `TRANSACTION` document is deleted from Firestore.
@@ -153,13 +154,15 @@ The application uses a **Modular Plug-and-Play Architecture**. Each feature is a
 - **Mobile Floating Action Button (FAB)**: Provides quick access to "Add Transaction" on relevant views when the selected month is open.
 
 
-### 2.6 Account Balance Refresh (Background Job)
-- **Trigger**: Any addition, update, or deletion of an `ACCOUNT` or `TRANSACTION`.
+### 2.6 Account Balance Refresh (Asynchronous Aggregator)
+- **Trigger**: Any addition, update, or deletion of an `ACCOUNT`, `TRANSACTION`, or `RECURRING_TEMPLATE`.
 - **Process**: 
-  1. The system identifies the starting date `T.date` of the change.
-  2. It retrieves the balances of all accounts from the previous month (`T.date - 1 month`) from the `MONTH` collection.
-  3. It recalculates the balances for all accounts month-by-month from the current month up to the `FUNCTIONAL_BOUNDARY_DATE`.
-  4. Each month's balances are stored in the `MONTH` collection in Firestore.
+  1. The client-side system marks affected accounts with `balanceDirty: true`.
+  2. A Firebase Cloud Function (`onTransactionWrite` or `onTemplateWrite`) is triggered.
+  3. The function recalculates balances month-by-month from the month of the change (minus 1 month) up to the `FUNCTIONAL_BOUNDARY_DATE`.
+  4. Recalculation is atomic (using transactions) and idempotent (using event IDs).
+  5. Upon completion, the `balanceDirty` flag is cleared and a log is written to `system_logs`.
+- **UI Indicator**: A spinning "stale" icon appears next to accounts and global balances while `balanceDirty` is true.
 
 ### 2.7 FUNCTIONAL_BOUNDARY_DATE
 - **Definition**: The fixed upper limit for all financial calculations and transaction generation.
@@ -189,3 +192,31 @@ Sum of balances for all accounts marked `isSavings: true`.
 
 ### 3.4 Monthly Spending
 Sum of all `TRANSACTION` documents for the month where `destination` is empty.
+
+---
+
+## 4. Agentic Development Workflow
+
+To ensure high-quality, specialized development, this project employs an **Agentic Multi-Agent Architecture**. This approach utilizes specialized AI agents, each acting as a senior software developer for a specific domain of the application.
+
+### 4.1 Architecture Overview
+
+The workflow is governed by a **Lead Developer (Master Agent)** who orchestrates the development process and coordinates between specialized **Domain Specialists**.
+
+- **Lead Developer (Orchestrator):** Performs initial triage of user requests, identifies affected modules, and delegates tasks to the appropriate specialists. It also ensures cross-module consistency and manages global infrastructure (routing, state).
+- **Domain Specialists:**
+    - **Account Specialist:** Expert in account management and Firestore `ACCOUNT` entity logic.
+    - **Category Specialist:** Master of classification, icons, and sorting.
+    - **Transaction Specialist:** Specialist in the transaction lifecycle and complex recurring batch generation (FUNCTIONAL_BOUNDARY_DATE rule).
+    - **Dashboard Specialist:** Focused on data visualization (Sankey, KPI Cards) and financial forecasting.
+    - **Settings Specialist:** Manages system configuration and robust data portability (CSV Import/Export).
+    - **Calculation Specialist:** Expert in the core financial engine and background balance recalculations (`MONTH` collection).
+
+### 4.2 Specialist Handoffs
+
+For features that span multiple modules (e.g., "Add a warning to the dashboard when a category exceeds its budget"), the Lead Developer manages the sequence:
+1. **Category Specialist** provides the budget retrieval logic.
+2. **Dashboard Specialist** implements the UI warning using that logic.
+3. **Lead Developer** validates the integration and cross-module imports.
+
+This modularity ensures that each part of the codebase is handled with deep domain expertise and consistent architectural patterns.

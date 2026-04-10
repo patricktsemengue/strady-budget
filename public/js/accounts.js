@@ -183,10 +183,16 @@ export const renderAccountsList = () => {
                     <div class="flex items-center gap-4 flex-grow truncate">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center text-white bg-blue-500 flex-shrink-0"><i class="fa-solid fa-landmark"></i></div>
                         <div class="flex-1 truncate">
-                            <p class="font-semibold text-slate-800 truncate">${acc.name}</p>
+                            <div class="flex items-center gap-2">
+                                <p class="font-semibold text-slate-800 truncate">${acc.name}</p>
+                                ${acc.balanceDirty !== false ? '<i class="fa-solid fa-arrows-rotate fa-spin text-[10px] text-amber-500" title="Recalcul des soldes en cours ..."></i>' : ''}
+                            </div>
                             <div class="flex items-center gap-2">
                                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${acc.isSavings ? 'Épargne' : 'Courant'}</p>
-                                <p class="text-xs font-bold text-slate-700">${formatCurrency(balance)}</p>
+                                <p class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                                    ${formatCurrency(balance)}
+                                    ${acc.balanceDirty !== false ? '<i class="fa-solid fa-clock-rotate-left text-[10px] text-amber-500" title="Le solde affiché peut être obsolète. Mise à jour en cours."></i>' : ''}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -206,14 +212,22 @@ export const renderAccountsList = () => {
 
             return `
                 <tr data-id="${acc.id}" class="group hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-4 text-sm font-medium text-slate-700">${acc.name}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-slate-700">
+                        <div class="flex items-center gap-2">
+                            ${acc.name}
+                            ${acc.balanceDirty !== false ? '<i class="fa-solid fa-arrows-rotate fa-spin text-[10px] text-amber-500" title="Recalcul des soldes en cours ..."></i>' : ''}
+                        </div>
+                    </td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${acc.isSavings ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">
                             ${acc.isSavings ? 'Épargne' : 'Courant'}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <span class="text-sm font-bold text-slate-700">${formatCurrency(balance)}</span>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-sm font-bold text-slate-700">${formatCurrency(balance)}</span>
+                            ${acc.balanceDirty !== false ? '<i class="fa-solid fa-clock-rotate-left text-[10px] text-amber-500" title="Le solde affiché peut être obsolète. Mise à jour en cours."></i>' : ''}
+                        </div>
                     </td>
                     <td class="px-6 py-4">
                         ${renderActions(acc, isUsed, disabledTitle, false)}

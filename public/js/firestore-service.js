@@ -94,24 +94,22 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
 
 export const addAccountToFirestore = async (userId, account) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
-    await setDoc(docRef, { ...account, updated_at: serverTimestamp() });
-    recalculateAndStoreBalances(userId, account.initialBalanceDate);
+    await setDoc(docRef, { ...account, balanceDirty: true, updated_at: serverTimestamp() });
 };
 
-export const updateAccountInFirestore = async (userId, account) => {
+    export const updateAccountInFirestore = async (userId, account) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
     await runTransaction(db, async (transaction) => {
         const docSnap = await transaction.get(docRef);
         if (!docSnap.exists()) throw new Error("Document does not exist!");
-        transaction.update(docRef, { ...account, updated_at: serverTimestamp() });
+        transaction.update(docRef, { ...account, balanceDirty: true, updated_at: serverTimestamp() });
     });
-    recalculateAndStoreBalances(userId, account.initialBalanceDate);
-};
+    };
 
 export const deleteAccountFromFirestore = async (userId, accountId) => {
     const docRef = doc(db, `users/${userId}/accounts`, accountId);
     await deleteDoc(docRef);
-    recalculateAndStoreBalances(userId); // Full recalc for safety on delete
+    await markAccountsBalanceDirty(userId); // Mark all for safety after deletion
 };
 
 export const addCategoryToFirestore = async (userId, category) => {
@@ -147,15 +145,21 @@ export const updateCategoryOrderInFirestore = async (userId, updates) => {
 export const addTransactionToFirestore = async (userId, tx) => {
     const docRef = doc(db, `users/${userId}/transactions`, tx.id);
     await setDoc(docRef, { ...tx, updated_at: serverTimestamp() });
-    recalculateAndStoreBalances(userId, tx.date);
+    const dirtyAccountIds = [tx.source, tx.destination].filter(id => id && id !== 'external');
+    await markAccountsBalanceDirty(userId, dirtyAccountIds);
 };
 
 export const deleteTransactionFromFirestore = async (userId, txId) => {
     const docRef = doc(db, `users/${userId}/transactions`, txId);
     const docSnap = await getDoc(docRef);
-    const txDate = docSnap.exists() ? docSnap.data().date : null;
-    await deleteDoc(docRef);
-    recalculateAndStoreBalances(userId, txDate);
+    if (docSnap.exists()) {
+        const tx = docSnap.data();
+        const dirtyAccountIds = [tx.source, tx.destination].filter(id => id && id !== 'external');
+        await deleteDoc(docRef);
+        await markAccountsBalanceDirty(userId, dirtyAccountIds);
+    } else {
+        await deleteDoc(docRef);
+    }
 };
 
 // -- MONTHS --
@@ -225,9 +229,7 @@ const batchGenerateAndSaveTransactions = (batch, userId, template) => {
 export const addRecurringTemplate = async (userId, template) => {
     const batch = writeBatch(db);
 
-    const startDate = new Date(template.date + 'T00:00:00Z');
-    const boundaryDate = new Date(Date.UTC(startDate.getUTCFullYear() + 3, startDate.getUTCMonth(), startDate.getUTCDate() - 1));
-    const boundaryDateStr = boundaryDate.toISOString().split('T')[0];
+    const boundaryDateStr = getFunctionalBoundaryDate();
 
     const generationTemplate = { ...template };
 
@@ -247,7 +249,7 @@ export const addRecurringTemplate = async (userId, template) => {
     batchGenerateAndSaveTransactions(batch, userId, generationTemplate);
 
     await batch.commit();
-    recalculateAndStoreBalances(userId, template.date);
+    await markAccountsBalanceDirty(userId, [template.source, template.destination].filter(id => id && id !== 'external'));
 };
 
 export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxData) => {
@@ -267,7 +269,7 @@ export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxD
     });
     
     await batch.commit();
-    recalculateAndStoreBalances(userId, newTxData.date);
+    await markAccountsBalanceDirty(userId, [newTxData.source, newTxData.destination].filter(id => id && id !== 'external'));
 };
 
 export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, newTemplateValues) => {
@@ -297,9 +299,7 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
         id: newTemplateId,
     };
     
-    const startDate = new Date(newTemplate.date + 'T00:00:00Z');
-    const boundaryDate = new Date(Date.UTC(startDate.getUTCFullYear() + 3, startDate.getUTCMonth(), startDate.getUTCDate() - 1));
-    const boundaryDateStr = boundaryDate.toISOString().split('T')[0];
+    const boundaryDateStr = getFunctionalBoundaryDate();
 
     const generationTemplate = { ...newTemplate };
 
@@ -319,7 +319,7 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
     batchGenerateAndSaveTransactions(batch, userId, generationTemplate);
 
     await batch.commit();
-    recalculateAndStoreBalances(userId, newTemplate.date);
+    await markAccountsBalanceDirty(userId); // Mark all for safety with templates
 };
 
 export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
@@ -341,7 +341,7 @@ export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
     });
     
     await batch.commit();
-    recalculateAndStoreBalances(userId, templateDate);
+    await markAccountsBalanceDirty(userId); // Mark all for safety
 };
 
 export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransactions) => {
@@ -385,7 +385,7 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         categories.forEach(cat => promises.push(setDoc(doc(db, `users/${userId}/categories`, cat.id), { ...cat, updated_at: serverTimestamp() })));
     }
     await Promise.all(promises);
-    recalculateAndStoreBalances(userId); 
+    await markAccountsBalanceDirty(userId); 
 };
 
 export const updateSettingsInFirestore = async (userId, settingsId, data) => {
@@ -394,87 +394,31 @@ export const updateSettingsInFirestore = async (userId, settingsId, data) => {
 };
 
 /**
- * Recalculates all account balances month by month and stores them in the 'months' collection.
+ * Marks accounts as dirty to trigger background recalculation.
  * @param {string} userId
- * @param {string} [startDateStr] - Optional starting date (YYYY-MM-DD). If not provided, recalculates from the beginning.
+ * @param {string[]} [accountIds] - Optional list of specific accounts to mark as dirty. If omitted, marks all user accounts.
  */
-export const recalculateAndStoreBalances = async (userId, startDateStr) => {
+export const markAccountsBalanceDirty = async (userId, accountIds) => {
     if (!userId) return;
 
     try {
-        const boundaryDateStr = getFunctionalBoundaryDate();
-        
-        const accountsSnap = await getDocs(collection(db, `users/${userId}/accounts`));
-        const transactionsSnap = await getDocs(collection(db, `users/${userId}/transactions`));
-        
-        const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        if (accounts.length === 0) return;
-
-        transactions.sort((a, b) => a.date.localeCompare(b.date));
-        
-        const currentBalances = {};
-        let calculationStartMonthKey;
-
-        if (startDateStr) {
-            calculationStartMonthKey = startDateStr.substring(0, 7);
-            const prevMonthDate = new Date(startDateStr.substring(0, 7) + '-01T00:00:00Z');
-            prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
-            const prevMonthKey = prevMonthDate.toISOString().substring(0, 7);
-            
-            const prevMonthSnap = await getDoc(doc(db, `users/${userId}/months`, prevMonthKey));
-            if (prevMonthSnap.exists()) {
-                Object.assign(currentBalances, prevMonthSnap.data().balances);
-            } else {
-                calculationStartMonthKey = null;
-            }
+        let targets = accountIds;
+        if (!targets) {
+            const accountsSnap = await getDocs(collection(db, `users/${userId}/accounts`));
+            targets = accountsSnap.docs.map(d => d.id);
         }
 
-        if (!calculationStartMonthKey) {
-            let minDateStr = accounts.reduce((min, acc) => (acc.initialBalanceDate < min ? acc.initialBalanceDate : min), '9999-12-31');
-            calculationStartMonthKey = minDateStr.substring(0, 7);
-            
-            accounts.forEach(acc => {
-                currentBalances[acc.id] = acc.initialBalance || 0;
-            });
-        }
-
-        const txByMonth = {};
-        transactions.forEach(tx => {
-            const monthKey = tx.date.substring(0, 7);
-            if (!txByMonth[monthKey]) txByMonth[monthKey] = [];
-            txByMonth[monthKey].push(tx);
-        });
-
-        const monthlyBalances = {};
-        let current = new Date(calculationStartMonthKey + '-01T00:00:00Z');
-        const end = new Date(boundaryDateStr.substring(0, 7) + '-01T00:00:00Z');
-
-        while (current <= end) {
-            const monthKey = current.toISOString().substring(0, 7);
-            
-            (txByMonth[monthKey] || []).forEach(tx => {
-                if (tx.source && currentBalances[tx.source] !== undefined) {
-                    currentBalances[tx.source] -= tx.amount;
-                }
-                if (tx.destination && currentBalances[tx.destination] !== undefined) {
-                    currentBalances[tx.destination] += tx.amount;
-                }
-            });
-            
-            monthlyBalances[monthKey] = { ...currentBalances };
-            current.setUTCMonth(current.getUTCMonth() + 1);
-        }
+        if (targets.length === 0) return;
 
         const batch = writeBatch(db);
-        for (const [monthKey, balances] of Object.entries(monthlyBalances)) {
-            const docRef = doc(db, `users/${userId}/months`, monthKey);
-            batch.set(docRef, { balances, updated_at: serverTimestamp() }, { merge: true });
-        }
+        targets.forEach(id => {
+            const accRef = doc(db, `users/${userId}/accounts`, id);
+            batch.update(accRef, { balanceDirty: true, updated_at: serverTimestamp() });
+        });
         await batch.commit();
-        console.log(`Balances recalculated and stored from ${calculationStartMonthKey} to ${boundaryDateStr.substring(0, 7)}.`);
+        console.log(`Accounts marked as dirty for recalculation: ${targets.join(', ')}`);
     } catch (error) {
-        console.error("Error recalculating balances:", error);
+        console.error("Error marking accounts as dirty:", error);
     }
 };
+

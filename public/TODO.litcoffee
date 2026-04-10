@@ -1,71 +1,52 @@
 
-# Requirement 2026-04-06_1540
-
 Always update @doc/about.md and/or @doc/erd.mermaid when you implement or change a functionality
+Let's change account balance calculation.
 
-# Account management
+# Asynchronous Account Balance Aggregator
+Write a Firebase Cloud Function `refreshUserAccountBalance` to manage user's account balance calculation.
 
-## Shared Month selector
-Make the Shared Month selector at the account page.
+## Rules
+### Single transaction:
+ * When the user creates a single transaction 'T (date, amount, source, destination,...)' and the system successfully writes the transaction to firestore, and notifies the user.
+ * Then, the cloud function calculates iteratively the source account balance and destination account balance.
+ * The iteration loop through every month, from 'T.date - 1 month' to 'FUNCTIONAL_BOUNDARY_DATE' 
 
-Given the user is at the account page,
-When the user select a month on the month selector, 
-The system displays the accounts:
-* Account name
-* Type (courant, épargne)
-* Solde (the selected month account balance calculated by the balance of all transactions added to the previous month balance)
-* Actions (edit, delete button)
+ 
+### Reccuring transaction
+ * When the user creates a reccuring transaction 'Recc_T (date, amount, source, destination,...)' and the system successfully writes the 'RECCURING_TEMPLATE' and associated transacations to firestore.
+ * Then, the cloud function calculates iteratively the source account balance and destination account balance.
+ * The iteration loop through every month, from  'Recc_T.date - 1 month' to 'FUNCTIONAL_BOUNDARY_DATE' 
+ 
+### Calculation
+* For Source account: 'balance = balance - amount'
+* For Destination account: 'balance = balance + amount'
 
-## Display account balance ('Solde') of the selected month.
-The system reads
- * (1) the sum all transaction that credits the accounts at the selected month,
- * (2) the sum all transaction that debits the accounts at the selected month,
- * (3) the account previous month balance.
-The account balance on the selected month is (1) - (2) + (3).
+### Log
+Record the completion of the `refreshUserAccountBalance` task to a system_logs collection for audit.
 
+### Exception
+ * External accounts are ignored from the calculation. 
+ 
+## Transaction deletion
+ In case a transaction is deleted, the Cloud function should refresh the source and destination account balance
+ 
+## Concurrency & Collision Requirements
+ * Atomic Transactions: Use db.runTransaction() when updating balance documents to prevent race conditions when multiple transactions affect the same account simultaneously.
 
-## Triggering the calculation of the account balance.
-Given that the user has created a single transacation "T"
-When the transaction "T" is successfully stored in the database,
-then the system triggers a backend job to refresh the balance of ALL the user's accounts.
-The starting point to refresh is T.date :
- 1. The job retrieves the previous month (T.date - 1 month) balance of all accounts
- 2. THe job retrieves all transactions from the current month (based on T.date) to FUNCTIONAL_BOUNDARY_DATE
- 3. The Job calculates the balance of all accounts, from the current month (based on T.date) to FUNCTIONAL_BOUNDARY_DATE
+ * Idempotency: Implement a check using an operationId or the event.id to ensure the same backend process does not run twice for the same database write.
 
-Given that the user has created a reccuring transaction "reccT"
- When the template "reccT" is successfully stored in the database,
- and child transactions are successfully stored in the database,
-Then the system triggers a backend job to refresh the balance of ALL the user's accounts.
-The starting point to refresh is reccT.date :
-1. The job retrieves the previous month (reccT.date - 1 month) balance of all accounts
-2. The job retrieves all transactions from the current month (based on reccT.date) to FUNCTIONAL_BOUNDARY_DATE
-3. The job calculates the balance of all accounts from the current month (based on reccT.date) to FUNCTIONAL_BOUNDARY_DATE
+ * Batching: Since the window covers ~48 months, use writeBatch to ensure the propagation of balances across years is atomic (all months update, or none do).
+ 
+## Shared Month Selector
+ * Store the calculation of transaction so that, when the user select a month, the UI immediately displays the accounts balance.
+ 
+## User login or navigate the account page
+ * Keep the state of user account balance calculation. 
+ * For every Account with a balanceDirty account Balance state , the `refreshUserAccountBalance` is executed.
+ * The state is set back to "not dirty" is when the  `refreshUserAccountBalance` is executed successfully. 
+## UI - Indicator
+ * While the `refreshUserAccountBalance`is processing, the user sees a stale icon next to their account indicating that the balance is not refreshed yet. THe user can continue to navigate the application.
 
-
-
-# FUNCTIONAL_BOUNDARY_DATE - General rule
-When the user logs in and is successfully authenticated, the FUNCTIONAL_BOUNDARY_DATE is autmatically set to the 31st december of the current year + 3.
-
-e.g. As the current year is 2026, the FUNCTIONAL_BOUNDARY_DATE = "2029-12-31"
-When we will be in 2030, the FUNCTIONAL_BOUNDARY_DATE will be automatically set to "2033-12-31"
-
-## Applying FUNCTIONAL_BOUNDARY_DATE
-
-### Apply FUNCTIONAL_BOUNDARY_DATE on reccuring transaction batch generation
-the system must limit the batch generation of a template's child transactions up to FUNCTIONAL_BOUNDARY_DATE.
-Operations based on a 36-month windows are no longer required.
-Iterative operations based on arithmetic series formla are no longer required.
-
-
-### Dashboard key indicator forecasting
-the system must limit all iterative operations on physical transactions only up to FUNCTIONAL_BOUNDARY_DATE.
-Operations based on arithmetic series formula are no longer required.
-
-### Account balance
-the system must limit all iterative operations on physical transactions only, from the transaction/template date anchor date up to FUNCTIONAL_BOUNDARY_DATE.
-
-## Apply FUNCTIONAL_BOUNDARY_DATE on Shared Month selector configuration
-When the user configures the dates of the shared month selector in the setting UI, the end date must be limited up to FUNCTIONAL_BOUNDARY_DATE.
-
-The periodicity "Step" is always 1 month. The "Step" field must be deleted
+	
+ 
+ 

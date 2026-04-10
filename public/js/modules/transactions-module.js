@@ -100,7 +100,8 @@ export default {
                 import('../transactions.js').then(m => m.openTransactionModal());
             }
             if (e.target.closest('#btn-mobile-filters')) {
-                document.getElementById('mobile-filters-modal').classList.remove('hidden');
+                const modal = document.getElementById('mobile-filters-modal');
+                if (modal) modal.classList.remove('hidden');
             }
         });
 

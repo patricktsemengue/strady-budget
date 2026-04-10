@@ -28,26 +28,37 @@ export const openTransactionModal = (id = null) => {
     destSelect.innerHTML = `<option value="">Externe (Dépense)</option>${accountOptions}`;
     
     // Default visibility
-    document.getElementById('recurring-fields').classList.add('hidden');
-    document.getElementById('transaction-is-recurring').checked = false;
+    const recurringFields = document.getElementById('recurring-fields');
+    if (recurringFields) recurringFields.classList.add('hidden');
+    const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
+    if (isRecurringCheckbox) isRecurringCheckbox.checked = false;
 
     const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : null;
 
     if (id) { // EDIT MODE
-        document.getElementById('transaction-modal-title').textContent = 'Éditer la transaction';
-        document.getElementById('transaction-edit-id').value = id;
+        const modalTitle = document.getElementById('transaction-modal-title');
+        if (modalTitle) modalTitle.textContent = 'Éditer la transaction';
+        const editIdInput = document.getElementById('transaction-edit-id');
+        if (editIdInput) editIdInput.value = id;
     } else { // NEW MODE
-        document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
-        document.getElementById('transaction-edit-id').value = '';
+        const modalTitle = document.getElementById('transaction-modal-title');
+        if (modalTitle) modalTitle.textContent = 'Ajouter une transaction';
+        const editIdInput = document.getElementById('transaction-edit-id');
+        if (editIdInput) editIdInput.value = '';
     }
 
     if (tx) { // Pre-fill for EDIT
-        document.getElementById('transaction-label').value = tx.label || '';
-        document.getElementById('transaction-amount').value = tx.amount || 0;
-        if (tx.date) {
-            document.getElementById('transaction-date').value = tx.date.substring(0, 10);
-        } else {
-            document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
+        const labelInput = document.getElementById('transaction-label');
+        if (labelInput) labelInput.value = tx.label || '';
+        const amountInput = document.getElementById('transaction-amount');
+        if (amountInput) amountInput.value = tx.amount || 0;
+        const dateInput = document.getElementById('transaction-date');
+        if (dateInput) {
+            if (tx.date) {
+                dateInput.value = tx.date.substring(0, 10);
+            } else {
+                dateInput.value = new Date().toISOString().substring(0, 10);
+            }
         }
         categorySelect.value = tx.Category || tx.category || '';
         sourceSelect.value = tx.source || tx.sourceId || '';
@@ -58,24 +69,32 @@ export const openTransactionModal = (id = null) => {
         const recurringFields = document.getElementById('recurring-fields');
         
         if (isRecurring) {
-            isRecurringCheckbox.checked = true;
-            recurringFields.classList.remove('hidden');
+            if (isRecurringCheckbox) isRecurringCheckbox.checked = true;
+            if (recurringFields) recurringFields.classList.remove('hidden');
             
             // Find the associated template
             const template = state.recurringTemplates.find(r => r.id === tx.Model);
             if (template) {
-                document.getElementById('transaction-periodicity').value = template.periodicity || 'M';
-                document.getElementById('transaction-end-date').value = template.endDate || '';
+                const periodicityInput = document.getElementById('transaction-periodicity');
+                if (periodicityInput) periodicityInput.value = template.periodicity || 'M';
+                const endDateInput = document.getElementById('transaction-end-date');
+                if (endDateInput) endDateInput.value = template.endDate || '';
             }
         }
     } else {
-        document.getElementById('transaction-modal-title').textContent = 'Ajouter une transaction';
-        document.getElementById('transaction-edit-id').value = '';
+        const modalTitle = document.getElementById('transaction-modal-title');
+        if (modalTitle) modalTitle.textContent = 'Ajouter une transaction';
+        const editIdInput = document.getElementById('transaction-edit-id');
+        if (editIdInput) editIdInput.value = '';
         // Defaults from TODO.litcoffee
-        document.getElementById('transaction-date').value = new Date().toISOString().substring(0, 10);
-        document.getElementById('transaction-amount').value = 0;
-        document.getElementById('transaction-periodicity').value = 'M';
-        document.getElementById('transaction-end-date').value = '';
+        const dateInput = document.getElementById('transaction-date');
+        if (dateInput) dateInput.value = new Date().toISOString().substring(0, 10);
+        const amountInput = document.getElementById('transaction-amount');
+        if (amountInput) amountInput.value = 0;
+        const periodicityInput = document.getElementById('transaction-periodicity');
+        if (periodicityInput) periodicityInput.value = 'M';
+        const endDateInput = document.getElementById('transaction-end-date');
+        if (endDateInput) endDateInput.value = '';
 
         // Category defaulting logic based on initial empty source/destination
         // Since both are empty by default, we need to pick a default. 
@@ -111,18 +130,23 @@ export const openTransactionModal = (id = null) => {
     destSelect.onchange = updateDefaultCategory;
 
     // Recurring checkbox toggle
-    document.getElementById('transaction-is-recurring').onchange = (e) => {
-        document.getElementById('recurring-fields').classList.toggle('hidden', !e.target.checked);
-    };
+    const recurringCheckbox = document.getElementById('transaction-is-recurring');
+    if (recurringCheckbox) {
+        recurringCheckbox.onchange = (e) => {
+            const fields = document.getElementById('recurring-fields');
+            if (fields) fields.classList.toggle('hidden', !e.target.checked);
+        };
+    }
 
     const saveButton = form.querySelector('button[type="submit"]');
-    saveButton.disabled = false;
+    if (saveButton) saveButton.disabled = false;
 
-    modal.classList.remove('hidden');
+    if (modal) modal.classList.remove('hidden');
 };
 
 export const closeTransactionModal = () => {
-    document.getElementById('transaction-modal').classList.add('hidden');
+    const modal = document.getElementById('transaction-modal');
+    if (modal) modal.classList.add('hidden');
 };
 
 export const handleSaveTransaction = async (e) => {

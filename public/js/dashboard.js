@@ -246,14 +246,16 @@ export const renderAnticipatedExpenses = () => {
     }
 
     if(allNonRecurring.length === 0) {
-        document.getElementById('anticipated-highlight').classList.add('hidden');
+        const highlight = document.getElementById('anticipated-highlight');
+        if (highlight) highlight.classList.add('hidden');
         return;
     }
 
     // Sort by date ascending
     allNonRecurring.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    document.getElementById('anticipated-highlight').classList.remove('hidden');
+    const highlight = document.getElementById('anticipated-highlight');
+    if (highlight) highlight.classList.remove('hidden');
     anticipatedList.innerHTML = allNonRecurring.map(item => `
         <div class="bg-white/60 rounded-lg p-3 border border-amber-100 flex justify-between items-center shadow-sm">
             <div class="truncate pr-2">
@@ -319,8 +321,17 @@ export const renderDashboard = () => {
     //const currentMonthKey = getMonthKey(state.viewDate);
     const balances = state.months[currentMonthKey]?.balances || calculateBalances(state.viewDate);
     const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);
+    const isAnyAccountDirty = state.accounts.some(acc => acc.balanceDirty !== false);
+
     const totalBalanceEl = document.getElementById('dash-total-balance');
-    if (totalBalanceEl) totalBalanceEl.textContent = formatCurrency(totalBalance);
+    if (totalBalanceEl) {
+        totalBalanceEl.innerHTML = `
+            <div class="flex items-center gap-2 justify-center">
+                ${formatCurrency(totalBalance)}
+                ${isAnyAccountDirty ? '<i class="fa-solid fa-arrows-rotate fa-spin text-sm text-amber-500" title="Recalcul des soldes en cours ..."></i>' : ''}
+            </div>
+        `;
+    }
 
     const monthIncome = calculateMonthlyIncome(state.viewDate);
     const monthExpense = currentMonthData.items
