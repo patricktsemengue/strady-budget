@@ -51,6 +51,15 @@ export const openEditAccount = (id) => {
     const acc = state.accounts.find(a => a.id === id);
     if (!acc) return;
 
+    // Check if in use
+    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
+    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
+
+    if (isUsedInTransactions || isUsedInTemplates) {
+        showNotification("Impossible de modifier un compte actuellement utilisé.", "error");
+        return;
+    }
+
     document.getElementById('edit-acc-id').value = acc.id;
     document.getElementById('edit-acc-name').value = acc.name;
     document.getElementById('edit-acc-balance').value = acc.initialBalance;
@@ -76,6 +85,16 @@ export const handleUpdateAccount = async (e) => {
 
     if (!name || isNaN(initialBalance) || !initialBalanceDate) {
         showNotification('Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    // Double check if in use
+    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
+    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
+
+    if (isUsedInTransactions || isUsedInTemplates) {
+        showNotification("Impossible de modifier un compte actuellement utilisé.", "error");
+        closeAccountDrawer();
         return;
     }
 
@@ -166,7 +185,7 @@ export const renderAccountsList = () => {
         }
         return `
             <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="window.app.openEditAccount('${acc.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier le compte"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button onclick="window.app.openEditAccount('${acc.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors disabled:text-slate-200" ${isDisabled ? `disabled title="${disabledTitle}"` : 'title="Modifier le compte"'}><i class="fa-solid fa-pen text-xs"></i></button>
                 <button onclick="window.app.deleteAccount('${acc.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors disabled:text-slate-200" ${isDisabled ? `disabled title="${disabledTitle}"` : 'title="Supprimer le compte"'}><i class="fa-solid fa-trash-can text-xs"></i></button>
             </div>`;
     };
@@ -255,16 +274,22 @@ export const openAccountActions = (id) => {
         content.style.transform = 'translateY(0)';
     }, 10);
 
-    const setupAction = (btnId, actionFn) => {
+    // Check if in use for mobile actions
+    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
+    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
+
+    const setupAction = (btnId, actionFn, isDisabled) => {
         const btn = document.getElementById(btnId);
-        btn.onclick = () => {
+        btn.disabled = isDisabled;
+        btn.classList.toggle('opacity-50', isDisabled);
+        btn.onclick = isDisabled ? null : () => {
             closeAccountActions();
             actionFn(currentAccountActionId);
         };
     };
 
-    setupAction('account-action-edit', openEditAccount);
-    setupAction('account-action-delete', deleteAccount);
+    setupAction('account-action-edit', openEditAccount, isUsedInTransactions || isUsedInTemplates);
+    setupAction('account-action-delete', deleteAccount, isUsedInTransactions || isUsedInTemplates);
 
     modal.onclick = (e) => {
         if (e.target === modal) closeAccountActions();

@@ -11,12 +11,20 @@ const db = admin.firestore();
 async function recalculateBalances(userId, startDateStr, eventId) {
     // Idempotency check
     const logRef = db.doc(`users/${userId}/system_logs/${eventId}`);
+    const userRef = db.doc(`users/${userId}`);
     
     try {
         await db.runTransaction(async (transaction) => {
             const logSnap = await transaction.get(logRef);
             if (logSnap.exists()) {
                 logger.info(`Event ${eventId} already processed for user ${userId}. Skipping.`);
+                return;
+            }
+
+            // 0. Check if import is in progress
+            const userSnap = await transaction.get(userRef);
+            if (userSnap.exists() && userSnap.data().isImporting) {
+                logger.info(`Import in progress for user ${userId}. Skipping balance recalculation.`);
                 return;
             }
 
@@ -179,13 +187,12 @@ exports.onTemplateWrite = onDocumentWritten("users/{userId}/recurringTemplates/{
  */
 exports.onAccountWrite = onDocumentWritten("users/{userId}/accounts/{accId}", async (event) => {
     const userId = event.params.userId;
-    const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
 
-    // Only trigger if balanceDirty changed to true (or was already true and didn't change, for safety)
-    if (afterData && afterData.balanceDirty === true && (!beforeData || beforeData.balanceDirty !== true)) {
+    // Trigger if balanceDirty is true to handle explicit refresh requests
+    if (afterData && afterData.balanceDirty === true) {
         logger.info(`Explicit balance refresh requested for user ${userId} via account ${event.params.accId}.`);
-        // When triggered via account, we recalculate from the beginning of that account's history (or just everything for simplicity)
+        // When triggered via account, we recalculate from the beginning of that account's history
         await recalculateBalances(userId, null, event.id);
     }
 });

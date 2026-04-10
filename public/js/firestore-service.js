@@ -393,6 +393,12 @@ export const updateSettingsInFirestore = async (userId, settingsId, data) => {
     await setDoc(docRef, { ...data, updated_at: serverTimestamp() });
 };
 
+export const setUserImportingState = async (userId, isImporting) => {
+    if (!userId) return;
+    const userRef = doc(db, `users/${userId}`);
+    await setDoc(userRef, { isImporting, updated_at: serverTimestamp() }, { merge: true });
+};
+
 /**
  * Marks accounts as dirty to trigger background recalculation.
  * @param {string} userId

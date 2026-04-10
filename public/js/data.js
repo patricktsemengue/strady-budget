@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { currentUserId } from './storage.js';
-import { resetDataInFirestore, importDataToFirestore } from './firestore-service.js';
+import { resetDataInFirestore, importDataToFirestore, setUserImportingState, markAccountsBalanceDirty } from './firestore-service.js';
 import { showNotification } from './ui.js';
 import { router } from './app-router.js';
 import { generateId, generateDeterministicId } from './utils.js';
@@ -88,14 +88,20 @@ export const importCSV = (event) => {
         headerCols.forEach((col, idx) => colIdx[col.toLowerCase()] = idx);
 
         const dataLines = lines.slice(1);
-        const accountMap = {};
+        
+        // Maps to track existing and newly created entities to ensure uniqueness by name
+        const accountMap = {}; // name.toLowerCase() -> id
         state.accounts.forEach(acc => {
             accountMap[acc.name.toLowerCase()] = acc.id;
         });
 
-        const existingCategories = new Set(state.categories.map(c => c.id.toLowerCase()));
+        const categoryMap = {}; // name.toLowerCase() -> id
+        state.categories.forEach(cat => {
+            categoryMap[cat.id.toLowerCase()] = cat.id;
+        });
+
+        const accountsToCreate = [];
         const categoriesToCreate = [];
-        const seenInCsv = new Set();
 
         const newTransactions = [];
         const newTemplates = [];
@@ -121,27 +127,39 @@ export const importCSV = (event) => {
             const category = getValue("category");
 
             try {
-                const getAccountId = (name, field) => {
-                    if (!name) return '';
-                    const id = accountMap[name.toLowerCase()];
-                    if (!id) {
-                        throw new Error(`Le compte "${name}" utilisé comme ${field} n'existe pas.`);
-                    }
-                    return id; 
+                const getOrCreateAccountId = (name) => {
+                    if (!name || name.toLowerCase() === 'external') return '';
+                    const lowerName = name.toLowerCase();
+                    if (accountMap[lowerName]) return accountMap[lowerName];
+                    
+                    // Create new account on the fly if it doesn't exist
+                    const newId = `acc_${lowerName.replace(/\s+/g, '_')}`;
+                    const newAcc = {
+                        id: newId,
+                        name: name,
+                        initialBalance: 0,
+                        initialBalanceDate: date || new Date().toISOString().split('T')[0],
+                        isSavings: false
+                    };
+                    accountsToCreate.push(newAcc);
+                    accountMap[lowerName] = newId;
+                    return newId;
                 };
 
                 if (!sourceName && !destName) {
                     throw new Error(`La transaction "${label}" doit avoir au moins un compte source ou destination.`);
                 }
 
-                const source = getAccountId(sourceName, 'source');
-                const destination = getAccountId(destName, 'destination');
+                const source = getOrCreateAccountId(sourceName);
+                const destination = getOrCreateAccountId(destName);
                 const isRecurring = recurringFlag === '1' || recurringFlag === 'true';
-                const finalCategory = category || 'Autre';
-
-                if (finalCategory !== 'Autre' && !existingCategories.has(finalCategory.toLowerCase()) && !seenInCsv.has(finalCategory.toLowerCase())) {
-                    categoriesToCreate.push({ id: finalCategory, label: finalCategory, icon: 'fa-tag', color: '#94a3b8' });
-                    seenInCsv.add(finalCategory.toLowerCase());
+                
+                let finalCategory = category || 'Autre';
+                const lowerCat = finalCategory.toLowerCase();
+                if (!categoryMap[lowerCat]) {
+                    const newCat = { id: finalCategory, label: finalCategory, icon: 'fa-tag', color: '#94a3b8' };
+                    categoriesToCreate.push(newCat);
+                    categoryMap[lowerCat] = finalCategory;
                 }
 
                 if (isRecurring) {
@@ -188,11 +206,13 @@ export const importCSV = (event) => {
 
         if (importedCount > 0) {
             try {
+                await setUserImportingState(currentUserId, true);
+
                 // DELETE ALL FIRST as per requirement
                 await resetDataInFirestore(currentUserId, false, true);
 
-                if (categoriesToCreate.length > 0) {
-                    await importDataToFirestore(currentUserId, null, null, null, categoriesToCreate);
+                if (accountsToCreate.length > 0 || categoriesToCreate.length > 0) {
+                    await importDataToFirestore(currentUserId, accountsToCreate, null, null, categoriesToCreate);
                 }
 
                 const templatePromises = newTemplates.map(tpl => import('./firestore-service.js').then(m => m.addRecurringTemplate(currentUserId, tpl)));
@@ -206,6 +226,9 @@ export const importCSV = (event) => {
             } catch (err) {
                 console.error(err);
                 showNotification("Erreur lors de l'enregistrement de l'import.", 'error');
+            } finally {
+                await setUserImportingState(currentUserId, false);
+                await markAccountsBalanceDirty(currentUserId);
             }
         }
     };
@@ -261,14 +284,15 @@ export const importAccountsCSV = (event) => {
             const initialBalanceDate = parts[2].trim();
             const isSavings = parts[3].trim().toLowerCase() === 'yes';
             
-            if (seenNames.has(name.toLowerCase())) {
+            const lowerName = name.toLowerCase();
+            if (seenNames.has(lowerName)) {
                 showNotification(`Erreur d'importation : le nom de compte "${name}" est utilisé plusieurs fois dans le fichier.`, 'error');
                 return;
             }
-            seenNames.add(name.toLowerCase());
+            seenNames.add(lowerName);
 
             newAccounts.push({
-                id: `acc_${generateId()}`,
+                id: `acc_${lowerName.replace(/\s+/g, '_')}`,
                 name,
                 initialBalance,
                 initialBalanceDate,
@@ -278,11 +302,16 @@ export const importAccountsCSV = (event) => {
 
         if (newAccounts.length > 0) {
             try {
+                await setUserImportingState(currentUserId, true);
                 await resetDataInFirestore(currentUserId, true, false); 
                 await importDataToFirestore(currentUserId, newAccounts, null, null);
                 showNotification(`Importation réussie : "${file.name}" (${newAccounts.length} comptes).`);
             } catch (err) {
+                console.error(err);
                 showNotification("Erreur lors de l'enregistrement des comptes.", 'error');
+            } finally {
+                await setUserImportingState(currentUserId, false);
+                await markAccountsBalanceDirty(currentUserId);
             }
         }
     };

@@ -227,12 +227,12 @@ export const handleAddCategory = async (e) => {
     if (!iconValue) iconValue = 'tag';
     const icon = iconValue.startsWith('fa-') ? iconValue : 'fa-' + iconValue;
 
-    if (state.categories.find(c => c.label === name)) {
-        alert('Une catégorie avec ce nom existe déjà.');
+    if (state.categories.find(c => c.label.toLowerCase() === name.toLowerCase())) {
+        showNotification('Une catégorie avec ce nom existe déjà.', 'error');
         return;
     }
 
-    const id = generateId();
+    const id = `cat_${name.toLowerCase().replace(/\s+/g, '_')}`;
     const maxIndex = Math.max(0, ...state.categories.map(c => c['index-order'] || 0));
     const newCategory = { id, label: name, icon, color, 'index-order': maxIndex + 1 };
     
@@ -277,6 +277,11 @@ export const handleUpdateCategory = async (e) => {
 
     const existingCategory = state.categories.find(c => c.id === id);
     if (!existingCategory) return;
+
+    if (state.categories.find(c => c.id !== id && c.label.toLowerCase() === name.toLowerCase())) {
+        showNotification('Une autre catégorie avec ce nom existe déjà.', 'error');
+        return;
+    }
 
     try {
         await updateCategoryInFirestore(currentUserId, { id, label: name, icon, color, 'index-order': existingCategory['index-order'] });

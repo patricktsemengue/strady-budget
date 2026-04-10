@@ -7,16 +7,17 @@ This document outlines the functional specifications for the Strady Budget appli
 The system revolves around the following data entities, all of which are scoped to the authenticated user (`users/{userId}/...` in Firestore).
 
 - **USER**: The authenticated user via Firebase Authentication.
+  - `isImporting`: boolean (true during CSV import to pause background refreshes)
 - **ACCOUNT**: A financial account belonging to the user (e.g., checking, savings).
-  - `id`: string (unique)
-  - `name`: string
+  - `id`: string (unique, derived from name: `acc_name`)
+  - `name`: string (unique)
   - `initialBalance`: float
   - `initialBalanceDate`: string (YYYY-MM-DD)
   - `isSavings`: boolean
   - `balanceDirty`: boolean (true if balance needs background recalculation)
 - **CATEGORY**: A user-defined category for transactions.
-  - `id`: string (unique)
-  - `label`: string
+  - `id`: string (unique, derived from name: `cat_name`)
+  - `label`: string (unique)
   - `icon`: string (FontAwesome class, e.g., `fa-car`)
   - `color`: string (hex code)
   - `index-order`: integer (for sorting)
@@ -58,6 +59,7 @@ The system revolves around the following data entities, all of which are scoped 
 
 #### 2.1.2 Edit an Account
 - **Trigger**: User clicks the edit icon for an account.
+- **Constraints**: An account cannot be edited if it is used in any `TRANSACTION` or `RECURRING_TEMPLATE`.
 - **Process**: The corresponding `ACCOUNT` document in Firestore is updated.
 
 #### 2.1.3 Delete an Account
@@ -72,11 +74,11 @@ The system revolves around the following data entities, all of which are scoped 
 
 #### 2.2.2 Edit a Category
 - **Trigger**: User clicks the edit icon for a category.
-- **Process**: The corresponding `CATEGORY` document is updated in Firestore.
+- **Process**: The corresponding `CATEGORY` document is updated in Firestore. Category updates (name, icon, color) are allowed even if the category is assigned to transactions, as transactions reference the stable category ID.
 
 #### 2.2.3 Delete a Category
 - **Trigger**: User clicks the delete icon for a category.
-- **Constraints**: A category cannot be deleted if it is currently used.
+- **Constraints**: A category cannot be deleted if it is currently used in any `TRANSACTION` or `RECURRING_TEMPLATE`.
 
 #### 2.2.4 Reorder Categories
 - **Trigger**: User drags and drops a category.
@@ -119,7 +121,10 @@ The system revolves around the following data entities, all of which are scoped 
 ### 2.4 Data Import / Export
 
 ##### 2.4.1 Export/Import Transactions & Accounts
-- **Process**: Supports CSV export and import for both transactions and accounts. Import is a destructive action that replaces existing records.
+- **Process**: Supports CSV export and import for both transactions and accounts. 
+- **Uniqueness**: Both accounts and categories must have unique names.
+- **Auto-Creation**: During transaction import, if a referenced account or category does not exist, it is automatically created "on the fly".
+- **Refresh Management**: To prevent performance issues, the `isImporting` flag is set to `true` during the process, which causes Cloud Functions to skip background recalculations. A single full recalculation is triggered once the import is complete.
 
 ### 2.5 Navigation Menu & UI Layout
 
@@ -155,14 +160,15 @@ The application uses a **Modular Plug-and-Play Architecture**. Each feature is a
 
 
 ### 2.6 Account Balance Refresh (Asynchronous Aggregator)
-- **Trigger**: Any addition, update, or deletion of an `ACCOUNT`, `TRANSACTION`, or `RECURRING_TEMPLATE`.
+- **Trigger**: Any addition, update, or deletion of an `ACCOUNT`, `TRANSACTION`, or `RECURRING_TEMPLATE`, or an explicit request via `balanceDirty: true`.
 - **Process**: 
   1. The client-side system marks affected accounts with `balanceDirty: true`.
-  2. A Firebase Cloud Function (`onTransactionWrite` or `onTemplateWrite`) is triggered.
-  3. The function recalculates balances month-by-month from the month of the change (minus 1 month) up to the `FUNCTIONAL_BOUNDARY_DATE`.
-  4. Recalculation is atomic (using transactions) and idempotent (using event IDs).
-  5. Upon completion, the `balanceDirty` flag is cleared and a log is written to `system_logs`.
-- **UI Indicator**: A spinning "stale" icon appears next to accounts and global balances while `balanceDirty` is true.
+  2. A Firebase Cloud Function (`onTransactionWrite`, `onTemplateWrite`, or `onAccountWrite`) is triggered.
+  3. The function first checks the `isImporting` flag on the user document; if `true`, it skips the recalculation.
+  4. The function recalculates balances month-by-month from the earliest affected date up to the `FUNCTIONAL_BOUNDARY_DATE`.
+  5. Recalculation is atomic (using transactions) and idempotent (using event IDs).
+  6. Upon completion, the `balanceDirty` flag is cleared (set to `false`) and a log is written to `system_logs`.
+- **UI Indicator**: A spinning "stale" icon appears next to accounts and global balances whenever `balanceDirty` is NOT explicitly `false` (i.e., it appears if `true`, `null`, `undefined`, or empty).
 
 ### 2.7 FUNCTIONAL_BOUNDARY_DATE
 - **Definition**: The fixed upper limit for all financial calculations and transaction generation.
