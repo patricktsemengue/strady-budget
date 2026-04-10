@@ -1,5 +1,5 @@
 date,label,amount,source,destination,reccuring,endate,periodicity,category
-2026-01-01,"Alimentation",400,Compte Principal (CBC),,1,2027-01-01,M, Alimentation
+2026-01-01,"Alimentation",400,Compte Principal (CBC),,1,2027-01-01,M,4-Charge diverse
 2026-01-01,"Salaire",3000,,Compte Principal (CBC),1,2027-01-01,M,1-Revenu
 2026-01-01,"Allocation",594,,Belfius (Mao),1,2027-01-01,M,1-Revenu
 2026-01-02,"Ep_1_10eme_Mao",300,Compte Principal (CBC),1_10eme_Mao (ep),1,2026-02-01,M,2-Épargne
