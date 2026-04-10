@@ -43,7 +43,7 @@ import {
 } from './transactions.js';
 
 import { logout, onUserChanged } from './auth.js';
-import { subscribeToAppData } from './firestore-service.js';
+import { subscribeToAppData, markAccountsBalanceDirty } from './firestore-service.js';
 
 const init = () => {
     // Initialize Router
@@ -103,6 +103,13 @@ const init = () => {
                     if (cachedData) { // Only show the "live" transition if we started from cache
                         setDataStatusIndicator('live');
                     }
+
+                    // Trigger balance refresh on login if any accounts are dirty
+                    const hasDirtyAccounts = (newData.accounts || []).some(acc => acc.balanceDirty !== false);
+                    if (hasDirtyAccounts) {
+                        markAccountsBalanceDirty(user.uid);
+                    }
+                    
                     isFirstFirestoreUpdate = false;
                 }
                 updateState({

@@ -1,4 +1,6 @@
 import { state, updateState } from './state.js';
+import { markAccountsBalanceDirty } from './firestore-service.js';
+import { currentUserId } from './storage.js';
 
 class AppRouter {
     constructor() {
@@ -65,6 +67,14 @@ class AppRouter {
         if (!this.modules[viewId]) {
             console.error(`Module not found: ${viewId}`);
             return;
+        }
+
+        // Trigger balance refresh when navigating to the accounts view if any are dirty
+        if (viewId === 'accounts' && currentUserId) {
+            const hasDirtyAccounts = state.accounts.some(acc => acc.balanceDirty !== false);
+            if (hasDirtyAccounts) {
+                markAccountsBalanceDirty(currentUserId);
+            }
         }
 
         this.currentModule = this.modules[viewId];

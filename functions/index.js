@@ -173,3 +173,19 @@ exports.onTemplateWrite = onDocumentWritten("users/{userId}/recurringTemplates/{
 
     await recalculateBalances(userId, earliestDate, event.id);
 });
+
+/**
+ * Triggered on any account write to handle explicit refresh requests via balanceDirty: true
+ */
+exports.onAccountWrite = onDocumentWritten("users/{userId}/accounts/{accId}", async (event) => {
+    const userId = event.params.userId;
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+
+    // Only trigger if balanceDirty changed to true (or was already true and didn't change, for safety)
+    if (afterData && afterData.balanceDirty === true && (!beforeData || beforeData.balanceDirty !== true)) {
+        logger.info(`Explicit balance refresh requested for user ${userId} via account ${event.params.accId}.`);
+        // When triggered via account, we recalculate from the beginning of that account's history (or just everything for simplicity)
+        await recalculateBalances(userId, null, event.id);
+    }
+});
