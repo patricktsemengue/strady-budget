@@ -77,6 +77,17 @@ export const setDataStatusIndicator = (status) => {
     }
 };
 
+export const setLoadingState = (isLoading) => {
+    const overlay = document.getElementById('loading-overlay');
+    if (!overlay) return;
+    
+    if (isLoading) {
+        overlay.classList.remove('hidden');
+    } else {
+        overlay.classList.add('hidden');
+    }
+};
+
 export const setView = (view, isInitial = false) => {
     window.location.hash = view;
 };

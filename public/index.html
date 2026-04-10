@@ -483,6 +483,22 @@
     <!-- Notification Container -->
     <div id="notification-container" class="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4 max-w-sm mx-4">
+            <div class="relative">
+                <div class="w-16 h-16 border-4 border-slate-100 border-t-slate-800 rounded-full animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fa-solid fa-cloud-arrow-up text-slate-800 text-xl animate-pulse"></i>
+                </div>
+            </div>
+            <div class="text-center">
+                <h3 class="font-bold text-slate-800 text-lg">Importation en cours...</h3>
+                <p class="text-slate-500 text-sm mt-1">Veuillez patienter pendant le traitement de vos données.</p>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

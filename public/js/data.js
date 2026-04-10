@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { currentUserId } from './storage.js';
 import { resetDataInFirestore, importDataToFirestore, setUserImportingState, markAccountsBalanceDirty } from './firestore-service.js';
-import { showNotification } from './ui.js';
+import { showNotification, setLoadingState } from './ui.js';
 import { router } from './app-router.js';
 import { generateId, generateDeterministicId } from './utils.js';
 
@@ -206,6 +206,7 @@ export const importCSV = (event) => {
 
         if (importedCount > 0) {
             try {
+                setLoadingState(true);
                 await setUserImportingState(currentUserId, true);
 
                 // DELETE ALL FIRST as per requirement
@@ -229,6 +230,7 @@ export const importCSV = (event) => {
             } finally {
                 await setUserImportingState(currentUserId, false);
                 await markAccountsBalanceDirty(currentUserId);
+                setLoadingState(false);
             }
         }
     };
@@ -302,6 +304,7 @@ export const importAccountsCSV = (event) => {
 
         if (newAccounts.length > 0) {
             try {
+                setLoadingState(true);
                 await setUserImportingState(currentUserId, true);
                 await resetDataInFirestore(currentUserId, true, false); 
                 await importDataToFirestore(currentUserId, newAccounts, null, null);
@@ -312,6 +315,7 @@ export const importAccountsCSV = (event) => {
             } finally {
                 await setUserImportingState(currentUserId, false);
                 await markAccountsBalanceDirty(currentUserId);
+                setLoadingState(false);
             }
         }
     };
