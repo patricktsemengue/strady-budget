@@ -93,7 +93,7 @@ export const renderCategoriesList = () => {
 
     const renderActions = (cat, isDisabled, disabledTitle, isMobile = false) => {
         if (isMobile) {
-            if (isDisabled) return '';
+            // Always show the ellipsis button on mobile so user can open the modal
             return `<button onclick="window.app.openCategoryActions('${cat.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>`;
         }
         return `
@@ -162,12 +162,30 @@ export const openCategoryActions = (id) => {
     const cat = state.categories.find(c => c.id === id);
     if (!cat) return;
 
+    const isUsedInTransactions = state.transactions.some(tx => tx.Category === id);
+    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.category === id);
+    const isDefaultOther = id === 'Autre';
+    const isDisabled = isUsedInTransactions || isUsedInTemplates || isDefaultOther;
+
     currentCategoryActionId = id;
     const modal = document.getElementById('category-actions-modal');
     const content = document.getElementById('category-actions-content');
     const title = document.getElementById('category-actions-title');
+    const deleteBtn = document.getElementById('category-action-delete');
 
     title.textContent = cat.label;
+    
+    // Update Delete button UI
+    if (isDisabled) {
+        deleteBtn.disabled = true;
+        deleteBtn.classList.add('opacity-50', 'grayscale');
+        deleteBtn.classList.remove('hover:bg-red-50');
+    } else {
+        deleteBtn.disabled = false;
+        deleteBtn.classList.remove('opacity-50', 'grayscale');
+        deleteBtn.classList.add('hover:bg-red-50');
+    }
+
     modal.classList.remove('hidden');
     
     setTimeout(() => {
@@ -177,6 +195,7 @@ export const openCategoryActions = (id) => {
     const setupAction = (btnId, actionFn) => {
         const btn = document.getElementById(btnId);
         btn.onclick = () => {
+            if (btn.disabled) return;
             closeCategoryActions();
             actionFn(currentCategoryActionId);
         };

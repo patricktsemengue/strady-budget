@@ -51,19 +51,28 @@ export const openEditAccount = (id) => {
     const acc = state.accounts.find(a => a.id === id);
     if (!acc) return;
 
-    // Check if in use
-    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
-    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
+    const dateInput = document.getElementById('edit-acc-balance-date');
+    const helpText = document.getElementById('edit-acc-date-help');
 
-    if (isUsedInTransactions || isUsedInTemplates) {
-        showNotification("Impossible de modifier un compte actuellement utilisé.", "error");
-        return;
+    // Find oldest transaction
+    const accTxs = Object.values(state.records).flatMap(r => r.items).filter(t => t.source === id || t.destination === id);
+    if (accTxs.length > 0) {
+        const oldestDate = accTxs.reduce((min, t) => t.date < min ? t.date : min, '9999-12-31');
+        const limitDate = new Date(oldestDate + 'T00:00:00Z');
+        limitDate.setUTCDate(limitDate.getUTCDate() - 1);
+        const maxStr = limitDate.toISOString().split('T')[0];
+        
+        dateInput.max = maxStr;
+        if (helpText) helpText.textContent = `Une transaction existe le ${oldestDate}. La date de création ne peut pas dépasser le ${maxStr}.`;
+    } else {
+        dateInput.max = '';
+        if (helpText) helpText.textContent = '';
     }
 
     document.getElementById('edit-acc-id').value = acc.id;
     document.getElementById('edit-acc-name').value = acc.name;
     document.getElementById('edit-acc-balance').value = acc.initialBalance;
-    document.getElementById('edit-acc-balance-date').value = acc.initialBalanceDate;
+    document.getElementById('edit-acc-balance-date').value = acc.createDate || acc.initialBalanceDate;
     document.getElementById('edit-acc-is-savings').checked = acc.isSavings;
     
     document.getElementById('drawer-overlay').classList.add('active');
@@ -79,33 +88,26 @@ export const handleUpdateAccount = async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-acc-id').value;
     const name = document.getElementById('edit-acc-name').value.trim();
-    const initialBalance = parseFloat(document.getElementById('edit-acc-balance').value);
-    const initialBalanceDate = document.getElementById('edit-acc-balance-date').value;
+    const newInitialBalance = parseFloat(document.getElementById('edit-acc-balance').value);
+    const createDate = document.getElementById('edit-acc-balance-date').value;
     const isSavings = document.getElementById('edit-acc-is-savings').checked;
 
-    if (!name || isNaN(initialBalance) || !initialBalanceDate) {
+    if (!name || isNaN(newInitialBalance) || !createDate) {
         showNotification('Veuillez remplir tous les champs.', 'error');
         return;
     }
 
-    // Double check if in use
-    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
-    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
-
-    if (isUsedInTransactions || isUsedInTemplates) {
-        showNotification("Impossible de modifier un compte actuellement utilisé.", "error");
-        closeAccountDrawer();
-        return;
-    }
+    const oldAcc = state.accounts.find(a => a.id === id);
+    if (!oldAcc) return;
 
     try {
         await updateAccountInFirestore(currentUserId, {
             id,
             name,
-            initialBalance,
-            initialBalanceDate,
+            initialBalance: newInitialBalance,
+            createDate,
             isSavings
-        });
+        }, oldAcc.initialBalance);
         closeAccountDrawer();
         showNotification('Compte mis à jour !');
     } catch (err) {

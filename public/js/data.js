@@ -206,7 +206,7 @@ export const importCSV = (event) => {
 
         if (importedCount > 0) {
             try {
-                setLoadingState(true);
+                setLoadingState(true, 'Importation des transactions...', `Traitement de ${importedCount} lignes en cours.`);
                 await setUserImportingState(currentUserId, true);
 
                 // DELETE ALL FIRST as per requirement
@@ -297,14 +297,14 @@ export const importAccountsCSV = (event) => {
                 id: `acc_${lowerName.replace(/\s+/g, '_')}`,
                 name,
                 initialBalance,
-                initialBalanceDate,
+                createDate: initialBalanceDate,
                 isSavings
             });
         }
 
         if (newAccounts.length > 0) {
             try {
-                setLoadingState(true);
+                setLoadingState(true, 'Importation des comptes...', `Traitement de ${newAccounts.length} comptes en cours.`);
                 await setUserImportingState(currentUserId, true);
                 await resetDataInFirestore(currentUserId, true, false); 
                 await importDataToFirestore(currentUserId, newAccounts, null, null);

@@ -174,6 +174,19 @@ export const handleSaveTransaction = async (e) => {
         return;
     }
 
+    // Restriction: transaction cannot be before account creation date (TODO.md)
+    const sourceAcc = state.accounts.find(a => a.id === source);
+    const destAcc = state.accounts.find(a => a.id === destination);
+
+    if (sourceAcc && date < (sourceAcc.createDate || sourceAcc.initialBalanceDate)) {
+        showNotification(`La transaction ne peut pas être créée avant la date de création du compte source (${sourceAcc.createDate || sourceAcc.initialBalanceDate}).`, 'error');
+        return;
+    }
+    if (destAcc && date < (destAcc.createDate || destAcc.initialBalanceDate)) {
+        showNotification(`La transaction ne peut pas être créée avant la date de création du compte destination (${destAcc.createDate || destAcc.initialBalanceDate}).`, 'error');
+        return;
+    }
+
     try {
         const onFocusMonthKey = getMonthKey(state.viewDate);
 

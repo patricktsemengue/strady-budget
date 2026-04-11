@@ -5,194 +5,196 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 const db = admin.firestore();
 
+const getFunctionalBoundaryDateStr = () => {
+    const year = new Date().getFullYear();
+    return `${year + 3}-12-31`;
+};
+
 /**
- * Shared logic to recalculate balances for a user's accounts starting from a specific date.
+ * Incremental balance update as per TODO.md:
+ * Selects all records >= balanceDate and updates them.
+ * If no record exists for balanceDate, it creates one.
  */
-async function recalculateBalances(userId, startDateStr, eventId) {
-    // Idempotency check
-    const logRef = db.doc(`users/${userId}/system_logs/${eventId}`);
-    const userRef = db.doc(`users/${userId}`);
+async function calculateBalanceUpdate(transaction, userId, accountId, amount, balanceDate) {
+    if (!accountId || accountId === "external") return;
+
+    const balancesColl = db.collection(`users/${userId}/account_balances`);
+    const q = balancesColl.where("account_id", "==", accountId)
+                          .where("date", ">=", balanceDate);
     
-    try {
-        await db.runTransaction(async (transaction) => {
-            const logSnap = await transaction.get(logRef);
-            if (logSnap.exists()) {
-                logger.info(`Event ${eventId} already processed for user ${userId}. Skipping.`);
-                return;
+    const snapshot = await transaction.get(q);
+    let exactMatch = false;
+
+    if (snapshot.empty) {
+        // Case: No records >= balanceDate. 
+        // We must create one for balanceDate.
+        // To do so, we need the latest balance BEFORE balanceDate.
+        const prevQ = balancesColl.where("account_id", "==", accountId)
+                                  .where("date", "<", balanceDate)
+                                  .orderBy("date", "desc")
+                                  .limit(1);
+        const prevSnap = await transaction.get(prevQ);
+        
+        let baseBalance = 0;
+        if (!prevSnap.empty) {
+            baseBalance = prevSnap.docs[0].data().balance;
+        } else {
+            // Check account initial balance
+            const accSnap = await transaction.get(db.doc(`users/${userId}/accounts/${accountId}`));
+            if (accSnap.exists()) {
+                baseBalance = accSnap.data().initialBalance || 0;
             }
+        }
 
-            // 0. Check if import is in progress
-            const userSnap = await transaction.get(userRef);
-            if (userSnap.exists() && userSnap.data().isImporting) {
-                logger.info(`Import in progress for user ${userId}. Skipping balance recalculation.`);
-                return;
-            }
+        const newBalRef = db.doc(`users/${userId}/account_balances/${accountId}_${balanceDate}`);
+        transaction.set(newBalRef, {
+            account_id: accountId,
+            date: balanceDate,
+            balance: baseBalance + amount,
+            updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+    } else {
+        // Update all existing future records
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.date === balanceDate) exactMatch = true;
+            transaction.update(doc.ref, {
+                balance: data.balance + amount,
+                updated_at: admin.firestore.FieldValue.serverTimestamp()
+            });
+        });
 
-            // 1. Get functional boundary date
-            const year = new Date().getFullYear();
-            const boundaryDateStr = `${year + 3}-12-31`;
-
-            // 2. Fetch accounts and transactions
-            const accountsSnap = await transaction.get(db.collection(`users/${userId}/accounts`));
-            const transactionsSnap = await transaction.get(db.collection(`users/${userId}/transactions`));
-
-            const accounts = [];
-            accountsSnap.forEach(doc => accounts.push({ id: doc.id, ...doc.data() }));
+        if (!exactMatch) {
+            // If we found future records but none exactly at balanceDate, create it.
+            // Find latest balance BEFORE balanceDate
+            const prevQ = balancesColl.where("account_id", "==", accountId)
+                                      .where("date", "<", balanceDate)
+                                      .orderBy("date", "desc")
+                                      .limit(1);
+            const prevSnap = await transaction.get(prevQ);
             
-            const transactions = [];
-            transactionsSnap.forEach(doc => transactions.push({ id: doc.id, ...doc.data() }));
-
-            if (accounts.length === 0) return;
-
-            // Sort transactions by date
-            transactions.sort((a, b) => a.date.localeCompare(b.date));
-
-            const currentBalances = {};
-            let calculationStartMonthKey;
-
-            // 3. Determine starting point
-            if (startDateStr) {
-                calculationStartMonthKey = startDateStr.substring(0, 7);
-                const prevMonthDate = new Date(startDateStr.substring(0, 7) + '-01T00:00:00Z');
-                prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
-                const prevMonthKey = prevMonthDate.toISOString().substring(0, 7);
-                
-                const prevMonthRef = db.doc(`users/${userId}/months/${prevMonthKey}`);
-                const prevMonthSnap = await transaction.get(prevMonthRef);
-                
-                if (prevMonthSnap.exists()) {
-                    Object.assign(currentBalances, prevMonthSnap.data().balances);
-                } else {
-                    calculationStartMonthKey = null;
+            let baseBalance = 0;
+            if (!prevSnap.empty) {
+                baseBalance = prevSnap.docs[0].data().balance;
+            } else {
+                const accSnap = await transaction.get(db.doc(`users/${userId}/accounts/${accountId}`));
+                if (accSnap.exists()) {
+                    baseBalance = accSnap.data().initialBalance || 0;
                 }
             }
 
-            if (!calculationStartMonthKey) {
-                let minDateStr = accounts.reduce((min, acc) => (acc.initialBalanceDate < min ? acc.initialBalanceDate : min), '9999-12-31');
-                calculationStartMonthKey = minDateStr.substring(0, 7);
-                
-                accounts.forEach(acc => {
-                    currentBalances[acc.id] = acc.initialBalance || 0;
-                });
-            }
-
-            const txByMonth = {};
-            transactions.forEach(tx => {
-                const monthKey = tx.date.substring(0, 7);
-                if (!txByMonth[monthKey]) txByMonth[monthKey] = [];
-                txByMonth[monthKey].push(tx);
+            const newBalRef = db.doc(`users/${userId}/account_balances/${accountId}_${balanceDate}`);
+            transaction.set(newBalRef, {
+                account_id: accountId,
+                date: balanceDate,
+                balance: baseBalance + amount,
+                updated_at: admin.firestore.FieldValue.serverTimestamp()
             });
-
-            const monthlyBalances = {};
-            let current = new Date(calculationStartMonthKey + '-01T00:00:00Z');
-            const end = new Date(boundaryDateStr.substring(0, 7) + '-01T00:00:00Z');
-
-            // 4. Iteratively calculate balances
-            while (current <= end) {
-                const monthKey = current.toISOString().substring(0, 7);
-                
-                (txByMonth[monthKey] || []).forEach(tx => {
-                    // Ignore external accounts (empty or "external")
-                    if (tx.source && tx.source !== "external" && currentBalances[tx.source] !== undefined) {
-                        currentBalances[tx.source] -= tx.amount;
-                    }
-                    if (tx.destination && tx.destination !== "external" && currentBalances[tx.destination] !== undefined) {
-                        currentBalances[tx.destination] += tx.amount;
-                    }
-                });
-                
-                monthlyBalances[monthKey] = { ...currentBalances };
-                current.setUTCMonth(current.getUTCMonth() + 1);
-            }
-
-            // 5. Atomic Batch Update for all months
-            const batch = db.batch();
-            for (const [monthKey, balances] of Object.entries(monthlyBalances)) {
-                const monthRef = db.doc(`users/${userId}/months/${monthKey}`);
-                batch.set(monthRef, { balances, updated_at: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-            }
-
-            // 6. Clear balanceDirty flag for ALL accounts (as we recalculated everything for simplicity)
-            accounts.forEach(acc => {
-                const accRef = db.doc(`users/${userId}/accounts/${acc.id}`);
-                batch.update(accRef, { balanceDirty: false, updated_at: admin.firestore.FieldValue.serverTimestamp() });
-            });
-
-            // 7. Audit Log
-            batch.set(logRef, {
-                userId,
-                eventId,
-                startDate: startDateStr || 'beginning',
-                completed_at: admin.firestore.FieldValue.serverTimestamp(),
-                status: 'success'
-            });
-
-            await batch.commit();
-            logger.info(`Balance recalculation successful for user ${userId} starting from ${startDateStr}.`);
-        });
-    } catch (error) {
-        logger.error(`Error recalculating balances for user ${userId}:`, error);
-        throw error;
+        }
     }
 }
 
-/**
- * Triggered on any transaction write (create, update, delete)
- */
+async function recalculateAll(userId, eventId) {
+    const logRef = db.doc(`users/${userId}/system_logs/${eventId}`);
+    await db.runTransaction(async (transaction) => {
+        const logSnap = await transaction.get(logRef);
+        if (logSnap.exists()) return;
+
+        const accountsSnap = await transaction.get(db.collection(`users/${userId}/accounts`));
+        const transactionsSnap = await transaction.get(db.collection(`users/${userId}/transactions`));
+
+        const accounts = [];
+        accountsSnap.forEach(doc => accounts.push({ id: doc.id, ...doc.data() }));
+        const transactions = [];
+        transactionsSnap.forEach(doc => transactions.push({ id: doc.id, ...doc.data() }));
+
+        if (accounts.length === 0) return;
+        transactions.sort((a, b) => a.date.localeCompare(b.date));
+
+        // For each account, we create records only for dates where a transaction occurs 
+        // (plus the initial balance date)
+        const batch = db.batch();
+        accounts.forEach(acc => {
+            let currentBalance = acc.initialBalance || 0;
+            const accTxs = transactions.filter(t => t.source === acc.id || t.destination === acc.id);
+            
+            // Initial record
+            const initDate = acc.createDate || acc.initialBalanceDate || '2000-01-01';
+            batch.set(db.doc(`users/${userId}/account_balances/${acc.id}_${initDate}`), {
+                account_id: acc.id,
+                date: initDate,
+                balance: currentBalance,
+                updated_at: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            accTxs.forEach(tx => {
+                if (tx.source === acc.id) currentBalance -= tx.amount;
+                if (tx.destination === acc.id) currentBalance += tx.amount;
+                
+                batch.set(db.doc(`users/${userId}/account_balances/${acc.id}_${tx.date}`), {
+                    account_id: acc.id,
+                    date: tx.date,
+                    balance: currentBalance,
+                    updated_at: admin.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            });
+            
+            batch.update(db.doc(`users/${userId}/accounts/${acc.id}`), { balanceDirty: false, updated_at: admin.firestore.FieldValue.serverTimestamp() });
+        });
+
+        batch.set(logRef, { eventId, status: 'success', completed_at: admin.firestore.FieldValue.serverTimestamp() });
+        await batch.commit();
+    });
+}
+
 exports.onTransactionWrite = onDocumentWritten("users/{userId}/transactions/{txId}", async (event) => {
     const userId = event.params.userId;
-    const beforeData = event.data.before.data();
-    const afterData = event.data.after.data();
+    const before = event.data.before.data();
+    const after = event.data.after.data();
 
-    // Determine the earliest date involved
-    let earliestDate = null;
-    if (beforeData && beforeData.date) earliestDate = beforeData.date;
-    if (afterData && afterData.date) {
-        if (!earliestDate || afterData.date < earliestDate) earliestDate = afterData.date;
-    }
+    await db.runTransaction(async (transaction) => {
+        const logRef = db.doc(`users/${userId}/system_logs/${event.id}`);
+        const logSnap = await transaction.get(logRef);
+        if (logSnap.exists()) return;
 
-    if (!earliestDate) {
-        logger.warn(`No date found for transaction event ${event.id}.`);
-        return;
-    }
+        const affectedAccountIds = new Set();
 
-    await recalculateBalances(userId, earliestDate, event.id);
+        if (before) {
+            // Reverse old impact: source +amount, destination -amount
+            await calculateBalanceUpdate(transaction, userId, before.source, before.amount, before.date);
+            await calculateBalanceUpdate(transaction, userId, before.destination, -before.amount, before.date);
+            if (before.source && before.source !== "external") affectedAccountIds.add(before.source);
+            if (before.destination && before.destination !== "external") affectedAccountIds.add(before.destination);
+        }
+        if (after) {
+            // Apply new impact: source -amount, destination +amount
+            await calculateBalanceUpdate(transaction, userId, after.source, -after.amount, after.date);
+            await calculateBalanceUpdate(transaction, userId, after.destination, after.amount, after.date);
+            if (after.source && after.source !== "external") affectedAccountIds.add(after.source);
+            if (after.destination && after.destination !== "external") affectedAccountIds.add(after.destination);
+        }
+
+        // Clear balanceDirty for all affected accounts
+        affectedAccountIds.forEach(accId => {
+            transaction.update(db.doc(`users/${userId}/accounts/${accId}`), { 
+                balanceDirty: false, 
+                updated_at: admin.firestore.FieldValue.serverTimestamp() 
+            });
+        });
+
+        transaction.set(logRef, { eventId: event.id, status: 'success', completed_at: admin.firestore.FieldValue.serverTimestamp() });
+    });
 });
 
-/**
- * Triggered on any recurring template write (create, update, delete)
- */
 exports.onTemplateWrite = onDocumentWritten("users/{userId}/recurringTemplates/{tplId}", async (event) => {
-    const userId = event.params.userId;
-    const beforeData = event.data.before.data();
-    const afterData = event.data.after.data();
-
-    // Recurring templates generate many transactions, so we start from the template date
-    let earliestDate = null;
-    if (beforeData && beforeData.date) earliestDate = beforeData.date;
-    if (afterData && afterData.date) {
-        if (!earliestDate || afterData.date < earliestDate) earliestDate = afterData.date;
-    }
-
-    if (!earliestDate) {
-        logger.warn(`No date found for template event ${event.id}.`);
-        return;
-    }
-
-    await recalculateBalances(userId, earliestDate, event.id);
+    // Template changes trigger full refresh for simplicity due to batch generation
+    await recalculateAll(event.params.userId, event.id);
 });
 
-/**
- * Triggered on any account write to handle explicit refresh requests via balanceDirty: true
- */
 exports.onAccountWrite = onDocumentWritten("users/{userId}/accounts/{accId}", async (event) => {
-    const userId = event.params.userId;
-    const afterData = event.data.after.data();
-
-    // Trigger if balanceDirty is true to handle explicit refresh requests
-    if (afterData && afterData.balanceDirty === true) {
-        logger.info(`Explicit balance refresh requested for user ${userId} via account ${event.params.accId}.`);
-        // When triggered via account, we recalculate from the beginning of that account's history
-        await recalculateBalances(userId, null, event.id);
+    const after = event.data.after.data();
+    const before = event.data.before.data();
+    if (after && (after.balanceDirty === true || !before)) {
+        await recalculateAll(event.params.userId, event.id);
     }
 });

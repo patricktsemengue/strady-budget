@@ -12,7 +12,7 @@ The system revolves around the following data entities, all of which are scoped 
   - `id`: string (unique, derived from name: `acc_name`)
   - `name`: string (unique)
   - `initialBalance`: float
-  - `initialBalanceDate`: string (YYYY-MM-DD)
+  - `createDate`: string (YYYY-MM-DD)
   - `isSavings`: boolean
   - `balanceDirty`: boolean (true if balance needs background recalculation)
 - **CATEGORY**: A user-defined category for transactions.
@@ -40,10 +40,13 @@ The system revolves around the following data entities, all of which are scoped 
   - `recurring`: boolean (always `true`)
   - `endDate`: string (YYYY-MM-DD, optional)
   - `periodicity`: string (`M` for Monthly, `Q` for Quarterly, `Y` for Yearly)
-- **MONTH**: Stores metadata and pre-calculated balances for a specific month.
+- **MONTH**: Stores metadata for a specific month.
   - `id`: string (YYYY-MM)
   - `status`: string (e.g., "closed")
-  - `balances`: map (accountId: float, the running balance at the end of the month)
+- **ACCOUNT_BALANCE**: Stores the pre-calculated balance for a specific account and month.
+  - `account_id`: string (FK to `ACCOUNT.id`)
+  - `date`: string (YYYY-MM-DD)
+  - `balance`: float
 
 ---
 
@@ -52,19 +55,31 @@ The system revolves around the following data entities, all of which are scoped 
 ### 2.1 Account Management (CRUD)
 
 #### 2.1.1 Create an Account
-- **Trigger**: User clicks "Add Account" in the accounts view.
+- **Trigger**: User submits the "Add Account" form.
 - **Process**:
   1. A new `ACCOUNT` document is created in Firestore.
-  2. The `id` is a generated unique ID.
+  2. The `initialBalance` and `createDate` (YYYY-MM-DD) are stored.
+  3. The system immediately writes exactly **one** `ACCOUNT_BALANCE` record for the `createDate`.
+  4. **No background refresh** is triggered at this stage (STOP rule).
+  5. The `balanceDirty` flag is NOT set.
 
 #### 2.1.2 Edit an Account
 - **Trigger**: User clicks the edit icon for an account.
-- **Constraints**: An account cannot be edited if it is used in any `TRANSACTION` or `RECURRING_TEMPLATE`.
-- **Process**: The corresponding `ACCOUNT` document in Firestore is updated.
+- **Constraints**: 
+  - **Creation Date**: Cannot be set after the date of the oldest transaction involving this account. UI limits the date picker to `min(transaction.date) - 1 day`.
+  - **Initial Balance**: If changed, the difference is applied as a delta to all existing `ACCOUNT_BALANCE` records for this account.
+- **Process**: 
+  1. The `ACCOUNT` document in Firestore is updated.
+  2. The `balanceDirty` flag is set to `true`.
+  3. The system applies the delta (`newInitialBalance - oldInitialBalance`) to all `ACCOUNT_BALANCE` records for the account.
+  4. Once updated, `balanceDirty` is set to `false`.
 
 #### 2.1.3 Delete an Account
 - **Trigger**: User clicks the delete icon for an account.
-- **Constraints**: An account cannot be deleted if it is used in any `TRANSACTION` or `RECURRING_TEMPLATE`.
+- **Constraints**: An account **cannot be deleted** if it is referenced in any `TRANSACTION` or `RECURRING_TEMPLATE`. The "delete" button is disabled in the UI if transactions exist.
+- **Process**: 
+  1. The `ACCOUNT` document is deleted from Firestore.
+  2. ALL associated `ACCOUNT_BALANCE` records for that account are deleted.
 
 ### 2.2 Category Management (CRUD & Reordering)
 
@@ -88,7 +103,12 @@ The system revolves around the following data entities, all of which are scoped 
 
 #### 2.3.1 Create a Single Transaction
 - **Trigger**: User submits the transaction form with "Is Recurring" unchecked.
-- **Process**: A new `TRANSACTION` document is created with `Model: null`.
+- **Restriction**: The transaction `date` cannot be earlier than the `createDate` of the `source` account or the `destination` account.
+- **Process**: 
+  1. A new `TRANSACTION` document is created with `Model: null`.
+  2. The system sets `balanceDirty` to `true` for affected accounts.
+  3. The system triggers a backend job to refresh the source and destination account balances incrementally from `transaction.date`.
+  4. Once refreshed, `balanceDirty` is set to `false`.
 
 #### 2.3.2 Create a Recurring Transaction
 - **Trigger**: User submits the form with "Is Recurring" checked.
@@ -101,22 +121,24 @@ The system revolves around the following data entities, all of which are scoped 
   4. **Case 2: User HAS edited the end date**:
      - `RECURRING_TEMPLATE.endDate` is stored as provided.
      - The system batch-generates child transactions from `startDate` to `MIN(userEndDate, boundaryDate)`.
+  5. The system triggers a backend job to refresh the source and destination account balances for all generated child transactions.
 
 #### 2.3.3 Edit a Single Transaction
-- **Process**: Updading a single transaction consists in delete-old and create-new. The system deletes the old transaction and creates a new one based on the updated details.
+- **Process**: Updating a single transaction consists in delete-old and create-new. The system deletes the old transaction and creates a new one based on the updated details. This triggers balance refreshes for both old and new dates/accounts.
 
 #### 2.3.4 Edit a Recurring Transaction
-- **Process**: Updading a recurring transaction consists in delete-old and create-new.
+- **Process**: Updating a recurring transaction consists in delete-old and create-new.
   1. The system retrieves the parent `RECURRING_TEMPLATE`.
   2. It batch deletes the template and ALL its associated child transactions.
   3. It creates a new `RECURRING_TEMPLATE` with updated details.
   4. It batch-generates new child transactions for the new template (up to the `FUNCTIONAL_BOUNDARY_DATE`).
+  5. It triggers a full balance refresh for affected accounts.
 
 #### 2.3.5 Delete a Single Transaction
-- **Process**: The `TRANSACTION` document is deleted from Firestore.
+- **Process**: The `TRANSACTION` document is deleted from Firestore, and account balances are updated accordingly.
 
 #### 2.3.6 Delete a Recurring Series
-- **Process**: Both the `RECURRING_TEMPLATE` and ALL associated `TRANSACTION` documents are deleted.
+- **Process**: Both the `RECURRING_TEMPLATE` and ALL associated `TRANSACTION` documents are deleted, and account balances are refreshed.
 
 ### 2.4 Data Import / Export
 
@@ -160,15 +182,17 @@ The application uses a **Modular Plug-and-Play Architecture**. Each feature is a
 
 
 ### 2.6 Account Balance Refresh (Asynchronous Aggregator)
-- **Trigger**: Any addition, update, or deletion of an `ACCOUNT`, `TRANSACTION`, or `RECURRING_TEMPLATE`, or an explicit request via `balanceDirty: true`.
+- **Trigger**: Any addition, update, or deletion of an `ACCOUNT`, `TRANSACTION`, or `RECURRING_TEMPLATE`.
 - **Process**: 
-  1. The client-side system marks affected accounts with `balanceDirty: true`.
-  2. A Firebase Cloud Function (`onTransactionWrite`, `onTemplateWrite`, or `onAccountWrite`) is triggered.
-  3. The function first checks the `isImporting` flag on the user document; if `true`, it skips the recalculation.
-  4. The function recalculates balances month-by-month from the earliest affected date up to the `FUNCTIONAL_BOUNDARY_DATE`.
-  5. Recalculation is atomic (using transactions) and idempotent (using event IDs).
-  6. Upon completion, the `balanceDirty` flag is cleared (set to `false`) and a log is written to `system_logs`.
-- **UI Indicator**: A spinning "stale" icon appears next to accounts and global balances whenever `balanceDirty` is NOT explicitly `false` (i.e., it appears if `true`, `null`, `undefined`, or empty).
+  1. The transaction `T` is written to the database.
+  2. A backend job is triggered to refresh source and destination account balances.
+  3. The system calculates the start date: `balanceDate = T.date`.
+  4. It iterates from `balanceDate` to `FUNCTIONAL_BOUNDARY_DATE`.
+  5. For each affected account balance record:
+     - If an `ACCOUNT_BALANCE` record exists for the date, it is updated: `balance = balance ± amount`.
+     - If no record exists for the exact date, a new one is created by finding the latest balance *prior* to that date and adding/subtracting the amount.
+  6. The process is atomic and idempotent.
+- **UI Indicator**: A spinning "stale" icon appears next to accounts and global balances whenever `balanceDirty` is true on an account (meaning a calculation is pending).
 
 ### 2.7 FUNCTIONAL_BOUNDARY_DATE
 - **Definition**: The fixed upper limit for all financial calculations and transaction generation.
@@ -186,18 +210,18 @@ The application uses a **Modular Plug-and-Play Architecture**. Each feature is a
 The system uses **Batch Generation** for recurring transactions and **Pre-calculated Balances** for performance.
 
 ### 3.1 Monthly Income
-Sum of all `TRANSACTION` documents for the month where `source` is empty.
+Sum of all `TRANSACTION` documents for the month where `source` is empty or "external".
 
 ### 3.2 Account Balance
-The account balance for a selected month is retrieved from the `MONTH` collection. It represents:
-`(Sum of Credits in Month) - (Sum of Debits in Month) + (Previous Month Balance)`.
-The first month's balance is calculated relative to the account's `initialBalance` and `initialBalanceDate`.
+The account balance for a selected month is retrieved from the `ACCOUNT_BALANCE` collection for the corresponding `account_id` and `date`.
+For each account, the system picks the last balance record of the selected month (ranked by date ascending).
+If no record exists for the month, it falls back to the latest balance record before the month, or the account's initial balance.
 
 ### 3.3 Emergency Fund
 Sum of balances for all accounts marked `isSavings: true`.
 
 ### 3.4 Monthly Spending
-Sum of all `TRANSACTION` documents for the month where `destination` is empty.
+Sum of all `TRANSACTION` documents for the month where `destination` is empty or "external".
 
 ---
 

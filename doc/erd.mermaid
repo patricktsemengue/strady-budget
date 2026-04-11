@@ -8,6 +8,7 @@ erDiagram
     USER ||--o{ TRANSACTION : owns
     USER ||--o{ RECURRING_TEMPLATE : owns
     USER ||--o{ MONTH : owns
+    USER ||--o{ ACCOUNT_BALANCE : owns
     USER ||--o{ SETTINGS : has
 
     SETTINGS {
@@ -20,9 +21,9 @@ erDiagram
 
     ACCOUNT {
         string id PK
-        string name
+        string name "unique"
         float initialBalance
-        string initialBalanceDate
+        string initialBalanceDate "yyyy-MM-dd, same as createDate"
         boolean isSavings
         timestamp updated_at
     }
@@ -65,7 +66,13 @@ erDiagram
     MONTH {
         string id PK "YYYY-MM"
         string status
-        map balances "accountId: balance"
+        timestamp updated_at
+    }
+
+    ACCOUNT_BALANCE {
+        string account_id FK "references ACCOUNT.id"
+        string date "YYYY-MM-01"
+        float balance
         timestamp updated_at
     }
 
@@ -77,3 +84,5 @@ erDiagram
     RECURRING_TEMPLATE }o--|| ACCOUNT : "has source"
     RECURRING_TEMPLATE }o--|| ACCOUNT : "has destination"
     RECURRING_TEMPLATE }o--|| CATEGORY : "categorized by (field: category)"
+
+    ACCOUNT ||--o{ ACCOUNT_BALANCE : "has balances"

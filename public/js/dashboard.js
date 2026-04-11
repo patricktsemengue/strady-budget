@@ -87,9 +87,11 @@ export const renderTransactions = () => {
             case 'category': {
                 const catA = state.categories.find(c => c.id === a.Category);
                 const catB = state.categories.find(c => c.id === b.Category);
-                const orderA = catA ? (catA['index-order'] ?? Infinity) : Infinity;
-                const orderB = catB ? (catB['index-order'] ?? Infinity) : Infinity;
-                return orderA - orderB || new Date(b.date) - new Date(a.date);
+                const orderA = catA ? (catA['index-order'] ?? 999) : 999;
+                const orderB = catB ? (catB['index-order'] ?? 999) : 999;
+                // Primary: Category Order, Secondary: Date
+                if (orderA !== orderB) return orderA - orderB;
+                return new Date(b.date) - new Date(a.date);
             }
             case 'amount-desc': return b.amount - a.amount;
             case 'amount-asc': return a.amount - b.amount;
@@ -579,8 +581,12 @@ export const clotureMois = async () => {
             // Update all accounts with new initial balances based on the closed month
             state.accounts.forEach(acc => {
                 const newBalance = balances[acc.id] || 0;
-                // Also update the initialBalanceDate to create a new checkpoint
-                updates.push(updateAccountInFirestore(currentUserId, { ...acc, initialBalance: newBalance, initialBalanceDate: closingDateStr }));
+                // Also update the createDate to create a new checkpoint
+                updates.push(updateAccountInFirestore(currentUserId, { 
+                    ...acc, 
+                    initialBalance: newBalance, 
+                    createDate: closingDateStr 
+                }, acc.initialBalance));
             });
 
             // Mark current month as closed

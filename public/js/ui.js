@@ -77,11 +77,15 @@ export const setDataStatusIndicator = (status) => {
     }
 };
 
-export const setLoadingState = (isLoading) => {
+export const setLoadingState = (isLoading, title = 'Chargement...', subtitle = 'Veuillez patienter un instant') => {
     const overlay = document.getElementById('loading-overlay');
     if (!overlay) return;
     
     if (isLoading) {
+        const titleEl = document.getElementById('loading-overlay-title');
+        const subtitleEl = document.getElementById('loading-overlay-subtitle');
+        if (titleEl) titleEl.textContent = title;
+        if (subtitleEl) subtitleEl.textContent = subtitle;
         overlay.classList.remove('hidden');
     } else {
         overlay.classList.add('hidden');

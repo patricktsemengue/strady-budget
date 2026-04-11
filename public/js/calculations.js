@@ -13,27 +13,33 @@ export const calculateMonthlyIncome = (date) => {
 
 export const calculateBalances = (targetDate) => {
     const balances = {};
+    const selectedYear = targetDate.getFullYear();
+    const selectedMonth = targetDate.getMonth() + 1;
+    const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
     
-    // Initialize with account initial balances
     state.accounts.forEach(acc => {
-        balances[acc.id] = acc.initialBalance || 0;
-    });
+        // Find all balances for this account in the selected month
+        const monthBalances = Object.keys(state.accountBalances)
+            .filter(key => key.startsWith(`${acc.id}_${monthPrefix}`))
+            .map(key => ({ date: key.split('_')[1], balance: state.accountBalances[key] }));
 
-    const targetDateUTC = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59));
+        if (monthBalances.length > 0) {
+            // Pick the last one by date ascending (as per TODO.md)
+            monthBalances.sort((a, b) => a.date.localeCompare(b.date));
+            balances[acc.id] = monthBalances[monthBalances.length - 1].balance;
+        } else {
+            // Fallback: Find the latest balance BEFORE this month
+            const priorBalances = Object.keys(state.accountBalances)
+                .filter(key => key.startsWith(`${acc.id}_`) && key.split('_')[1] < monthPrefix)
+                .map(key => ({ date: key.split('_')[1], balance: state.accountBalances[key] }));
 
-    // Process all existing transactions up to targetDate
-    Object.values(state.records).forEach(month => {
-        month.items.forEach(tx => {
-            const txDate = new Date(tx.date + 'T00:00:00Z');
-            if (txDate <= targetDateUTC) {
-                if (tx.source && balances[tx.source] !== undefined) {
-                    balances[tx.source] -= tx.amount;
-                }
-                if (tx.destination && balances[tx.destination] !== undefined) {
-                    balances[tx.destination] += tx.amount;
-                }
+            if (priorBalances.length > 0) {
+                priorBalances.sort((a, b) => a.date.localeCompare(b.date));
+                balances[acc.id] = priorBalances[priorBalances.length - 1].balance;
+            } else {
+                balances[acc.id] = acc.initialBalance || 0;
             }
-        });
+        }
     });
 
     return balances;
