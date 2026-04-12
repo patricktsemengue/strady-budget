@@ -157,6 +157,18 @@ exports.onTransactionWrite = onDocumentWritten("users/{userId}/transactions/{txI
         const logSnap = await transaction.get(logRef);
         if (logSnap.exists()) return;
 
+        // Optimization: Skip incremental updates if a mass import is in progress
+        const userRef = db.doc(`users/${userId}`);
+        const userSnap = await transaction.get(userRef);
+        if (userSnap.exists() && userSnap.data().isImporting) {
+            transaction.set(logRef, { 
+                eventId: event.id, 
+                status: 'skipped_during_import', 
+                completed_at: admin.firestore.FieldValue.serverTimestamp() 
+            });
+            return;
+        }
+
         const affectedAccountIds = new Set();
 
         if (before) {
