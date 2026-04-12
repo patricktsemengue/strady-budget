@@ -37,7 +37,17 @@ export const calculateBalances = (targetDate) => {
                 priorBalances.sort((a, b) => a.date.localeCompare(b.date));
                 balances[acc.id] = priorBalances[priorBalances.length - 1].balance;
             } else {
-                balances[acc.id] = acc.initialBalance || 0;
+                // Final fallback: find the absolute earliest record for this account
+                const allAccountBalances = Object.keys(state.accountBalances)
+                    .filter(key => key.startsWith(`${acc.id}_`))
+                    .map(key => ({ date: key.split('_')[1], balance: state.accountBalances[key] }));
+                
+                if (allAccountBalances.length > 0) {
+                    allAccountBalances.sort((a, b) => a.date.localeCompare(b.date));
+                    balances[acc.id] = allAccountBalances[0].balance;
+                } else {
+                    balances[acc.id] = 0;
+                }
             }
         }
     });

@@ -44,8 +44,36 @@ import {
 
 import { logout, onUserChanged } from './auth.js';
 import { subscribeToAppData, markAccountsBalanceDirty } from './firestore-service.js';
+import { firebaseConfig } from './firebase-config.js';
 
 const init = () => {
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js', { type: 'module' })
+                .then(reg => {
+                    console.log('Service Worker registered');
+                    // If user is already logged in, init SW
+                    if (auth.currentUser) {
+                        reg.active?.postMessage({ type: 'INIT_FIREBASE', payload: { config: firebaseConfig } });
+                    }
+                })
+                .catch(err => console.error('SW registration failed:', err));
+        });
+
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data.type === 'REFRESH_COMPLETE') {
+                // Locally clear the dirty flags to stop the spinners immediately
+                const { accountIds } = event.data.payload;
+                const newAccounts = state.accounts.map(acc => 
+                    accountIds.includes(acc.id) ? { ...acc, balanceDirty: false } : acc
+                );
+                updateState({ accounts: newAccounts });
+                router.render();
+            }
+        });
+    }
+
     // Initialize Router
     router.setNavContainers('nav-desktop', 'nav-mobile');
     router.register(dashboardModule);

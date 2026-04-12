@@ -133,12 +133,11 @@ export const importCSV = (event) => {
                     if (accountMap[lowerName]) return accountMap[lowerName];
                     
                     // Create new account on the fly if it doesn't exist
-                    const newId = `acc_${lowerName.replace(/\s+/g, '_')}`;
                     const newAcc = {
                         id: newId,
                         name: name,
-                        initialBalance: 0,
-                        initialBalanceDate: date || new Date().toISOString().split('T')[0],
+                        createDate: date || new Date().toISOString().split('T')[0],
+                        initialBalance: 0, // Keeping temporarily for firestore-service helper logic if needed, but service will drop it from doc
                         isSavings: false
                     };
                     accountsToCreate.push(newAcc);
@@ -228,8 +227,15 @@ export const importCSV = (event) => {
                 console.error(err);
                 showNotification("Erreur lors de l'enregistrement de l'import.", 'error');
             } finally {
+                // 1. Clear importing state first and WAIT for it
                 await setUserImportingState(currentUserId, false);
+                
+                // 2. Small delay to ensure Firestore propagation before triggering refresh
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 3. Trigger the refresh
                 await markAccountsBalanceDirty(currentUserId);
+                
                 setLoadingState(false);
             }
         }
@@ -313,8 +319,15 @@ export const importAccountsCSV = (event) => {
                 console.error(err);
                 showNotification("Erreur lors de l'enregistrement des comptes.", 'error');
             } finally {
+                // 1. Clear importing state first and WAIT for it
                 await setUserImportingState(currentUserId, false);
+                
+                // 2. Small delay to ensure Firestore propagation before triggering refresh
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 3. Trigger the refresh
                 await markAccountsBalanceDirty(currentUserId);
+                
                 setLoadingState(false);
             }
         }

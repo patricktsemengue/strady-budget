@@ -106,17 +106,18 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
 
 export const addAccountToFirestore = async (userId, account) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
-    // Use createDate instead of initialBalanceDate as per TODO.md
     const accountData = { 
-        ...account, 
-        createDate: account.initialBalanceDate || account.createDate,
+        id: account.id,
+        name: account.name,
+        createDate: account.createDate || account.initialBalanceDate,
+        isSavings: account.isSavings,
         updated_at: serverTimestamp() 
     };
-    delete accountData.initialBalanceDate;
     
+    // 1. Create the account document WITHOUT initialBalance
     await setDoc(docRef, accountData);
 
-    // Immediately write the initial account balance record
+    // 2. Immediately write the initial account balance record (The starting point)
     const balDocId = `${account.id}_${accountData.createDate}`;
     const balRef = doc(db, `users/${userId}/account_balances`, balDocId);
     await setDoc(balRef, {
@@ -130,7 +131,6 @@ export const addAccountToFirestore = async (userId, account) => {
 export const updateAccountInFirestore = async (userId, account, oldInitialBalance) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
     
-    // 1. Mark as dirty first
     await markAccountsBalanceDirty(userId, [account.id]);
 
     await runTransaction(db, async (transaction) => {
@@ -139,13 +139,14 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
         
         const oldData = docSnap.data();
         const accountData = { 
-            ...account, 
+            id: account.id,
+            name: account.name,
             createDate: account.createDate || oldData.createDate,
+            isSavings: account.isSavings,
             updated_at: serverTimestamp() 
         };
-        delete accountData.initialBalanceDate;
 
-        // Handle Date change (only for fresh accounts - handled by UI constraints)
+        // Handle Date change (update the key of the initial balance record)
         if (oldData.createDate !== accountData.createDate) {
             const oldBalDocId = `${account.id}_${oldData.createDate}`;
             const newBalDocId = `${account.id}_${accountData.createDate}`;
@@ -153,16 +154,16 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
             transaction.set(doc(db, `users/${userId}/account_balances`, newBalDocId), {
                 account_id: account.id,
                 date: accountData.createDate,
-                balance: accountData.initialBalance || 0,
+                balance: account.initialBalance || 0,
                 updated_at: serverTimestamp()
             });
         }
 
         // Handle Balance Delta for ALL existing records
-        const delta = accountData.initialBalance - oldInitialBalance;
+        const delta = account.initialBalance - oldInitialBalance;
         if (delta !== 0 && oldData.createDate === accountData.createDate) {
             const q = query(collection(db, `users/${userId}/account_balances`), where("account_id", "==", account.id));
-            const snapshot = await getDocs(q); // NOTE: Transactions cannot get collections easily, we do it outside if needed or assume small set
+            const snapshot = await getDocs(q);
             snapshot.forEach(balDoc => {
                 transaction.update(balDoc.ref, {
                     balance: balDoc.data().balance + delta,
@@ -449,7 +450,26 @@ export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransac
 export const importDataToFirestore = async (userId, accounts, transactions, templates, categories) => {
     const promises = [];
     if (accounts) {
-        accounts.forEach(acc => promises.push(setDoc(doc(db, `users/${userId}/accounts`, acc.id), { ...acc, updated_at: serverTimestamp() })));
+        accounts.forEach(acc => {
+            const { initialBalance, ...accountData } = acc;
+            const createDate = acc.createDate || acc.initialBalanceDate;
+            
+            // 1. Save Account without initialBalance
+            promises.push(setDoc(doc(db, `users/${userId}/accounts`, acc.id), { 
+                ...accountData, 
+                createDate,
+                updated_at: serverTimestamp() 
+            }));
+
+            // 2. Save first balance record
+            const balDocId = `${acc.id}_${createDate}`;
+            promises.push(setDoc(doc(db, `users/${userId}/account_balances`, balDocId), {
+                account_id: acc.id,
+                date: createDate,
+                balance: initialBalance || 0,
+                updated_at: serverTimestamp()
+            }));
+        });
     }
     if (transactions) {
         transactions.forEach(tx => promises.push(setDoc(doc(db, `users/${userId}/transactions`, tx.id), { ...tx, updated_at: serverTimestamp() })));
@@ -476,9 +496,25 @@ export const setUserImportingState = async (userId, isImporting) => {
 };
 
 /**
- * Marks accounts as dirty to trigger background recalculation.
- * @param {string} userId
- * @param {string[]} [accountIds] - Optional list of specific accounts to mark as dirty. If omitted, marks all user accounts.
+ * Triggers a balance refresh via the Service Worker.
+ * @param {string} userId 
+ * @param {'SWEEP'|'DELTA'} action 
+ * @param {Object} data 
+ */
+const triggerSWRefresh = (userId, action, data) => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'REFRESH_BALANCES',
+            payload: { userId, action, data }
+        });
+    } else {
+        // Fallback for when SW is not ready: perform in main thread (less ideal)
+        console.warn('SW not ready, refresh may be delayed');
+    }
+};
+
+/**
+ * Marks accounts as dirty and requests a refresh from the Service Worker.
  */
 export const markAccountsBalanceDirty = async (userId, accountIds) => {
     if (!userId) return;
@@ -498,9 +534,23 @@ export const markAccountsBalanceDirty = async (userId, accountIds) => {
             batch.update(accRef, { balanceDirty: true, updated_at: serverTimestamp() });
         });
         await batch.commit();
-        console.log(`Accounts marked as dirty for recalculation: ${targets.join(', ')}`);
+
+        // Delegate the actual calculation to the Service Worker
+        triggerSWRefresh(userId, 'SWEEP', { accountIds: targets });
+        
     } catch (error) {
-        console.error("Error marking accounts as dirty:", error);
+        console.error("Error triggering balance refresh:", error);
     }
+};
+
+export const markSingleAccountBalanceDelta = async (userId, accountId, amount, date) => {
+    if (!userId || !accountId || accountId === 'external' || amount === 0) return;
+    
+    // 1. UI feedback: mark as dirty
+    const accRef = doc(db, `users/${userId}/accounts`, accountId);
+    await setDoc(accRef, { balanceDirty: true, updated_at: serverTimestamp() }, { merge: true });
+
+    // 2. Delegate surgical delta to SW
+    triggerSWRefresh(userId, 'DELTA', { accountId, amount, date });
 };
 

@@ -22,8 +22,7 @@ erDiagram
     ACCOUNT {
         string id PK
         string name "unique"
-        float initialBalance
-        string initialBalanceDate "yyyy-MM-dd, same as createDate"
+        string createDate "yyyy-MM-dd"
         boolean isSavings
         timestamp updated_at
     }
@@ -71,7 +70,7 @@ erDiagram
 
     ACCOUNT_BALANCE {
         string account_id FK "references ACCOUNT.id"
-        string date "YYYY-MM-01"
+        string date "YYYY-MM-DD"
         float balance
         timestamp updated_at
     }
