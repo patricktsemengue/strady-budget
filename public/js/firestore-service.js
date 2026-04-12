@@ -15,7 +15,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth } from "./auth.js";
 import { generateId, getMonthKey, generateDeterministicTransactionId, generateDeterministicTemplateId } from "./utils.js";
-import { saveDataToCache } from "./storage.js";
 import { getFunctionalBoundaryDate } from './state.js';
 
 const db = getFirestore();
@@ -54,7 +53,6 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
 
     const triggerUpdate = () => {
         onDataUpdate({ ...localState });
-        saveDataToCache(userId, localState);
     };
 
     const settingsUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'monthSelector'), (docSnap) => {
@@ -495,21 +493,50 @@ export const setUserImportingState = async (userId, isImporting) => {
     await setDoc(userRef, { isImporting, updated_at: serverTimestamp() }, { merge: true });
 };
 
+import { calculateBalanceDelta, sweepAccountBalances } from "./balance-engine.js";
+
 /**
- * Triggers a balance refresh via the Service Worker.
+ * Triggers a balance refresh. 
+ * Falls back to main-thread execution if Service Worker is not yet controlling the page.
  * @param {string} userId 
  * @param {'SWEEP'|'DELTA'} action 
  * @param {Object} data 
  */
-const triggerSWRefresh = (userId, action, data) => {
+const triggerSWRefresh = async (userId, action, data) => {
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
             type: 'REFRESH_BALANCES',
             payload: { userId, action, data }
         });
     } else {
-        // Fallback for when SW is not ready: perform in main thread (less ideal)
-        console.warn('SW not ready, refresh may be delayed');
+        // Fallback: Perform in main thread
+        console.log(`SW not ready, performing ${action} in main thread...`);
+        try {
+            if (action === 'DELTA') {
+                await calculateBalanceDelta(
+                    db, userId, data.accountId, data.amount, data.date,
+                    getDocs, updateDoc, setDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
+                );
+            } else if (action === 'SWEEP') {
+                await sweepAccountBalances(
+                    db, userId, data.accountIds,
+                    getDocs, setDoc, updateDoc, doc, collection, serverTimestamp
+                );
+            }
+            
+            // Manually clear the dirty flag since we did it in the main thread
+            const batch = writeBatch(db);
+            const targets = action === 'DELTA' ? [data.accountId] : data.accountIds;
+            targets.forEach(id => {
+                const accRef = doc(db, `users/${userId}/accounts`, id);
+                batch.update(accRef, { balanceDirty: false, updated_at: serverTimestamp() });
+            });
+            await batch.commit();
+
+            console.log(`${action} complete (main thread).`);
+        } catch (error) {
+            console.error(`Main thread balance refresh error (${action}):`, error);
+        }
     }
 };
 

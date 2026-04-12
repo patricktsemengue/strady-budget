@@ -13,7 +13,6 @@ export const defaultCategories = [
     { id: 'Autre', label: 'Autre', icon: 'fa-tag', color: '#94a3b8' }
 ];
 
-const savedViewDate = localStorage.getItem('viewDate');
 const now = new Date();
 const currentYear = now.getFullYear();
 
@@ -24,7 +23,7 @@ export const getFunctionalBoundaryDate = () => {
 
 export let state = {
     currentView: 'dashboard',
-    viewDate: savedViewDate ? new Date(savedViewDate) : new Date(),
+    viewDate: new Date(),
     accounts: [],
     records: {},
     recurringTemplates: [],

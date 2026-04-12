@@ -1,5 +1,5 @@
 import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
-import { setStorageUser, loadDataFromCache } from './storage.js';
+import { setStorageUser } from './storage.js';
 import { showNotification, setDataStatusIndicator, setView } from './ui.js';
 import { router } from './app-router.js';
 
@@ -42,7 +42,7 @@ import {
     closeMobileActions
 } from './transactions.js';
 
-import { logout, onUserChanged } from './auth.js';
+import { logout, onUserChanged, auth } from './auth.js';
 import { subscribeToAppData, markAccountsBalanceDirty } from './firestore-service.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -100,7 +100,13 @@ const init = () => {
 
         if (user) {
             setStorageUser(user.uid);
-            // User is signed in
+            
+            // Init Service Worker with Firebase config once user is authenticated
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.active.postMessage({ type: 'INIT_FIREBASE', payload: { config: firebaseConfig } });
+                });
+            }
             if (userInfo) userInfo.classList.remove('hidden');
             if (userName) userName.textContent = user.displayName;
             if (userPhoto) userPhoto.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
@@ -110,31 +116,15 @@ const init = () => {
             if (userEmailMobile) userEmailMobile.textContent = user.email;
             if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
-            // 1. Load from cache first for instant UI
-            const cachedData = loadDataFromCache(user.uid);
-            if (cachedData) {
-                setDataStatusIndicator('cached');
-                updateState({
-                    accounts: cachedData.accounts || [],
-                    categories: cachedData.categories || defaultCategories,
-                    recurringTemplates: cachedData.recurringTemplates || [],
-                    months: cachedData.months || {}
-                });
-                rebuildRecords(cachedData.transactions || [], cachedData.months || {});
-                router.render(); // Render immediately with cached data
-            }
-
-            // 2. Subscribe to Firestore for live data and updates
+            // 1. Subscribe to Firestore for live data and updates
             let isFirstFirestoreUpdate = true;
             subscribeToAppData(user.uid, (newData) => {
                 if (isFirstFirestoreUpdate) {
-                    if (cachedData) { // Only show the "live" transition if we started from cache
-                        setDataStatusIndicator('live');
-                    }
-
-                    // Trigger balance refresh on login if any accounts are dirty
+                    // Trigger balance refresh on login if any accounts are dirty OR if no balances exist yet
                     const hasDirtyAccounts = (newData.accounts || []).some(acc => acc.balanceDirty !== false);
-                    if (hasDirtyAccounts) {
+                    const hasNoBalances = Object.keys(newData.accountBalances || {}).length === 0;
+                    
+                    if (hasDirtyAccounts || (hasNoBalances && (newData.accounts || []).length > 0)) {
                         markAccountsBalanceDirty(user.uid);
                     }
                     
@@ -179,7 +169,6 @@ const init = () => {
 const setViewDate = (date) => {
     const newDate = new Date(date);
     updateState({ viewDate: newDate });
-    localStorage.setItem('viewDate', newDate.toISOString());
     router.render();
 };
 

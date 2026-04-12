@@ -310,7 +310,7 @@ export const renderDashboard = () => {
     const currentMonthKey = getMonthKey(state.viewDate);
     const currentMonthData = state.records[currentMonthKey] || { items: [], status: 'open' };
 
-    const savedSortOrder = localStorage.getItem('transactionSortOrder') || 'date-desc';
+    const savedSortOrder = 'date-desc';
     const sortOrderSelect = document.getElementById('sort-order');
     if (sortOrderSelect) {
         sortOrderSelect.value = savedSortOrder;
