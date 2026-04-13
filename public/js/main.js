@@ -43,7 +43,21 @@ import {
 } from './transactions.js';
 
 import { logout, onUserChanged, auth } from './auth.js';
-import { subscribeToAppData, markAccountsBalanceDirty } from './firestore-service.js';
+import { subscribeToAppData, markAccountsBalanceDirty, db } from './firestore-service.js';
+import { calculateBalanceDelta, sweepAccountBalances } from './balance-engine.js';
+import { 
+    collection, 
+    doc, 
+    writeBatch, 
+    serverTimestamp,
+    query,
+    where,
+    getDocs,
+    updateDoc,
+    setDoc,
+    orderBy,
+    limit
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { firebaseConfig } from './firebase-config.js';
 
 const init = () => {
@@ -55,21 +69,57 @@ const init = () => {
                     console.log('Service Worker registered');
                     // If user is already logged in, init SW
                     if (auth.currentUser) {
-                        reg.active?.postMessage({ type: 'INIT_FIREBASE', payload: { config: firebaseConfig } });
+                        auth.currentUser.getIdToken().then(token => {
+                            reg.active?.postMessage({ 
+                                type: 'INIT_FIREBASE', 
+                                payload: { config: firebaseConfig, token } 
+                            });
+                        });
                     }
                 })
                 .catch(err => console.error('SW registration failed:', err));
         });
 
-        navigator.serviceWorker.addEventListener('message', (event) => {
+        navigator.serviceWorker.addEventListener('message', async (event) => {
             if (event.data.type === 'REFRESH_COMPLETE') {
-                // Locally clear the dirty flags to stop the spinners immediately
                 const { accountIds } = event.data.payload;
+                console.log('[Main] Balance refresh complete for accounts:', accountIds);
+                // Locally clear the dirty flags to stop the spinners immediately
                 const newAccounts = state.accounts.map(acc => 
                     accountIds.includes(acc.id) ? { ...acc, balanceDirty: false } : acc
                 );
                 updateState({ accounts: newAccounts });
                 router.render();
+            } else if (event.data.type === 'REFRESH_FAILED') {
+                const { userId, action, data, error } = event.data.payload;
+                console.warn(`[Main] SW refresh failed (${action}):`, error, " - Falling back to main thread.");
+                
+                // Trigger the fallback immediately in the main thread
+                try {
+                    if (action === 'DELTA') {
+                        await calculateBalanceDelta(
+                            db, userId, data.accountId, data.amount, data.date,
+                            getDocs, updateDoc, setDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
+                        );
+                    } else if (action === 'SWEEP') {
+                        await sweepAccountBalances(
+                            db, userId, data.accountIds,
+                            getDocs, setDoc, updateDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
+                        );
+                    }
+                    
+                    // Clear the dirty flag manually after fallback
+                    const batch = writeBatch(db);
+                    const targets = action === 'DELTA' ? [data.accountId] : data.accountIds;
+                    targets.forEach(id => {
+                        const accRef = doc(db, `users/${userId}/accounts`, id);
+                        batch.update(accRef, { balanceDirty: false, updated_at: serverTimestamp() });
+                    });
+                    await batch.commit();
+                    console.log(`[Main] Fallback ${action} complete.`);
+                } catch (fallbackError) {
+                    console.error("[Main] Fallback refresh failed:", fallbackError);
+                }
             }
         });
     }
@@ -101,10 +151,14 @@ const init = () => {
         if (user) {
             setStorageUser(user.uid);
             
-            // Init Service Worker with Firebase config once user is authenticated
+            // Init Service Worker with Firebase config and token once user is authenticated
             if ('serviceWorker' in navigator) {
+                const token = await user.getIdToken();
                 navigator.serviceWorker.ready.then(reg => {
-                    reg.active.postMessage({ type: 'INIT_FIREBASE', payload: { config: firebaseConfig } });
+                    reg.active.postMessage({ 
+                        type: 'INIT_FIREBASE', 
+                        payload: { config: firebaseConfig, token } 
+                    });
                 });
             }
             if (userInfo) userInfo.classList.remove('hidden');

@@ -60,7 +60,7 @@ export async function calculateBalanceDelta(db, userId, accountId, amount, balan
 /**
  * Performs a full chronological sweep for one or more accounts.
  */
-export async function sweepAccountBalances(db, userId, accountIds, getDocs, setDoc, updateDoc, doc, collection, serverTimestamp) {
+export async function sweepAccountBalances(db, userId, accountIds, getDocs, setDoc, updateDoc, doc, collection, query, where, orderBy, limit, serverTimestamp) {
     if (!accountIds || accountIds.length === 0) return;
 
     const accountsSnap = await getDocs(collection(db, `users/${userId}/accounts`));

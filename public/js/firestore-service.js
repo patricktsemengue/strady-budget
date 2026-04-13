@@ -11,13 +11,16 @@ import {
     query,
     where,
     getDocs,
-    getDoc
+    getDoc,
+    updateDoc,
+    orderBy,
+    limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth } from "./auth.js";
 import { generateId, getMonthKey, generateDeterministicTransactionId, generateDeterministicTemplateId } from "./utils.js";
 import { getFunctionalBoundaryDate } from './state.js';
 
-const db = getFirestore();
+export const db = getFirestore();
 let unsubscribes = [];
 
 export const unsubscribeFromData = () => {
@@ -503,6 +506,7 @@ import { calculateBalanceDelta, sweepAccountBalances } from "./balance-engine.js
  * @param {Object} data 
  */
 const triggerSWRefresh = async (userId, action, data) => {
+    console.log(`[FirestoreService] Triggering balance ${action} for accounts:`, data.accountId || data.accountIds);
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
             type: 'REFRESH_BALANCES',
@@ -520,7 +524,7 @@ const triggerSWRefresh = async (userId, action, data) => {
             } else if (action === 'SWEEP') {
                 await sweepAccountBalances(
                     db, userId, data.accountIds,
-                    getDocs, setDoc, updateDoc, doc, collection, serverTimestamp
+                    getDocs, setDoc, updateDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
                 );
             }
             
