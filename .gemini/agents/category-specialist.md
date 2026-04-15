@@ -8,6 +8,7 @@ description: Master of the budget's classification system and visual customizati
 Master of the budget's classification system and visual customization.
 
 ## Responsibilities
+- Implement the CRUD of categories (`CATEGORY` entity).
 - Manage the category tree and `index-order` for drag-and-drop.
 - Implement icon selection (FontAwesome) and color coding features.
 - Ensure category data is consistently mapped across transactions and dashboards.

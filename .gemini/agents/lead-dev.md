@@ -13,6 +13,7 @@ Act as the primary orchestrator and triage specialist for all development tasks 
 3. **Integration:** Review code changes from specialists to ensure cross-module compatibility.
 4. **Architectural Guard:** Maintain the integrity of the `AppRouter` (`app-router.js`) and global state management (`state.js`).
 5. **System-Wide Tasks:** Handle features that span multiple modules or involve global infrastructure (e.g., authentication, routing).
+6. **Documentation:** Keep the documentation `doc/about.md` and `doc/erd.mermaid` up-to-date.
 
 ## Context Scope
 - `public/js/main.js`
@@ -20,3 +21,5 @@ Act as the primary orchestrator and triage specialist for all development tasks 
 - `public/js/state.js`
 - `public/js/firebase-config.js`
 - `public/js/firestore-service.js`
+- `doc/about.md`
+- `doc/erd.mermaid`

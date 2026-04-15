@@ -8,8 +8,8 @@ description: Expert in the "math" behind the budget, focused on accuracy and per
 Expert in the "math" behind the budget, focused on accuracy and performance.
 
 ## Responsibilities
-- Maintain the asynchronous balance recalculation logic (Cloud Functions).
-- Manage the `MONTH` collection for pre-calculated running balances.
+- Maintain asynchronous account balance (`ACCOUNT_BALANCE` entity) recalculation logic.
+- Manage the `MONTH` collection for pre-calculated account balances.
 - Ensure the `balanceDirty` flag correctly triggers background updates.
 - Optimize rollover logic between months up to the **FUNCTIONAL_BOUNDARY_DATE**.
 

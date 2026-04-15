@@ -9,6 +9,7 @@ Specialist in system-wide configuration and robust data migration.
 
 ## Responsibilities
 - Manage the global month selector configuration and system settings.
+- Manage Emergency fund configuration
 - Implement CSV import/export for transactions and accounts.
 - Handle destructive actions like data resets with proper user confirmation.
 - Maintain data consistency during mass imports.
