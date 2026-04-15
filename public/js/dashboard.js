@@ -358,7 +358,7 @@ export const renderDashboard = () => {
         }
     }
 
-    const savingsBalance = state.accounts.filter(a => a.isSavings).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
+    const savingsBalance = state.accounts.filter(a => a.isSaving).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
     const targetFund = monthExpense * 3;
     const progressPct = targetFund > 0 ? Math.min((savingsBalance / targetFund) * 100, 100) : 0;
     const isEmergencyOk = savingsBalance >= targetFund;
@@ -493,7 +493,7 @@ export const renderSankeyChart = (isExpanded = false) => {
             const labeledDest = getLabel(destName);
             rows.push(['Entrées', labeledDest, item.amount]);
             const acc = state.accounts.find(a => a.id === item.destination);
-            colorsMap[labeledDest] = acc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+            colorsMap[labeledDest] = acc?.isSaving ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
         } else if (txInfo.isExpense) {
             const category = state.categories.find(c => c.id === item.Category);
             const catLabel = category ? category.label : 'Sans catégorie';
@@ -503,7 +503,7 @@ export const renderSankeyChart = (isExpanded = false) => {
             rows.push([labeledSrc, labeledDest, item.amount]);
             
             const acc = state.accounts.find(a => a.id === item.source);
-            colorsMap[labeledSrc] = acc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+            colorsMap[labeledSrc] = acc?.isSaving ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
             colorsMap[labeledDest] = category?.color || OTHER_COLOR;
         } else if (item.source && item.destination) {
             const destLabel = destName + ' (Épargne)';
@@ -513,8 +513,8 @@ export const renderSankeyChart = (isExpanded = false) => {
             
             const srcAcc = state.accounts.find(a => a.id === item.source);
             const dstAcc = state.accounts.find(a => a.id === item.destination);
-            colorsMap[labeledSrc] = srcAcc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
-            colorsMap[labeledDest] = dstAcc?.isSavings ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+            colorsMap[labeledSrc] = srcAcc?.isSaving ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
+            colorsMap[labeledDest] = dstAcc?.isSaving ? SAVINGS_ACC_COLOR : CURRENT_ACC_COLOR;
         }
     });
 

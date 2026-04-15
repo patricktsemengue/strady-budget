@@ -1,9 +1,9 @@
-import { state } from './state.js';
+import { state, updateState } from './state.js';
 import { currentUserId } from './storage.js';
-import { resetDataInFirestore, importDataToFirestore, setUserImportingState, markAccountsBalanceDirty } from './firestore-service.js';
+import { resetDataInFirestore, importDataToFirestore, setUserImportingState, markAccountsBalanceDirty, provisionStarterData } from './firestore-service.js';
 import { showNotification, setLoadingState } from './ui.js';
 import { router } from './app-router.js';
-import { generateId, generateDeterministicId } from './utils.js';
+import { generateId, generateDeterministicId, generateDeterministicUUID, getMonthFromDate } from './utils.js';
 
 export const handleReset = async () => {
     const txCheckbox = document.getElementById('delete-transactions-checkbox');
@@ -26,12 +26,40 @@ export const handleReset = async () => {
 
     if (confirm(confirmationMessage)) {
         try {
+            setLoadingState(true, 'Suppression...', 'Nettoyage de vos données en cours.');
             await resetDataInFirestore(currentUserId, deleteAccounts, deleteAccounts || deleteTransactions);
             showNotification('Données réinitialisées avec succès.');
             txCheckbox.checked = false;
             accCheckbox.checked = false;
+            window.location.reload();
         } catch (err) {
             showNotification('Erreur lors de la réinitialisation.', 'error');
+        } finally {
+            setLoadingState(false);
+        }
+    }
+};
+
+export const handleFactoryReset = async () => {
+    if (confirm("ATTENTION : Cette action supprimera TOUTES vos données (comptes, transactions, catégories, budgets) et réinstalle le 'Starter Pack'. Êtes-vous sûr ?")) {
+        try {
+            setLoadingState(true, 'Réinitialisation...', 'Restauration du Starter Pack en cours.');
+            
+            // 1. Wipe everything (including categories)
+            await resetDataInFirestore(currentUserId, true, true);
+
+            // 2. Reprovision Starter Pack
+            await provisionStarterData(currentUserId);
+
+            showNotification("L'application a été réinitialisée avec succès !");
+            window.location.hash = '#dashboard';
+            window.location.reload(); // Force reload to ensure clean state
+            
+        } catch (err) {
+            console.error(err);
+            showNotification("Erreur lors de la réinitialisation", "error");
+        } finally {
+            setLoadingState(false);
         }
     }
 };
@@ -95,9 +123,9 @@ export const importCSV = (event) => {
             accountMap[acc.name.toLowerCase()] = acc.id;
         });
 
-        const categoryMap = {}; // name.toLowerCase() -> id
+        const categoryMap = {}; // label.toLowerCase() -> id
         state.categories.forEach(cat => {
-            categoryMap[cat.id.toLowerCase()] = cat.id;
+            categoryMap[cat.label.toLowerCase()] = cat.id;
         });
 
         const accountsToCreate = [];
@@ -132,13 +160,14 @@ export const importCSV = (event) => {
                     const lowerName = name.toLowerCase();
                     if (accountMap[lowerName]) return accountMap[lowerName];
                     
+                    const newId = `acc_${generateId()}`;
                     // Create new account on the fly if it doesn't exist
                     const newAcc = {
                         id: newId,
                         name: name,
                         createDate: date || new Date().toISOString().split('T')[0],
-                        initialBalance: 0, // Keeping temporarily for firestore-service helper logic if needed, but service will drop it from doc
-                        isSavings: false
+                        initialBalance: 0, 
+                        isSaving: false
                     };
                     accountsToCreate.push(newAcc);
                     accountMap[lowerName] = newId;
@@ -156,10 +185,12 @@ export const importCSV = (event) => {
                 let finalCategory = category || 'Autre';
                 const lowerCat = finalCategory.toLowerCase();
                 if (!categoryMap[lowerCat]) {
-                    const newCat = { id: finalCategory, label: finalCategory, icon: 'fa-tag', color: '#94a3b8' };
+                    const newCatId = `cat_${generateId()}`;
+                    const newCat = { id: newCatId, label: finalCategory, icon: 'fa-tag', color: '#94a3b8' };
                     categoriesToCreate.push(newCat);
-                    categoryMap[lowerCat] = finalCategory;
+                    categoryMap[lowerCat] = newCatId;
                 }
+                const categoryId = categoryMap[lowerCat];
 
                 if (isRecurring) {
                     const identityFields = {
@@ -177,7 +208,7 @@ export const importCSV = (event) => {
                         recurring: true, 
                         endDate: endDate || null, 
                         periodicity: periodicity || 'M', 
-                        category: finalCategory 
+                        category: categoryId 
                     });
                 } else {
                     // Per user spec, identity is based on these core fields
@@ -193,51 +224,43 @@ export const importCSV = (event) => {
                     newTransactions.push({ 
                         ...identityFields,
                         id: txId,
-                        Category: finalCategory, 
+                        Category: categoryId, 
                     });
                 }
                 importedCount++;
             } catch (err) {
-                showNotification(`Erreur d'importation ligne ${i+2} : ${err.message}`, 'error');
-                return;
+                console.warn(`[Import] Saut de ligne ${i+2}: ${err.message}`);
             }
         }
 
         if (importedCount > 0) {
             try {
-                setLoadingState(true, 'Importation des transactions...', `Traitement de ${importedCount} lignes en cours.`);
+                // Set importing state
                 await setUserImportingState(currentUserId, true);
-
-                // DELETE ALL FIRST as per requirement
-                await resetDataInFirestore(currentUserId, false, true);
 
                 if (accountsToCreate.length > 0 || categoriesToCreate.length > 0) {
                     await importDataToFirestore(currentUserId, accountsToCreate, null, null, categoriesToCreate);
                 }
-
-                const templatePromises = newTemplates.map(tpl => import('./firestore-service.js').then(m => m.addRecurringTemplate(currentUserId, tpl)));
                 
-                if (newTransactions.length > 0) {
-                    await importDataToFirestore(currentUserId, null, newTransactions, null, null);
+                if (newTransactions.length > 0 || newTemplates.length > 0) {
+                    await importDataToFirestore(currentUserId, null, newTransactions, newTemplates, null);
                 }
                 
-                await Promise.all(templatePromises);
-                showNotification(`Importation réussie : "${file.name}" (${importedCount} lignes traitées).`);
-            } catch (err) {
-                console.error(err);
-                showNotification("Erreur lors de l'enregistrement de l'import.", 'error');
-            } finally {
-                // 1. Clear importing state first and WAIT for it
-                await setUserImportingState(currentUserId, false);
+                showNotification(`Importation réussie : "${file.name}" (${importedCount} transactions).`);
                 
-                // 2. Small delay to ensure Firestore propagation before triggering refresh
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // 3. Trigger the refresh
                 await markAccountsBalanceDirty(currentUserId);
                 
                 setLoadingState(false);
+            } catch (err) {
+                console.error(err);
+                showNotification("Erreur lors de l'enregistrement des données.", 'error');
+            } finally {
+                // 1. Clear importing state first and WAIT for it
+                await setUserImportingState(currentUserId, false);
+                setLoadingState(false);
             }
+        } else {
+            showNotification("Aucune donnée valide n'a été trouvée dans le fichier.", 'error');
         }
     };
     reader.onerror = () => showNotification("Erreur lors de la lecture du fichier.", "error");
@@ -245,9 +268,9 @@ export const importCSV = (event) => {
 };
 
 export const exportAccountsCSV = () => {
-    let csv = "Account,balance,date,saving\n";
+    let csv = "Nom du compte,Solde Initial,Date Solde Initial,Épargne\n";
     state.accounts.forEach(acc => {
-        csv += `"${acc.name}",${acc.initialBalance},${acc.initialBalanceDate},${acc.isSavings ? 'Yes' : 'No'}\n`;
+        csv += `"${acc.name}",${acc.initialBalance || 0},${acc.createDate},${acc.isSaving ? 'Yes' : 'No'}\n`;
     });
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -269,65 +292,52 @@ export const importAccountsCSV = (event) => {
     reader.onload = async (e) => {
         const text = e.target.result;
         const lines = text.split('\n');
-        const header = lines[0] ? lines[0].trim().replace(/\r/g, '') : "";
-
-        if (header !== "Account,balance,date,saving") {
-            showNotification(`L'en-tête du fichier est invalide. Attendu: Account,balance,date,saving`, 'error');
-            return;
-        }
-
-        const dataLines = lines.slice(1);
         const newAccounts = [];
-        const seenNames = new Set();
 
-        for (let i = 0; i < dataLines.length; i++) {
-            const line = dataLines[i];
+        // Maps to track existing entities to ensure uniqueness by name
+        const accountMap = {}; 
+        state.accounts.forEach(acc => {
+            accountMap[acc.name.toLowerCase()] = acc.id;
+        });
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i];
             if (!line || line.trim() === "") continue;
-            
-            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            if (parts.length < 4) continue;
-            
-            const name = parts[0].replace(/"/g, '').replace(/'/g, '').trim();
+
+            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/"/g, '').replace(/'/g, '').trim());
+            if (parts.length < 3) continue;
+
+            const name = parts[0];
             const initialBalance = parseFloat(parts[1]);
             const initialBalanceDate = parts[2].trim();
-            const isSavings = parts[3].trim().toLowerCase() === 'yes';
-            
-            const lowerName = name.toLowerCase();
-            if (seenNames.has(lowerName)) {
-                showNotification(`Erreur d'importation : le nom de compte "${name}" est utilisé plusieurs fois dans le fichier.`, 'error');
-                return;
-            }
-            seenNames.add(lowerName);
+            const isSaving = parts[3] ? parts[3].toLowerCase() === 'yes' || parts[3] === '1' : false;
 
+            if (!name || isNaN(initialBalance) || !initialBalanceDate) continue;
+
+            const lowerName = name.toLowerCase();
+            if (accountMap[lowerName]) continue; // Skip existing
+
+            const newId = `acc_${generateId()}`;
             newAccounts.push({
-                id: `acc_${lowerName.replace(/\s+/g, '_')}`,
+                id: newId,
                 name,
                 initialBalance,
                 createDate: initialBalanceDate,
-                isSavings
+                isSaving
             });
+            accountMap[lowerName] = newId;
         }
 
         if (newAccounts.length > 0) {
             try {
                 setLoadingState(true, 'Importation des comptes...', `Traitement de ${newAccounts.length} comptes en cours.`);
-                await setUserImportingState(currentUserId, true);
-                await resetDataInFirestore(currentUserId, true, false); 
                 await importDataToFirestore(currentUserId, newAccounts, null, null);
                 showNotification(`Importation réussie : "${file.name}" (${newAccounts.length} comptes).`);
+                await markAccountsBalanceDirty(currentUserId);
             } catch (err) {
                 console.error(err);
-                showNotification("Erreur lors de l'enregistrement des comptes.", 'error');
+                showNotification("Erreur lors de l'importation des comptes.", 'error');
             } finally {
-                // 1. Clear importing state first and WAIT for it
-                await setUserImportingState(currentUserId, false);
-                
-                // 2. Small delay to ensure Firestore propagation before triggering refresh
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // 3. Trigger the refresh
-                await markAccountsBalanceDirty(currentUserId);
-                
                 setLoadingState(false);
             }
         }

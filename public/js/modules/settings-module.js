@@ -56,19 +56,30 @@ export default {
             <!-- Danger Zone -->
             <div class="mt-8 p-4 border border-red-200 rounded-lg bg-red-50">
                 <h4 class="font-bold text-red-800 mb-2">Zone de Danger</h4>
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="delete-transactions-checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
-                        <label for="delete-transactions-checkbox" class="ml-2 block text-sm text-gray-900">Supprimer les transactions</label>
+                <div class="flex flex-col gap-4 mb-4">
+                    <div class="p-4 bg-white rounded-lg border border-red-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h5 class="font-bold text-red-700">Réinitialisation d'usine</h5>
+                            <p class="text-sm text-red-600">Supprime TOUTES vos données (comptes, transactions, catégories) et restaure le Starter Pack.</p>
+                        </div>
+                        <button id="btn-factory-reset" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm whitespace-nowrap">
+                            Réinitialisation d'usine
+                        </button>
                     </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="delete-accounts-checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
-                        <label for="delete-accounts-checkbox" class="ml-2 block text-sm text-gray-900">Supprimer les comptes et les transactions</label>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="delete-transactions-checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <label for="delete-transactions-checkbox" class="ml-2 block text-sm text-gray-900">Supprimer les transactions</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="delete-accounts-checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <label for="delete-accounts-checkbox" class="ml-2 block text-sm text-gray-900">Supprimer les comptes et les transactions</label>
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <button id="reset-button" class="bg-white border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors shadow-sm flex items-center gap-2">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Réinitialiser les données
+                        <i class="fa-solid fa-triangle-exclamation"></i> Effacer la sélection
                     </button>
                     <button id="btn-logout-settings" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2">
                         <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
@@ -101,6 +112,9 @@ export default {
             }
             if (e.target.id === 'reset-button') {
                 import('../data.js').then(m => m.handleReset());
+            }
+            if (e.target.id === 'btn-factory-reset') {
+                import('../data.js').then(m => m.handleFactoryReset());
             }
             if (e.target.id === 'btn-logout-settings') {
                 import('../auth.js').then(m => {

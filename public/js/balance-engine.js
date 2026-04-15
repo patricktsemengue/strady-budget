@@ -1,7 +1,4 @@
-/**
- * Shared Calculation Engine for Account Balances
- * This logic is used by both the UI (for instant feedback) and the Service Worker (for persistence).
- */
+import { getMonthFromDate } from "./utils.js";
 
 export const getFunctionalBoundaryDateStr = () => {
     const year = new Date().getFullYear();
@@ -46,9 +43,11 @@ export async function calculateBalanceDelta(db, userId, accountId, amount, balan
         }
 
         const balDocId = `${accountId}_${balanceDate}`;
+        const month = getMonthFromDate(balanceDate);
         updates.push(setDoc(doc(db, `users/${userId}/account_balances`, balDocId), {
             account_id: accountId,
             date: balanceDate,
+            month,
             balance: baseBalance + amount,
             updated_at: serverTimestamp()
         }));
@@ -76,6 +75,8 @@ export async function sweepAccountBalances(db, userId, accountIds, getDocs, setD
 
     const batchPromises = [];
 
+    const boundaryDate = getFunctionalBoundaryDateStr();
+
     for (const acc of targetAccounts) {
         // 1. Find the very first balance record (The Genesis)
         const balQ = query(collection(db, `users/${userId}/account_balances`), where("account_id", "==", acc.id), orderBy("date", "asc"), limit(1));
@@ -89,18 +90,27 @@ export async function sweepAccountBalances(db, userId, accountIds, getDocs, setD
         
         // 2. Project forward
         const dailyBalances = {};
+        
+        // Ensure projection to boundary date even if no transactions exist
+        dailyBalances[genesisDate] = currentBalance;
+
         accTxs.forEach(tx => {
             if (tx.source === acc.id) currentBalance -= tx.amount;
             if (tx.destination === acc.id) currentBalance += tx.amount;
             dailyBalances[tx.date] = currentBalance;
         });
 
+        // Add boundary date to ensure lookup finds it for any month in the range
+        dailyBalances[boundaryDate] = currentBalance;
+
         // 3. Write updates
         Object.entries(dailyBalances).forEach(([date, bal]) => {
             const balDocId = `${acc.id}_${date}`;
+            const month = getMonthFromDate(date);
             batchPromises.push(setDoc(doc(db, `users/${userId}/account_balances`, balDocId), {
                 account_id: acc.id,
                 date,
+                month,
                 balance: bal,
                 updated_at: serverTimestamp()
             }, { merge: true }));

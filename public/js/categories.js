@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { generateId } from './utils.js';
+import { generateId, generateDeterministicUUID } from './utils.js';
 import { currentUserId } from './storage.js';
 import { addCategoryToFirestore, updateCategoryInFirestore, deleteCategoryFromFirestore, updateCategoryOrderInFirestore } from './firestore-service.js';
 import { showNotification } from './ui.js';
@@ -107,7 +107,7 @@ export const renderCategoriesList = () => {
     if (list) {
         list.innerHTML = sortedCategories.map(cat => {
             const isUsed = usedCategoryIds.has(cat.id);
-            const isDefaultOther = cat.id === 'Autre';
+            const isDefaultOther = cat.label === 'Autre';
             const isDisabled = isUsed || isDefaultOther;
             const disabledTitle = isDefaultOther ? "Catégorie système" : "Catégorie utilisée";
 
@@ -129,7 +129,7 @@ export const renderCategoriesList = () => {
     if (tableBody) {
         tableBody.innerHTML = sortedCategories.map(cat => {
             const isUsed = usedCategoryIds.has(cat.id);
-            const isDefaultOther = cat.id === 'Autre';
+            const isDefaultOther = cat.label === 'Autre';
             const isDisabled = isUsed || isDefaultOther;
             const disabledTitle = isDefaultOther ? "Cette catégorie par défaut ne peut pas être supprimée." : "Catégorie utilisée par des transactions.";
 
@@ -164,7 +164,7 @@ export const openCategoryActions = (id) => {
 
     const isUsedInTransactions = state.transactions.some(tx => tx.Category === id);
     const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.category === id);
-    const isDefaultOther = id === 'Autre';
+    const isDefaultOther = cat.label === 'Autre';
     const isDisabled = isUsedInTransactions || isUsedInTemplates || isDefaultOther;
 
     currentCategoryActionId = id;
@@ -251,7 +251,7 @@ export const handleAddCategory = async (e) => {
         return;
     }
 
-    const id = `cat_${name.toLowerCase().replace(/\s+/g, '_')}`;
+    const id = await generateDeterministicUUID(name);
     const maxIndex = Math.max(0, ...state.categories.map(c => c['index-order'] || 0));
     const newCategory = { id, label: name, icon, color, 'index-order': maxIndex + 1 };
     

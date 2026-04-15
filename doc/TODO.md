@@ -7,7 +7,7 @@
         string id PK
         string name unique
         string createDate "yyyy-MM-dd"
-        boolean isSavings
+        boolean isSaving
         timestamp updated_at
     }
 

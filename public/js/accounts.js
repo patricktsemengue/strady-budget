@@ -1,11 +1,10 @@
 import { state } from './state.js';
-import { generateId } from './utils.js';
+import { generateId, getMonthKey } from './utils.js';
 import { currentUserId } from './storage.js';
 import { addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore } from './firestore-service.js';
 import { showNotification } from './ui.js';
 import { router } from './app-router.js';
-
-// NOTE: The following are basic implementations for CRUD operations.
+import { calculateBalances } from './calculations.js';
 
 export const openAddAccountDrawer = () => {
     document.getElementById('add-account-form').reset();
@@ -23,10 +22,15 @@ export const handleAddAccount = async (e) => {
     const name = document.getElementById('acc-name').value.trim();
     const initialBalance = parseFloat(document.getElementById('acc-balance').value);
     const initialBalanceDate = document.getElementById('acc-balance-date').value;
-    const isSavings = document.getElementById('acc-is-savings').checked;
+    const isSaving = document.getElementById('acc-is-savings').checked;
 
     if (!name || isNaN(initialBalance) || !initialBalanceDate) {
         showNotification('Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    if (state.accounts.some(acc => acc.name.toLowerCase() === name.toLowerCase())) {
+        showNotification('Un compte avec ce nom existe déjà.', 'error');
         return;
     }
 
@@ -35,7 +39,7 @@ export const handleAddAccount = async (e) => {
         name,
         initialBalance,
         initialBalanceDate,
-        isSavings
+        isSaving
     };
 
     try {
@@ -71,9 +75,12 @@ export const openEditAccount = (id) => {
 
     document.getElementById('edit-acc-id').value = acc.id;
     document.getElementById('edit-acc-name').value = acc.name;
-    document.getElementById('edit-acc-balance').value = acc.initialBalance;
+    
+    // Fallback: system no longer stores initialBalance in doc, so we find it from calculated state or history
+    const balances = calculateBalances(new Date(acc.createDate || acc.initialBalanceDate));
+    document.getElementById('edit-acc-balance').value = balances[acc.id] || 0;
     document.getElementById('edit-acc-balance-date').value = acc.createDate || acc.initialBalanceDate;
-    document.getElementById('edit-acc-is-savings').checked = acc.isSavings;
+    document.getElementById('edit-acc-is-savings').checked = acc.isSaving;
     
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('account-edit-drawer').classList.add('active');
@@ -90,10 +97,15 @@ export const handleUpdateAccount = async (e) => {
     const name = document.getElementById('edit-acc-name').value.trim();
     const newInitialBalance = parseFloat(document.getElementById('edit-acc-balance').value);
     const createDate = document.getElementById('edit-acc-balance-date').value;
-    const isSavings = document.getElementById('edit-acc-is-savings').checked;
+    const isSaving = document.getElementById('edit-acc-is-savings').checked;
 
     if (!name || isNaN(newInitialBalance) || !createDate) {
         showNotification('Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    if (state.accounts.some(acc => acc.name.toLowerCase() === name.toLowerCase() && acc.id !== id)) {
+        showNotification('Un autre compte avec ce nom existe déjà.', 'error');
         return;
     }
 
@@ -101,13 +113,18 @@ export const handleUpdateAccount = async (e) => {
     if (!oldAcc) return;
 
     try {
+        // We need the old "Initial Balance" specifically to calculate the delta
+        // Since it's not in the object, we recalculate it from the genesis date
+        const balancesAtStart = calculateBalances(new Date(oldAcc.createDate || oldAcc.initialBalanceDate));
+        const oldInitialBalance = balancesAtStart[id] || 0;
+
         await updateAccountInFirestore(currentUserId, {
             id,
             name,
             initialBalance: newInitialBalance,
             createDate,
-            isSavings
-        }, oldAcc.initialBalance);
+            isSaving
+        }, oldInitialBalance);
         closeAccountDrawer();
         showNotification('Compte mis à jour !');
     } catch (err) {
@@ -115,8 +132,40 @@ export const handleUpdateAccount = async (e) => {
     }
 };
 
-import { formatCurrency, getMonthKey } from './utils.js';
-import { calculateBalances } from './calculations.js';
+export const deleteAccount = async (id) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte et TOUTES ses transactions associées ?')) {
+        try {
+            await deleteAccountFromFirestore(currentUserId, id);
+            showNotification('Compte supprimé.');
+        } catch (err) {
+            showNotification('Erreur de suppression', 'error');
+        }
+    }
+};
+
+export const openAccountActions = (id) => {
+    const acc = state.accounts.find(a => a.id === id);
+    if (!acc) return;
+    
+    const actionsDrawer = document.getElementById('account-actions-drawer');
+    const actionsTitle = document.getElementById('account-actions-title');
+    const btnEdit = document.getElementById('btn-edit-account');
+    const btnDelete = document.getElementById('btn-delete-account');
+    
+    actionsTitle.textContent = acc.name;
+    btnEdit.onclick = () => openEditAccount(id);
+    btnDelete.onclick = () => deleteAccount(id);
+    
+    document.getElementById('drawer-overlay').classList.add('active');
+    actionsDrawer.classList.add('active');
+};
+
+export const closeAccountActions = () => {
+    document.getElementById('drawer-overlay').classList.remove('active');
+    document.getElementById('account-actions-drawer').classList.remove('active');
+};
+
+export const formatCurrency = (amount) => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(amount);
 
 /**
  * Renders the list of accounts in the accounts view.
@@ -139,9 +188,9 @@ export const renderAccountsList = () => {
 
     // Apply Filters
     if (typeFilter === 'current') {
-        filteredAccounts = filteredAccounts.filter(acc => !acc.isSavings);
+        filteredAccounts = filteredAccounts.filter(acc => !acc.isSaving);
     } else if (typeFilter === 'savings') {
-        filteredAccounts = filteredAccounts.filter(acc => acc.isSavings);
+        filteredAccounts = filteredAccounts.filter(acc => acc.isSaving);
     }
 
     // Apply Search (Name, Balance)
@@ -158,178 +207,78 @@ export const renderAccountsList = () => {
         const balA = balances[a.id] || 0;
         const balB = balances[b.id] || 0;
         switch (sortOrder) {
-            case 'type':
-                return (a.isSavings === b.isSavings) ? a.name.localeCompare(b.name) : (a.isSavings ? 1 : -1);
-            case 'balance-desc':
-                return balB - balA || a.name.localeCompare(b.name);
-            case 'balance-asc':
-                return balA - balB || a.name.localeCompare(b.name);
-            default: // name-asc
-                return a.name.localeCompare(b.name);
+            case 'name-asc': return a.name.localeCompare(b.name);
+            case 'name-desc': return b.name.localeCompare(a.name);
+            case 'balance-desc': return balB - balA;
+            case 'balance-asc': return balA - balB;
+            default: return 0;
         }
     });
 
-    const usedAccountIds = new Set();
-    // Use all transactions and templates for the 'in use' check
-    const allRecords = Object.values(state.records).flatMap(r => r.items);
-    allRecords.forEach(tx => {
-        if (tx.source) usedAccountIds.add(tx.source);
-        if (tx.destination) usedAccountIds.add(tx.destination);
-    });
-    state.recurringTemplates.forEach(tpl => {
-        if (tpl.source) usedAccountIds.add(tpl.source);
-        if (tpl.destination) usedAccountIds.add(tpl.destination);
-    });
+    const renderItem = (acc) => {
+        const balance = balances[acc.id] || 0;
+        const balColor = balance >= 0 ? 'text-slate-900' : 'text-red-600';
+        const typeIcon = acc.isSaving ? 'fa-piggy-bank text-blue-500' : 'fa-wallet text-slate-400';
+        const isDirty = acc.balanceDirty !== false;
 
-    const renderActions = (acc, isDisabled, disabledTitle, isMobile = false) => {
-        if (isMobile) {
-            return `<button onclick="window.app.openAccountActions('${acc.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>`;
-        }
         return `
-            <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="window.app.openEditAccount('${acc.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors disabled:text-slate-200" ${isDisabled ? `disabled title="${disabledTitle}"` : 'title="Modifier le compte"'}><i class="fa-solid fa-pen text-xs"></i></button>
-                <button onclick="window.app.deleteAccount('${acc.id}')" class="p-2 text-slate-400 hover:text-red-600 transition-colors disabled:text-slate-200" ${isDisabled ? `disabled title="${disabledTitle}"` : 'title="Supprimer le compte"'}><i class="fa-solid fa-trash-can text-xs"></i></button>
-            </div>`;
-    };
-
-    // Render mobile cards
-    if (list) {
-        list.innerHTML = filteredAccounts.map(acc => {
-            const isUsed = usedAccountIds.has(acc.id);
-            const disabledTitle = "Compte utilisé";
-            const balance = balances[acc.id] || 0;
-
-            return `
-                <li data-id="${acc.id}" class="p-4 flex items-center justify-between gap-4 group">
-                    <div class="flex items-center gap-4 flex-grow truncate">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white bg-blue-500 flex-shrink-0"><i class="fa-solid fa-landmark"></i></div>
-                        <div class="flex-1 truncate">
-                            <div class="flex items-center gap-2">
-                                <p class="font-semibold text-slate-800 truncate">${acc.name}</p>
-                                ${acc.balanceDirty !== false ? '<i class="fa-solid fa-arrows-rotate fa-spin text-[10px] text-amber-500" title="Recalcul des soldes en cours ..."></i>' : ''}
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${acc.isSavings ? 'Épargne' : 'Courant'}</p>
-                                <p class="text-xs font-bold text-slate-700 flex items-center gap-1">
-                                    ${formatCurrency(balance)}
-                                    ${acc.balanceDirty !== false ? '<i class="fa-solid fa-clock-rotate-left text-[10px] text-amber-500" title="Le solde affiché peut être obsolète. Mise à jour en cours."></i>' : ''}
-                                </p>
-                            </div>
-                        </div>
+            <div class="p-4 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between group" onclick="window.app.openAccountActions('${acc.id}')">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                        <i class="fa-solid ${typeIcon}"></i>
                     </div>
-                    <div class="flex items-center gap-2">
-                        ${renderActions(acc, isUsed, disabledTitle, true)}
-                    </div>
-                </li>`;
-        }).join('');
-    }
-
-    // Render desktop table
-    if (tableBody) {
-        tableBody.innerHTML = filteredAccounts.map(acc => {
-            const isUsed = usedAccountIds.has(acc.id);
-            const disabledTitle = "Ce compte est utilisé et ne peut pas être supprimé.";
-            const balance = balances[acc.id] || 0;
-
-            return `
-                <tr data-id="${acc.id}" class="group hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-4 text-sm font-medium text-slate-700">
-                        <div class="flex items-center gap-2">
+                    <div>
+                        <div class="font-bold text-slate-800 flex items-center gap-2">
                             ${acc.name}
-                            ${acc.balanceDirty !== false ? '<i class="fa-solid fa-arrows-rotate fa-spin text-[10px] text-amber-500" title="Recalcul des soldes en cours ..."></i>' : ''}
+                            ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs" title="Calcul en cours..."></i>' : ''}
                         </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${acc.isSavings ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">
-                            ${acc.isSavings ? 'Épargne' : 'Courant'}
+                        <div class="text-xs text-slate-500">${acc.isSaving ? 'Épargne' : 'Compte courant'}</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="font-bold ${balColor}">${formatCurrency(balance)}</div>
+                    <div class="text-xs text-slate-400">Solde estimé</div>
+                </div>
+            </div>
+        `;
+    };
+
+    const renderRow = (acc) => {
+        const balance = balances[acc.id] || 0;
+        const balColor = balance >= 0 ? 'text-slate-900' : 'text-red-600';
+        const typeBadge = acc.isSaving ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700';
+        const isDirty = acc.balanceDirty !== false;
+
+        return `
+            <tr class="hover:bg-slate-50 transition-colors cursor-pointer group" onclick="window.app.openAccountActions('${acc.id}')">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                            <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : 'fa-wallet'}"></i>
+                        </div>
+                        <span class="font-semibold text-slate-800 flex items-center gap-2">
+                            ${acc.name}
+                            ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs"></i>' : ''}
                         </span>
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        <div class="flex items-center justify-end gap-1">
-                            <span class="text-sm font-bold text-slate-700">${formatCurrency(balance)}</span>
-                            ${acc.balanceDirty !== false ? '<i class="fa-solid fa-clock-rotate-left text-[10px] text-amber-500" title="Le solde affiché peut être obsolète. Mise à jour en cours."></i>' : ''}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        ${renderActions(acc, isUsed, disabledTitle, false)}
-                    </td>
-                </tr>`;
-        }).join('');
-    }
-};
-
-let currentAccountActionId = null;
-
-export const openAccountActions = (id) => {
-    const acc = state.accounts.find(a => a.id === id);
-    if (!acc) return;
-
-    currentAccountActionId = id;
-    const modal = document.getElementById('account-actions-modal');
-    const content = document.getElementById('account-actions-content');
-    const title = document.getElementById('account-actions-title');
-
-    title.textContent = acc.name;
-    modal.classList.remove('hidden');
-    
-    setTimeout(() => {
-        content.style.transform = 'translateY(0)';
-    }, 10);
-
-    // Check if in use for mobile actions
-    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
-    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
-
-    const setupAction = (btnId, actionFn, isDisabled) => {
-        const btn = document.getElementById(btnId);
-        btn.disabled = isDisabled;
-        btn.classList.toggle('opacity-50', isDisabled);
-        btn.onclick = isDisabled ? null : () => {
-            closeAccountActions();
-            actionFn(currentAccountActionId);
-        };
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${typeBadge}">
+                        ${acc.isSaving ? 'Épargne' : 'Courant'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <div class="font-bold ${balColor}">${formatCurrency(balance)}</div>
+                </td>
+                <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="text-slate-400 hover:text-blue-600">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
     };
 
-    setupAction('account-action-edit', openEditAccount, isUsedInTransactions || isUsedInTemplates);
-    setupAction('account-action-delete', deleteAccount, isUsedInTransactions || isUsedInTemplates);
-
-    modal.onclick = (e) => {
-        if (e.target === modal) closeAccountActions();
-    };
-};
-
-export const closeAccountActions = () => {
-    const modal = document.getElementById('account-actions-modal');
-    const content = document.getElementById('account-actions-content');
-    
-    content.style.transform = 'translateY(100%)';
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        currentAccountActionId = null;
-    }, 300);
-};
-
-/**
- * Handles the account deletion process.
- */
-export const deleteAccount = async (id) => {
-    // Final check to ensure account is not in use, in case UI is out of sync.
-    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
-    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
-
-    if (isUsedInTransactions || isUsedInTemplates) {
-        showNotification("Impossible de supprimer un compte actuellement utilisé.", "error");
-        router.render(); // Re-render to fix the UI state if it was incorrect
-        return;
-    }
-
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte ? Cette action est irréversible.')) {
-        try {
-            await deleteAccountFromFirestore(currentUserId, id);
-            showNotification('Compte supprimé.');
-        } catch (err) {
-            console.error("Error deleting account:", err);
-            showNotification('Erreur de suppression du compte.', 'error');
-        }
-    }
+    if (list) list.innerHTML = filteredAccounts.map(renderItem).join('');
+    if (tableBody) tableBody.innerHTML = filteredAccounts.map(renderRow).join('');
 };

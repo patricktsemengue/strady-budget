@@ -1,16 +1,16 @@
 import { getMonthKey } from './utils.js';
 
 export const defaultCategories = [
-    { id: 'Revenu', label: 'Revenu', icon: 'fa-money-bill-wave', color: '#10b981' },
-    { id: 'Logement', label: 'Logement', icon: 'fa-house', color: '#3b82f6' },
-    { id: 'Alimentation', label: 'Alimentation', icon: 'fa-utensils', color: '#f59e0b' },
-    { id: 'Transport', label: 'Transport / Auto', icon: 'fa-car', color: '#ef4444' },
-    { id: 'Loisirs', label: 'Loisirs / Abonnements', icon: 'fa-gamepad', color: '#8b5cf6' },
-    { id: 'Sante', label: 'Santé', icon: 'fa-heart-pulse', color: '#ec4899' },
-    { id: 'Assurance', label: 'Assurance', icon: 'fa-shield-halved', color: '#64748b' },
-    { id: 'Epargne', label: 'Épargne', icon: 'fa-piggy-bank', color: '#10b981' },
-    { id: 'Provisions', label: 'Provisions', icon: 'fa-box-archive', color: '#f97316' },
-    { id: 'Autre', label: 'Autre', icon: 'fa-tag', color: '#94a3b8' }
+    { id: '5780f07c-3f2a-4095-9e66-3359107922aa', label: 'Revenu', icon: 'fa-money-bill-wave', color: '#10b981' },
+    { id: '66bb0680-e71d-4ac8-9ca4-6c99a0828eae', label: 'Logement', icon: 'fa-house', color: '#3b82f6' },
+    { id: '0aa98af8-8252-4c00-97be-783ba2eae1e8', label: 'Alimentation', icon: 'fa-utensils', color: '#f59e0b' },
+    { id: '6694ea80-7500-4f66-a8da-20f1afdafc74', label: 'Transport', icon: 'fa-car', color: '#ef4444' },
+    { id: 'bf3bed38-06f5-4ef3-b1c8-591f84cf57ea', label: 'Loisirs', icon: 'fa-gamepad', color: '#8b5cf6' },
+    { id: '4fe47baa-a01a-4d88-8f54-9fe3ca7d92e0', label: 'Sante', icon: 'fa-heart-pulse', color: '#ec4899' },
+    { id: '9b2d53ab-ee43-4c91-8a12-6f5f79a30616', label: 'Assurance', icon: 'fa-shield-halved', color: '#64748b' },
+    { id: 'b97b19e7-e79d-4ccb-b4f6-5d6cb6a093dc', label: 'Epargne', icon: 'fa-piggy-bank', color: '#10b981' },
+    { id: '59216e61-6e82-441c-8a6f-6cd8707084e7', label: 'Provisions', icon: 'fa-box-archive', color: '#f97316' },
+    { id: 'e996f291-499e-4419-8e47-d296e2d95898', label: 'Autre', icon: 'fa-tag', color: '#94a3b8' }
 ];
 
 const now = new Date();

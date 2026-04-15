@@ -107,23 +107,27 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
 
 export const addAccountToFirestore = async (userId, account) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
+    const createDate = account.createDate || account.initialBalanceDate;
+    
+    // STRICT: Only allowed fields
     const accountData = { 
         id: account.id,
         name: account.name,
-        createDate: account.createDate || account.initialBalanceDate,
-        isSavings: account.isSavings,
+        createDate: createDate,
+        isSaving: !!account.isSaving,
+        balanceDirty: false,
         updated_at: serverTimestamp() 
     };
     
-    // 1. Create the account document WITHOUT initialBalance
+    // Use overwrite (setDoc without merge) to wipe any old fields
     await setDoc(docRef, accountData);
 
-    // 2. Immediately write the initial account balance record (The starting point)
-    const balDocId = `${account.id}_${accountData.createDate}`;
+    // 2. Store balance in separate collection
+    const balDocId = `${account.id}_${createDate}`;
     const balRef = doc(db, `users/${userId}/account_balances`, balDocId);
     await setDoc(balRef, {
         account_id: account.id,
-        date: accountData.createDate,
+        date: createDate,
         balance: account.initialBalance || 0,
         updated_at: serverTimestamp()
     });
@@ -131,7 +135,16 @@ export const addAccountToFirestore = async (userId, account) => {
 
 export const updateAccountInFirestore = async (userId, account, oldInitialBalance) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
+    const createDate = account.createDate || account.initialBalanceDate;
     
+    const delta = account.initialBalance - oldInitialBalance;
+    let balanceDocs = [];
+    if (delta !== 0) {
+        const q = query(collection(db, `users/${userId}/account_balances`), where("account_id", "==", account.id));
+        const snapshot = await getDocs(q);
+        balanceDocs = snapshot.docs.map(d => ({ ref: d.ref, balance: d.data().balance }));
+    }
+
     await markAccountsBalanceDirty(userId, [account.id]);
 
     await runTransaction(db, async (transaction) => {
@@ -139,15 +152,16 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
         if (!docSnap.exists()) throw new Error("Document does not exist!");
         
         const oldData = docSnap.data();
+        
+        // STRICT: Only allowed fields
         const accountData = { 
             id: account.id,
             name: account.name,
-            createDate: account.createDate || oldData.createDate,
-            isSavings: account.isSavings,
+            createDate: createDate || oldData.createDate,
+            isSaving: !!account.isSaving,
             updated_at: serverTimestamp() 
         };
 
-        // Handle Date change (update the key of the initial balance record)
         if (oldData.createDate !== accountData.createDate) {
             const oldBalDocId = `${account.id}_${oldData.createDate}`;
             const newBalDocId = `${account.id}_${accountData.createDate}`;
@@ -158,22 +172,17 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
                 balance: account.initialBalance || 0,
                 updated_at: serverTimestamp()
             });
-        }
-
-        // Handle Balance Delta for ALL existing records
-        const delta = account.initialBalance - oldInitialBalance;
-        if (delta !== 0 && oldData.createDate === accountData.createDate) {
-            const q = query(collection(db, `users/${userId}/account_balances`), where("account_id", "==", account.id));
-            const snapshot = await getDocs(q);
-            snapshot.forEach(balDoc => {
+        } else if (delta !== 0) {
+            balanceDocs.forEach(balDoc => {
                 transaction.update(balDoc.ref, {
-                    balance: balDoc.data().balance + delta,
+                    balance: balDoc.balance + delta,
                     updated_at: serverTimestamp()
                 });
             });
         }
 
-        transaction.update(docRef, { ...accountData, balanceDirty: false });
+        // FORCE overwrite to remove fields like initialBalance/InitialBalance
+        transaction.set(docRef, { ...accountData, balanceDirty: false });
     });
 };
 
@@ -223,8 +232,14 @@ export const updateCategoryOrderInFirestore = async (userId, updates) => {
 export const addTransactionToFirestore = async (userId, tx) => {
     const docRef = doc(db, `users/${userId}/transactions`, tx.id);
     await setDoc(docRef, { ...tx, updated_at: serverTimestamp() });
-    const dirtyAccountIds = [tx.source, tx.destination].filter(id => id && id !== 'external');
-    await markAccountsBalanceDirty(userId, dirtyAccountIds);
+    
+    // Surgical delta updates
+    if (tx.source && tx.source !== 'external') {
+        await markSingleAccountBalanceDelta(userId, tx.source, -tx.amount, tx.date);
+    }
+    if (tx.destination && tx.destination !== 'external') {
+        await markSingleAccountBalanceDelta(userId, tx.destination, tx.amount, tx.date);
+    }
 };
 
 export const deleteTransactionFromFirestore = async (userId, txId) => {
@@ -232,9 +247,15 @@ export const deleteTransactionFromFirestore = async (userId, txId) => {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         const tx = docSnap.data();
-        const dirtyAccountIds = [tx.source, tx.destination].filter(id => id && id !== 'external');
         await deleteDoc(docRef);
-        await markAccountsBalanceDirty(userId, dirtyAccountIds);
+        
+        // Surgical delta updates (inverse of original transaction)
+        if (tx.source && tx.source !== 'external') {
+            await markSingleAccountBalanceDelta(userId, tx.source, tx.amount, tx.date);
+        }
+        if (tx.destination && tx.destination !== 'external') {
+            await markSingleAccountBalanceDelta(userId, tx.destination, -tx.amount, tx.date);
+        }
     } else {
         await deleteDoc(docRef);
     }
@@ -331,23 +352,35 @@ export const addRecurringTemplate = async (userId, template) => {
 };
 
 export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxData) => {
-    const newTxId = generateDeterministicTransactionId(newTxData);
-    const batch = writeBatch(db);
-
-    if (newTxId !== oldTxId) {
-        const oldTxRef = doc(db, `users/${userId}/transactions`, oldTxId);
-        batch.delete(oldTxRef);
+    // 1. Get old transaction to reverse its impact
+    const oldTxRef = doc(db, `users/${userId}/transactions`, oldTxId);
+    const oldSnap = await getDoc(oldTxRef);
+    if (oldSnap.exists()) {
+        const oldTx = oldSnap.data();
+        if (oldTx.source && oldTx.source !== 'external') {
+            await markSingleAccountBalanceDelta(userId, oldTx.source, oldTx.amount, oldTx.date);
+        }
+        if (oldTx.destination && oldTx.destination !== 'external') {
+            await markSingleAccountBalanceDelta(userId, oldTx.destination, -oldTx.amount, oldTx.date);
+        }
+        await deleteDoc(oldTxRef);
     }
-    
+
+    // 2. Create new transaction and apply its impact
+    const newTxId = generateDeterministicTransactionId(newTxData);
     const newTxRef = doc(db, `users/${userId}/transactions`, newTxId);
-    batch.set(newTxRef, {
+    await setDoc(newTxRef, {
         id: newTxId,
         ...newTxData,
         updated_at: serverTimestamp()
     });
     
-    await batch.commit();
-    await markAccountsBalanceDirty(userId, [newTxData.source, newTxData.destination].filter(id => id && id !== 'external'));
+    if (newTxData.source && newTxData.source !== 'external') {
+        await markSingleAccountBalanceDelta(userId, newTxData.source, -newTxData.amount, newTxData.date);
+    }
+    if (newTxData.destination && newTxData.destination !== 'external') {
+        await markSingleAccountBalanceDelta(userId, newTxData.destination, newTxData.amount, newTxData.date);
+    }
 };
 
 export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, newTemplateValues) => {
@@ -440,6 +473,10 @@ export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransac
     if (deleteAccounts) {
         const accSnap = await getDocs(collection(db, `users/${userId}/accounts`));
         accSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
+        
+        const balSnap = await getDocs(collection(db, `users/${userId}/account_balances`));
+        balSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
+        
         commitNeeded = true;
     }
     
@@ -452,13 +489,15 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
     const promises = [];
     if (accounts) {
         accounts.forEach(acc => {
-            const { initialBalance, ...accountData } = acc;
             const createDate = acc.createDate || acc.initialBalanceDate;
             
-            // 1. Save Account without initialBalance
+            // 1. Save Account strictly with required fields
             promises.push(setDoc(doc(db, `users/${userId}/accounts`, acc.id), { 
-                ...accountData, 
-                createDate,
+                id: acc.id,
+                name: acc.name,
+                createDate: createDate,
+                isSaving: !!acc.isSaving,
+                balanceDirty: false,
                 updated_at: serverTimestamp() 
             }));
 
@@ -467,7 +506,7 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
             promises.push(setDoc(doc(db, `users/${userId}/account_balances`, balDocId), {
                 account_id: acc.id,
                 date: createDate,
-                balance: initialBalance || 0,
+                balance: acc.initialBalance || 0,
                 updated_at: serverTimestamp()
             }));
         });

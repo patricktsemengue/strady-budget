@@ -12,10 +12,10 @@ The system revolves around the following data entities, all of which are scoped 
   - `id`: string (unique, derived from name: `acc_name`)
   - `name`: string (unique)
   - `createDate`: string (YYYY-MM-DD)
-  - `isSavings`: boolean
+  - `isSaving`: boolean
   - `balanceDirty`: boolean (true if balance needs background recalculation)
 - **CATEGORY**: A user-defined category for transactions.
-  - `id`: string (unique, derived from name: `cat_name`)
+  - `id`: string (unique, deterministic UUID based on label)
   - `label`: string (unique)
   - `icon`: string (FontAwesome class, e.g., `fa-car`)
   - `color`: string (hex code)
@@ -196,7 +196,7 @@ For each account, the system picks the **last balance record** of the selected m
 If no record exists for the month, it falls back to the latest balance record **before** the month.
 
 ### 3.3 Emergency Fund
-Sum of balances for all accounts marked `isSavings: true`.
+Sum of balances for all accounts marked `isSaving: true`.
 
 ### 3.4 Monthly Spending
 Sum of all `TRANSACTION` documents for the month where `destination` is empty or "external".

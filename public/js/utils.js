@@ -18,6 +18,25 @@ export const generateId = () => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+export const generateDeterministicUUID = async (label) => {
+    if (!label) return generateId();
+    const encoder = new TextEncoder();
+    const data = encoder.encode(label.toLowerCase().trim());
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    
+    // Use first 16 bytes for UUID (32 hex characters)
+    const hex = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return [
+        hex.substring(0, 8),
+        hex.substring(8, 12),
+        '4' + hex.substring(13, 16),
+        ((parseInt(hex.substring(16, 18), 16) & 0x3f) | 0x80).toString(16) + hex.substring(18, 20),
+        hex.substring(20, 32)
+    ].join('-');
+};
+
 export const generateDeterministicId = (obj) => {
     const str = JSON.stringify(obj);
     let hash = 0;

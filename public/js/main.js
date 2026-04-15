@@ -189,7 +189,9 @@ const init = () => {
                     transactions: newData.transactions || [],
                     categories: newData.categories || defaultCategories,
                     recurringTemplates: newData.recurringTemplates || [],
-                    months: newData.months || {}
+                    months: newData.months || {},
+                    accountBalances: newData.accountBalances || {},
+                    monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
                 });
                 
                 if (newData.categories && newData.categories.length === 0) {
