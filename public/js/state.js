@@ -30,6 +30,7 @@ export let state = {
     categories: [],
     months: {}, // Stores month statuses
     accountBalances: {}, // Stores pre-calculated balances: { "accountId_YYYY-MM-DD": balance }
+    onboarding: null,
     monthSelectorConfig: {
         startDate: `${currentYear}-01-01`,
         endDate: getFunctionalBoundaryDate(),

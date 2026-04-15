@@ -11,6 +11,11 @@ export const formatDateStr = (dateStr) => {
 
 export const getMonthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
+export const getMonthFromDate = (dateStr) => {
+    if (!dateStr) return '';
+    return dateStr.substring(0, 7);
+};
+
 export const generateId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();

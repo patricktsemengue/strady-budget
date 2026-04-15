@@ -10,6 +10,7 @@ import {
 import { calculateBalanceDelta, sweepAccountBalances } from "./js/balance-engine.js";
 
 let db;
+let auth;
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -27,22 +28,45 @@ self.addEventListener('message', async (event) => {
             console.log('SW: Initializing Firebase...');
             const app = initializeApp(payload.config);
             db = getFirestore(app);
+            auth = getAuth(app);
         }
         
         if (payload.token) {
-            console.log('SW: Received ID token');
-            // ID tokens cannot be used directly with signInWithCustomToken.
-            // However, the web SDK in a SW doesn't support easy auth sync yet.
-            // If the user's browser supports it, auth might sync automatically if indexedDB is used.
+            console.log('SW: Received Auth Token, authenticating...');
+            try {
+                // In Service Workers, we use GoogleAuthProvider.credential(idToken) 
+                // and signInWithCredential for ID tokens.
+                const credential = GoogleAuthProvider.credential(payload.token);
+                await signInWithCredential(auth, credential);
+                console.log('SW: Authenticated successfully');
+            } catch (err) {
+                console.error('SW: Authentication failed', err);
+            }
         }
         return;
     }
 
     if (type === 'REFRESH_BALANCES') {
         const { userId, action, data } = payload;
-        if (!db) return;
+        if (!db) {
+            console.warn('[SW] Database not initialized');
+            return;
+        }
 
-        console.log(`[SW] Starting balance ${action} refresh...`);
+        // Wait for auth to be ready if possible, or check if current user matches
+        if (!auth.currentUser || auth.currentUser.uid !== userId) {
+            console.warn(`[SW] Auth mismatch or missing. Expected: ${userId}, Got: ${auth.currentUser?.uid}. Falling back.`);
+            const clients = await self.clients.matchAll();
+            clients.forEach(client => {
+                client.postMessage({
+                    type: 'REFRESH_FAILED',
+                    payload: { userId, action, data, error: 'Authentication missing or mismatched in Service Worker' }
+                });
+            });
+            return;
+        }
+
+        console.log(`[SW] Starting balance ${action} refresh for ${userId}...`);
         try {
             if (action === 'DELTA') {
                 // Surgical update for single transactions

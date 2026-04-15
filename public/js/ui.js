@@ -96,3 +96,74 @@ export const setView = (view, isInitial = false) => {
     window.location.hash = view;
 };
 
+export const showOnboardingModal = (onChoice) => {
+    const existing = document.getElementById('onboarding-modal');
+    if (existing) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'onboarding-modal';
+    modal.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all duration-300 scale-95 opacity-0">
+            <div class="p-8 text-center">
+                <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                    <i class="fa-solid fa-rocket"></i>
+                </div>
+                
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Bienvenue sur Strady Budget !</h2>
+                <p class="text-slate-600 mb-8">Pour vous aider à démarrer, nous vous suggérons d'initialiser votre espace avec notre pack de démarrage.</p>
+                
+                <div class="space-y-4 text-left">
+                    <button id="btn-starter-pack" class="group w-full p-4 border-2 border-blue-100 hover:border-blue-500 rounded-xl transition-all hover:bg-blue-50 relative">
+                        <div class="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Recommandé</div>
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800">Pack de Démarrage Familial</h3>
+                                <p class="text-xs text-slate-500">Comptes (1200€ & 3000€), catégories (Salaire, Loyer, Courses) et factures récurrentes.</p>
+                            </div>
+                        </div>
+                    </button>
+                    
+                    <button id="btn-scratch-pack" class="group w-full p-4 border-2 border-slate-100 hover:border-slate-300 rounded-xl transition-all hover:bg-slate-50">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center mr-4 group-hover:bg-slate-600 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-leaf"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800">Partir de zéro</h3>
+                                <p class="text-xs text-slate-500">Commencez avec un budget vide et créez vos propres comptes et catégories.</p>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-slate-50 text-center">
+                <p class="text-[11px] text-slate-400 italic">Vous pourrez modifier ou supprimer toutes les données par la suite.</p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const content = modal.querySelector('div');
+    setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+    }, 10);
+
+    const close = (choice) => {
+        content.classList.add('scale-95', 'opacity-0');
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.remove();
+            onChoice(choice);
+        }, 300);
+    };
+
+    document.getElementById('btn-starter-pack').onclick = () => close('starter');
+    document.getElementById('btn-scratch-pack').onclick = () => close('scratch');
+};

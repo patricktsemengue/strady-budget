@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { generateId, getMonthKey } from './utils.js';
+import { generateId, getMonthKey, generateDeterministicUUID } from './utils.js';
 import { currentUserId } from './storage.js';
 import { addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore } from './firestore-service.js';
 import { showNotification } from './ui.js';
@@ -34,19 +34,21 @@ export const handleAddAccount = async (e) => {
         return;
     }
 
-    const newAccount = {
-        id: `acc_${generateId()}`,
-        name,
-        initialBalance,
-        initialBalanceDate,
-        isSaving
-    };
-
     try {
+        const deterministicId = await generateDeterministicUUID(name);
+        const newAccount = {
+            id: `acc_${deterministicId}`,
+            name,
+            initialBalance,
+            initialBalanceDate,
+            isSaving
+        };
+
         await addAccountToFirestore(currentUserId, newAccount);
         closeAddAccountDrawer();
         showNotification('Compte ajouté !');
     } catch (err) {
+        console.error(err);
         showNotification("Erreur lors de l'ajout du compte.", 'error');
     }
 };

@@ -16,6 +16,10 @@ const provider = new GoogleAuthProvider();
 export const login = async () => {
     try {
         const result = await signInWithPopup(auth, provider);
+        // Check if this is a new user using the _tokenResponse internal property
+        if (result._tokenResponse?.isNewUser) {
+            sessionStorage.setItem('strady_is_new_user_session', 'true');
+        }
         return result.user;
     } catch (error) {
         console.error("Login error:", error);

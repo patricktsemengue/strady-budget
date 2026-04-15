@@ -32,7 +32,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     unsubscribeFromData();
     if (!userId) return;
 
-    let initialLoadsPending = 7;
+    let initialLoadsPending = 8; // Increased for onboarding
     const onInitialLoadComplete = () => {
         initialLoadsPending--;
         if (initialLoadsPending === 0) {
@@ -47,6 +47,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         months: {},
         accountBalances: {},
         recurringTemplates: [],
+        onboarding: null,
         monthSelectorConfig: {
             startDate: `${new Date().getFullYear()}-01-01`,
             endDate: getFunctionalBoundaryDate(),
@@ -61,6 +62,13 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     const settingsUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'monthSelector'), (docSnap) => {
         if (docSnap.exists()) {
             localState.monthSelectorConfig = docSnap.data();
+        }
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
+
+    const onboardingUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'onboarding'), (docSnap) => {
+        if (docSnap.exists()) {
+            localState.onboarding = docSnap.data();
         }
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
@@ -90,7 +98,6 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         localState.accountBalances = {};
         snapshot.docs.forEach(doc => {
             const data = doc.data();
-            // Store with full date as per new requirement
             const key = `${data.account_id}_${data.date}`;
             localState.accountBalances[key] = data.balance;
         });
@@ -102,14 +109,13 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
 
-    unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, balUnsub, recUnsub);
+    unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, balUnsub, recUnsub, settingsUnsub, onboardingUnsub);
 };
 
 export const addAccountToFirestore = async (userId, account) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
     const createDate = account.createDate || account.initialBalanceDate;
     
-    // STRICT: Only allowed fields
     const accountData = { 
         id: account.id,
         name: account.name,
@@ -119,10 +125,8 @@ export const addAccountToFirestore = async (userId, account) => {
         updated_at: serverTimestamp() 
     };
     
-    // Use overwrite (setDoc without merge) to wipe any old fields
     await setDoc(docRef, accountData);
 
-    // 2. Store balance in separate collection
     const balDocId = `${account.id}_${createDate}`;
     const balRef = doc(db, `users/${userId}/account_balances`, balDocId);
     await setDoc(balRef, {
@@ -153,7 +157,6 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
         
         const oldData = docSnap.data();
         
-        // STRICT: Only allowed fields
         const accountData = { 
             id: account.id,
             name: account.name,
@@ -181,17 +184,14 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
             });
         }
 
-        // FORCE overwrite to remove fields like initialBalance/InitialBalance
         transaction.set(docRef, { ...accountData, balanceDirty: false });
     });
 };
 
 export const deleteAccountFromFirestore = async (userId, accountId) => {
-    // 1. Delete the account document
     const docRef = doc(db, `users/${userId}/accounts`, accountId);
     await deleteDoc(docRef);
 
-    // 2. Delete all associated account balances
     const q = query(collection(db, `users/${userId}/account_balances`), where("account_id", "==", accountId));
     const snapshot = await getDocs(q);
     const batch = writeBatch(db);
@@ -228,12 +228,10 @@ export const updateCategoryOrderInFirestore = async (userId, updates) => {
 };
 
 
-// -- TRANSACTIONS --
 export const addTransactionToFirestore = async (userId, tx) => {
     const docRef = doc(db, `users/${userId}/transactions`, tx.id);
     await setDoc(docRef, { ...tx, updated_at: serverTimestamp() });
     
-    // Surgical delta updates
     if (tx.source && tx.source !== 'external') {
         await markSingleAccountBalanceDelta(userId, tx.source, -tx.amount, tx.date);
     }
@@ -249,7 +247,6 @@ export const deleteTransactionFromFirestore = async (userId, txId) => {
         const tx = docSnap.data();
         await deleteDoc(docRef);
         
-        // Surgical delta updates (inverse of original transaction)
         if (tx.source && tx.source !== 'external') {
             await markSingleAccountBalanceDelta(userId, tx.source, tx.amount, tx.date);
         }
@@ -261,13 +258,11 @@ export const deleteTransactionFromFirestore = async (userId, txId) => {
     }
 };
 
-// -- MONTHS --
 export const updateMonthStatus = async (userId, monthKey, status) => {
     const docRef = doc(db, `users/${userId}/months`, monthKey);
     await setDoc(docRef, { status, updated_at: serverTimestamp() }, { merge: true });
 };
 
-// -- RECURRING TRANSACTIONS (NEW BATCH-BASED APPROACH) --
 
 const calculateAllOccurrences = (template) => {
     const occurrences = [];
@@ -352,7 +347,6 @@ export const addRecurringTemplate = async (userId, template) => {
 };
 
 export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxData) => {
-    // 1. Get old transaction to reverse its impact
     const oldTxRef = doc(db, `users/${userId}/transactions`, oldTxId);
     const oldSnap = await getDoc(oldTxRef);
     if (oldSnap.exists()) {
@@ -366,7 +360,6 @@ export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxD
         await deleteDoc(oldTxRef);
     }
 
-    // 2. Create new transaction and apply its impact
     const newTxId = generateDeterministicTransactionId(newTxData);
     const newTxRef = doc(db, `users/${userId}/transactions`, newTxId);
     await setDoc(newTxRef, {
@@ -430,7 +423,7 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
     batchGenerateAndSaveTransactions(batch, userId, generationTemplate);
 
     await batch.commit();
-    await markAccountsBalanceDirty(userId); // Mark all for safety with templates
+    await markAccountsBalanceDirty(userId); 
 };
 
 export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
@@ -452,7 +445,7 @@ export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
     });
     
     await batch.commit();
-    await markAccountsBalanceDirty(userId); // Mark all for safety
+    await markAccountsBalanceDirty(userId); 
 };
 
 export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransactions) => {
@@ -486,41 +479,81 @@ export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransac
 };
 
 export const importDataToFirestore = async (userId, accounts, transactions, templates, categories) => {
-    const promises = [];
+    const CHUNK_SIZE = 500;
+    const allOperations = [];
+
     if (accounts) {
         accounts.forEach(acc => {
             const createDate = acc.createDate || acc.initialBalanceDate;
-            
-            // 1. Save Account strictly with required fields
-            promises.push(setDoc(doc(db, `users/${userId}/accounts`, acc.id), { 
-                id: acc.id,
-                name: acc.name,
-                createDate: createDate,
-                isSaving: !!acc.isSaving,
-                balanceDirty: false,
-                updated_at: serverTimestamp() 
-            }));
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/accounts`, acc.id),
+                data: { 
+                    id: acc.id,
+                    name: acc.name,
+                    createDate: createDate,
+                    isSaving: !!acc.isSaving,
+                    balanceDirty: false,
+                    updated_at: serverTimestamp() 
+                }
+            });
 
-            // 2. Save first balance record
             const balDocId = `${acc.id}_${createDate}`;
-            promises.push(setDoc(doc(db, `users/${userId}/account_balances`, balDocId), {
-                account_id: acc.id,
-                date: createDate,
-                balance: acc.initialBalance || 0,
-                updated_at: serverTimestamp()
-            }));
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/account_balances`, balDocId),
+                data: {
+                    account_id: acc.id,
+                    date: createDate,
+                    balance: acc.initialBalance || 0,
+                    updated_at: serverTimestamp()
+                }
+            });
         });
     }
-    if (transactions) {
-        transactions.forEach(tx => promises.push(setDoc(doc(db, `users/${userId}/transactions`, tx.id), { ...tx, updated_at: serverTimestamp() })));
-    }
-    if (templates) {
-        templates.forEach(rec => promises.push(setDoc(doc(db, `users/${userId}/recurringTemplates`, rec.id), { ...rec, updated_at: serverTimestamp() })));
-    }
+
     if (categories) {
-        categories.forEach(cat => promises.push(setDoc(doc(db, `users/${userId}/categories`, cat.id), { ...cat, updated_at: serverTimestamp() })));
+        categories.forEach(cat => {
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/categories`, cat.id),
+                data: { ...cat, updated_at: serverTimestamp() }
+            });
+        });
     }
-    await Promise.all(promises);
+
+    if (transactions) {
+        transactions.forEach(tx => {
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/transactions`, tx.id),
+                data: { ...tx, updated_at: serverTimestamp() }
+            });
+        });
+    }
+
+    if (templates) {
+        templates.forEach(rec => {
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/recurringTemplates`, rec.id),
+                data: { ...rec, updated_at: serverTimestamp() }
+            });
+        });
+    }
+
+    // Process in batches of 500
+    for (let i = 0; i < allOperations.length; i += CHUNK_SIZE) {
+        const batch = writeBatch(db);
+        const chunk = allOperations.slice(i, i + CHUNK_SIZE);
+        chunk.forEach(op => {
+            if (op.type === 'set') batch.set(op.ref, op.data);
+            else if (op.type === 'update') batch.update(op.ref, op.data);
+            else if (op.type === 'delete') batch.delete(op.ref);
+        });
+        await batch.commit();
+    }
+
     await markAccountsBalanceDirty(userId); 
 };
 
@@ -537,13 +570,6 @@ export const setUserImportingState = async (userId, isImporting) => {
 
 import { calculateBalanceDelta, sweepAccountBalances } from "./balance-engine.js";
 
-/**
- * Triggers a balance refresh. 
- * Falls back to main-thread execution if Service Worker is not yet controlling the page.
- * @param {string} userId 
- * @param {'SWEEP'|'DELTA'} action 
- * @param {Object} data 
- */
 const triggerSWRefresh = async (userId, action, data) => {
     console.log(`[FirestoreService] Triggering balance ${action} for accounts:`, data.accountId || data.accountIds);
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
@@ -552,7 +578,6 @@ const triggerSWRefresh = async (userId, action, data) => {
             payload: { userId, action, data }
         });
     } else {
-        // Fallback: Perform in main thread
         console.log(`SW not ready, performing ${action} in main thread...`);
         try {
             if (action === 'DELTA') {
@@ -567,7 +592,6 @@ const triggerSWRefresh = async (userId, action, data) => {
                 );
             }
             
-            // Manually clear the dirty flag since we did it in the main thread
             const batch = writeBatch(db);
             const targets = action === 'DELTA' ? [data.accountId] : data.accountIds;
             targets.forEach(id => {
@@ -583,9 +607,6 @@ const triggerSWRefresh = async (userId, action, data) => {
     }
 };
 
-/**
- * Marks accounts as dirty and requests a refresh from the Service Worker.
- */
 export const markAccountsBalanceDirty = async (userId, accountIds) => {
     if (!userId) return;
 
@@ -605,7 +626,6 @@ export const markAccountsBalanceDirty = async (userId, accountIds) => {
         });
         await batch.commit();
 
-        // Delegate the actual calculation to the Service Worker
         triggerSWRefresh(userId, 'SWEEP', { accountIds: targets });
         
     } catch (error) {
@@ -616,11 +636,160 @@ export const markAccountsBalanceDirty = async (userId, accountIds) => {
 export const markSingleAccountBalanceDelta = async (userId, accountId, amount, date) => {
     if (!userId || !accountId || accountId === 'external' || amount === 0) return;
     
-    // 1. UI feedback: mark as dirty
     const accRef = doc(db, `users/${userId}/accounts`, accountId);
     await setDoc(accRef, { balanceDirty: true, updated_at: serverTimestamp() }, { merge: true });
 
-    // 2. Delegate surgical delta to SW
     triggerSWRefresh(userId, 'DELTA', { accountId, amount, date });
 };
 
+export const provisionStarterData = async (userId) => {
+    const batch = writeBatch(db);
+    const now = new Date();
+    const currentMonthStr = now.toISOString().split('T')[0].substring(0, 7);
+    const todayStr = now.toISOString().split('T')[0];
+    
+    // 1. Categories
+    const categories = [
+        { id: 'cat_salary', label: 'Salaire', icon: 'fa-money-bill-wave', color: '#10b981' },
+        { id: 'cat_food', label: 'Alimentation', icon: 'fa-shopping-basket', color: '#f59e0b' },
+        { id: 'cat_rent', label: 'Logement', icon: 'fa-home', color: '#3b82f6' },
+        { id: 'cat_elec', label: 'Électricité', icon: 'fa-bolt', color: '#fbbf24' },
+        { id: 'cat_water', label: 'Eau', icon: 'fa-tint', color: '#60a5fa' },
+        { id: 'cat_sub', label: 'Abonnements', icon: 'fa-calendar-alt', color: '#8b5cf6' }
+    ];
+    
+    categories.forEach(cat => {
+        const ref = doc(db, `users/${userId}/categories`, cat.id);
+        batch.set(ref, { ...cat, updated_at: serverTimestamp() });
+    });
+    
+    // 2. Accounts
+    const accMainId = 'acc_main';
+    const accSavingsId = 'acc_savings';
+    const firstOfMonth = `${currentMonthStr}-01`;
+    
+    const accounts = [
+        { id: accMainId, name: 'Compte Courant', initialBalance: 1200, createDate: firstOfMonth },
+        { id: accSavingsId, name: 'Livret A / Compte Épargne', initialBalance: 3000, createDate: firstOfMonth }
+    ];
+    
+    accounts.forEach(acc => {
+        const ref = doc(db, `users/${userId}/accounts`, acc.id);
+        batch.set(ref, { 
+            id: acc.id, 
+            name: acc.name, 
+            createDate: acc.createDate, 
+            isSaving: acc.id === accSavingsId,
+            balanceDirty: false,
+            updated_at: serverTimestamp() 
+        });
+        
+        const balDocId = `${acc.id}_${acc.createDate}`;
+        const balRef = doc(db, `users/${userId}/account_balances`, balDocId);
+        batch.set(balRef, {
+            account_id: acc.id,
+            date: acc.createDate,
+            balance: acc.initialBalance,
+            updated_at: serverTimestamp()
+        });
+    });
+    
+    // 3. Recurring Templates
+    const templates = [
+        {
+            id: 'rec_salary',
+            label: 'Salaire',
+            amount: 2500,
+            date: firstOfMonth,
+            category: 'cat_salary',
+            source: 'external',
+            destination: accMainId,
+            periodicity: 'M',
+            endDate: null
+        },
+        {
+            id: 'rec_rent',
+            label: 'Loyer',
+            amount: 850,
+            date: `${currentMonthStr}-05`,
+            category: 'cat_rent',
+            source: accMainId,
+            destination: 'external',
+            periodicity: 'M',
+            endDate: null
+        }
+    ];
+    
+    const boundaryDateStr = getFunctionalBoundaryDate();
+    
+    templates.forEach(tpl => {
+        const ref = doc(db, `users/${userId}/recurringTemplates`, tpl.id);
+        batch.set(ref, { ...tpl, updated_at: serverTimestamp() });
+        
+        const generationTemplate = { ...tpl };
+        generationTemplate.endDate = boundaryDateStr;
+        
+        const dates = calculateAllOccurrences(generationTemplate);
+        for (const date of dates) {
+            const txData = {
+                label: tpl.label,
+                amount: tpl.amount,
+                date: date,
+                Category: tpl.category,
+                source: tpl.source,
+                destination: tpl.destination,
+                Model: tpl.id,
+            };
+            const txId = generateDeterministicTransactionId(txData);
+            const txRef = doc(db, `users/${userId}/transactions`, txId);
+            batch.set(txRef, {
+                id: txId,
+                ...txData,
+                updated_at: serverTimestamp()
+            });
+        }
+    });
+    
+    // 4. Past Transactions
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    const twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(now.getDate() - 2);
+    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
+    
+    const pastTx = [
+        { label: 'Courses Carrefour', amount: 85.50, date: yesterdayStr, category: 'cat_food', source: accMainId, destination: 'external' },
+        { label: 'Boulangerie', amount: 4.20, date: twoDaysAgoStr, category: 'cat_food', source: accMainId, destination: 'external' }
+    ];
+    
+    pastTx.forEach(tx => {
+        const txData = {
+            label: tx.label,
+            amount: tx.amount,
+            date: tx.date,
+            Category: tx.category,
+            source: tx.source,
+            destination: tx.destination
+        };
+        const txId = generateDeterministicTransactionId(txData);
+        const txRef = doc(db, `users/${userId}/transactions`, txId);
+        batch.set(txRef, {
+            id: txId,
+            ...txData,
+            updated_at: serverTimestamp()
+        });
+    });
+    
+    // 5. Onboarding Setting
+    const onboardingRef = doc(db, `users/${userId}/settings`, 'onboarding');
+    batch.set(onboardingRef, { 
+        starterPackApplied: true, 
+        onboardingComplete: true,
+        updated_at: serverTimestamp() 
+    });
+    
+    await batch.commit();
+    await markAccountsBalanceDirty(userId);
+};

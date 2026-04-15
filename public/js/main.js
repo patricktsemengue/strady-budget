@@ -1,6 +1,11 @@
 import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
 import { setStorageUser } from './storage.js';
-import { showNotification, setDataStatusIndicator, setView } from './ui.js';
+import { 
+    showNotification, 
+    setDataStatusIndicator, 
+    setView,
+    showOnboardingModal 
+} from './ui.js';
 import { router } from './app-router.js';
 
 // Modules
@@ -43,7 +48,13 @@ import {
 } from './transactions.js';
 
 import { logout, onUserChanged, auth } from './auth.js';
-import { subscribeToAppData, markAccountsBalanceDirty, db } from './firestore-service.js';
+import { 
+    subscribeToAppData, 
+    markAccountsBalanceDirty, 
+    db,
+    provisionStarterData,
+    updateSettingsInFirestore 
+} from './firestore-service.js';
 import { calculateBalanceDelta, sweepAccountBalances } from './balance-engine.js';
 import { 
     collection, 
@@ -152,15 +163,24 @@ const init = () => {
             setStorageUser(user.uid);
             
             // Init Service Worker with Firebase config and token once user is authenticated
-            if ('serviceWorker' in navigator) {
-                const token = await user.getIdToken();
-                navigator.serviceWorker.ready.then(reg => {
-                    reg.active.postMessage({ 
-                        type: 'INIT_FIREBASE', 
-                        payload: { config: firebaseConfig, token } 
+            const syncSWAuth = async (u) => {
+                if ('serviceWorker' in navigator) {
+                    const token = await u.getIdToken();
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.active?.postMessage({ 
+                            type: 'INIT_FIREBASE', 
+                            payload: { config: firebaseConfig, token } 
+                        });
                     });
-                });
-            }
+                }
+            };
+
+            syncSWAuth(user);
+            // Also sync on token refresh
+            auth.onIdTokenChanged(async (u) => {
+                if (u) syncSWAuth(u);
+            });
+
             if (userInfo) userInfo.classList.remove('hidden');
             if (userName) userName.textContent = user.displayName;
             if (userPhoto) userPhoto.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
@@ -181,6 +201,38 @@ const init = () => {
                     if (hasDirtyAccounts || (hasNoBalances && (newData.accounts || []).length > 0)) {
                         markAccountsBalanceDirty(user.uid);
                     }
+
+                    // Onboarding Detection
+                    const isNewUserSession = sessionStorage.getItem('strady_is_new_user_session') === 'true';
+                    const noAccounts = (newData.accounts || []).length === 0;
+                    const noOnboarding = !newData.onboarding;
+
+                    if (noAccounts && (isNewUserSession || noOnboarding)) {
+                        showOnboardingModal(async (choice) => {
+                            if (choice === 'starter') {
+                                try {
+                                    await provisionStarterData(user.uid);
+                                    showNotification("Starter Pack installé avec succès !");
+                                } catch (err) {
+                                    console.error(err);
+                                    showNotification("Erreur lors de l'installation du Starter Pack", "error");
+                                }
+                            } else {
+                                // Start from scratch
+                                try {
+                                    await updateSettingsInFirestore(user.uid, 'onboarding', { 
+                                        starterPackApplied: false, 
+                                        onboardingComplete: true,
+                                        updated_at: serverTimestamp() 
+                                    });
+                                    showNotification("C'est parti ! Vous commencez de zéro.");
+                                } catch (err) {
+                                    console.error(err);
+                                }
+                            }
+                            sessionStorage.removeItem('strady_is_new_user_session');
+                        });
+                    }
                     
                     isFirstFirestoreUpdate = false;
                 }
@@ -191,6 +243,7 @@ const init = () => {
                     recurringTemplates: newData.recurringTemplates || [],
                     months: newData.months || {},
                     accountBalances: newData.accountBalances || {},
+                    onboarding: newData.onboarding || null,
                     monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
                 });
                 
@@ -313,7 +366,8 @@ const setupEventListeners = () => {
         } else if (type === 'expense') {
             if (sourceWrapper) sourceWrapper.classList.remove('hidden');
             if (destWrapper) destWrapper.classList.add('hidden');
-            document.getElementById('transaction-destination').value = '';
+            document.getElementById('transaction-source').value = 'external';
+            document.getElementById('transaction-destination').value = 'external';
         } else { // transfer
             if (sourceWrapper) sourceWrapper.classList.remove('hidden');
             if (destWrapper) destWrapper.classList.remove('hidden');
