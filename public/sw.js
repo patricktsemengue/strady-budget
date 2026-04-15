@@ -1,4 +1,5 @@
 // Service Worker for Client-Side Balance Aggregation
+const VERSION = '1.0.2';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
     getAuth, signInWithCustomToken, signInWithCredential, GoogleAuthProvider
