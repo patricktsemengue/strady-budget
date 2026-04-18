@@ -23,6 +23,7 @@ export const handleAddAccount = async (e) => {
     const initialBalance = parseFloat(document.getElementById('acc-balance').value);
     const initialBalanceDate = document.getElementById('acc-balance-date').value;
     const isSaving = document.getElementById('acc-is-savings').checked;
+    const isInvestmentAccount = document.getElementById('acc-is-investment').checked;
 
     if (!name || isNaN(initialBalance) || !initialBalanceDate) {
         showNotification('Veuillez remplir tous les champs.', 'error');
@@ -41,7 +42,8 @@ export const handleAddAccount = async (e) => {
             name,
             initialBalance,
             initialBalanceDate,
-            isSaving
+            isSaving,
+            isInvestmentAccount
         };
 
         await addAccountToFirestore(currentUserId, newAccount);
@@ -83,6 +85,7 @@ export const openEditAccount = (id) => {
     document.getElementById('edit-acc-balance').value = balances[acc.id] || 0;
     document.getElementById('edit-acc-balance-date').value = acc.createDate || acc.initialBalanceDate;
     document.getElementById('edit-acc-is-savings').checked = acc.isSaving;
+    document.getElementById('edit-acc-is-investment').checked = acc.isInvestmentAccount || false;
     
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('account-edit-drawer').classList.add('active');
@@ -100,6 +103,7 @@ export const handleUpdateAccount = async (e) => {
     const newInitialBalance = parseFloat(document.getElementById('edit-acc-balance').value);
     const createDate = document.getElementById('edit-acc-balance-date').value;
     const isSaving = document.getElementById('edit-acc-is-savings').checked;
+    const isInvestmentAccount = document.getElementById('edit-acc-is-investment').checked;
 
     if (!name || isNaN(newInitialBalance) || !createDate) {
         showNotification('Veuillez remplir tous les champs.', 'error');
@@ -125,7 +129,8 @@ export const handleUpdateAccount = async (e) => {
             name,
             initialBalance: newInitialBalance,
             createDate,
-            isSaving
+            isSaving,
+            isInvestmentAccount
         }, oldInitialBalance);
         closeAccountDrawer();
         showNotification('Compte mis à jour !');
@@ -149,22 +154,36 @@ export const openAccountActions = (id) => {
     const acc = state.accounts.find(a => a.id === id);
     if (!acc) return;
     
-    const actionsDrawer = document.getElementById('account-actions-drawer');
+    const modal = document.getElementById('account-actions-modal');
+    const content = document.getElementById('account-actions-content');
     const actionsTitle = document.getElementById('account-actions-title');
-    const btnEdit = document.getElementById('btn-edit-account');
-    const btnDelete = document.getElementById('btn-delete-account');
+    const btnEdit = document.getElementById('account-action-edit');
+    const btnDelete = document.getElementById('account-action-delete');
     
     actionsTitle.textContent = acc.name;
-    btnEdit.onclick = () => openEditAccount(id);
-    btnDelete.onclick = () => deleteAccount(id);
+    btnEdit.onclick = () => {
+        closeAccountActions();
+        openEditAccount(id);
+    };
+    btnDelete.onclick = () => {
+        closeAccountActions();
+        deleteAccount(id);
+    };
     
-    document.getElementById('drawer-overlay').classList.add('active');
-    actionsDrawer.classList.add('active');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        content.style.transform = 'translateY(0)';
+    }, 10);
 };
 
 export const closeAccountActions = () => {
-    document.getElementById('drawer-overlay').classList.remove('active');
-    document.getElementById('account-actions-drawer').classList.remove('active');
+    const modal = document.getElementById('account-actions-modal');
+    const content = document.getElementById('account-actions-content');
+    
+    content.style.transform = 'translateY(100%)';
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
 };
 
 export const formatCurrency = (amount) => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -190,9 +209,11 @@ export const renderAccountsList = () => {
 
     // Apply Filters
     if (typeFilter === 'current') {
-        filteredAccounts = filteredAccounts.filter(acc => !acc.isSaving);
+        filteredAccounts = filteredAccounts.filter(acc => !acc.isSaving && !acc.isInvestmentAccount);
     } else if (typeFilter === 'savings') {
         filteredAccounts = filteredAccounts.filter(acc => acc.isSaving);
+    } else if (typeFilter === 'investment') {
+        filteredAccounts = filteredAccounts.filter(acc => acc.isInvestmentAccount);
     }
 
     // Apply Search (Name, Balance)
@@ -220,21 +241,30 @@ export const renderAccountsList = () => {
     const renderItem = (acc) => {
         const balance = balances[acc.id] || 0;
         const balColor = balance >= 0 ? 'text-slate-900' : 'text-red-600';
-        const typeIcon = acc.isSaving ? 'fa-piggy-bank text-blue-500' : 'fa-wallet text-slate-400';
         const isDirty = acc.balanceDirty !== false;
+
+        let typeLabel = 'Compte courant';
+        let typeIconClass = 'fa-wallet text-slate-400';
+        if (acc.isSaving) {
+            typeLabel = 'Épargne';
+            typeIconClass = 'fa-piggy-bank text-blue-500';
+        } else if (acc.isInvestmentAccount) {
+            typeLabel = 'Investissement';
+            typeIconClass = 'fa-money-bill-trend-up text-indigo-500';
+        }
 
         return `
             <div class="p-4 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between group" onclick="window.app.openAccountActions('${acc.id}')">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                        <i class="fa-solid ${typeIcon}"></i>
+                        <i class="fa-solid ${typeIconClass}"></i>
                     </div>
                     <div>
                         <div class="font-bold text-slate-800 flex items-center gap-2">
                             ${acc.name}
                             ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs" title="Calcul en cours..."></i>' : ''}
                         </div>
-                        <div class="text-xs text-slate-500">${acc.isSaving ? 'Épargne' : 'Compte courant'}</div>
+                        <div class="text-xs text-slate-500">${typeLabel}</div>
                     </div>
                 </div>
                 <div class="text-right">
@@ -248,15 +278,28 @@ export const renderAccountsList = () => {
     const renderRow = (acc) => {
         const balance = balances[acc.id] || 0;
         const balColor = balance >= 0 ? 'text-slate-900' : 'text-red-600';
-        const typeBadge = acc.isSaving ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700';
         const isDirty = acc.balanceDirty !== false;
+
+        let typeLabel = 'Courant';
+        let typeBadge = 'bg-slate-100 text-slate-700';
+        let typeIcon = 'fa-wallet';
+        
+        if (acc.isSaving) {
+            typeLabel = 'Épargne';
+            typeBadge = 'bg-blue-100 text-blue-700';
+            typeIcon = 'fa-piggy-bank';
+        } else if (acc.isInvestmentAccount) {
+            typeLabel = 'Investissement';
+            typeBadge = 'bg-indigo-100 text-indigo-700';
+            typeIcon = 'fa-money-bill-trend-up';
+        }
 
         return `
             <tr class="hover:bg-slate-50 transition-colors cursor-pointer group" onclick="window.app.openAccountActions('${acc.id}')">
                 <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                            <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : 'fa-wallet'}"></i>
+                            <i class="fa-solid ${typeIcon}"></i>
                         </div>
                         <span class="font-semibold text-slate-800 flex items-center gap-2">
                             ${acc.name}
@@ -266,7 +309,7 @@ export const renderAccountsList = () => {
                 </td>
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 rounded-full text-xs font-medium ${typeBadge}">
-                        ${acc.isSaving ? 'Épargne' : 'Courant'}
+                        ${typeLabel}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-right">

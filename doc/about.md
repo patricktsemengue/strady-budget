@@ -13,6 +13,7 @@ The system revolves around the following data entities, all of which are scoped 
   - `name`: string (unique)
   - `createDate`: string (YYYY-MM-DD)
   - `isSaving`: boolean
+  - `isInvestmentAccount`: boolean
   - `balanceDirty`: boolean (true if balance needs background recalculation)
 - **CATEGORY**: A user-defined category for transactions.
   - `id`: string (unique, deterministic UUID based on label)
@@ -150,7 +151,7 @@ The system revolves around the following data entities, all of which are scoped 
 The application uses a **Modular Plug-and-Play Architecture**. Each feature is a self-contained module that can be added or removed with minimal code changes. The UI is dynamically generated based on the registered modules.
 
 - **Dashboard**: Displays key financial indicators and advanced visualizations.
-- **Transactions**: Dedicated list view for managing month-specific transactions.
+- **Transactions**: Dedicated list view for managing month-specific transactions. Features **Smart Grouping** by category with **MoM Variance Analysis**, allowing users to instantly see where spending has increased or decreased compared to the previous month.
 - **Accounts**: Centralized management of financial accounts.
 - **Categories**: Management of transaction categories.
 - **Settings**: System configuration and data maintenance.

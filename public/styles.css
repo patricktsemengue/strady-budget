@@ -105,3 +105,35 @@
     font-family: 'Font Awesome 6 Free', 'Inter', sans-serif;
     font-weight: 900;
 }
+
+/* Category Grouping Styles */
+.category-group-header {
+    transition: background-color 0.2s;
+    user-select: none;
+}
+
+.category-group-header:hover {
+    background-color: #f1f5f9;
+}
+
+.chevron.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.chevron.rotate-\[-90deg\] {
+    transform: rotate(-90deg);
+}
+
+.category-group-header-row {
+    position: relative;
+}
+
+.category-group-header-row::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #f1f5f9;
+}

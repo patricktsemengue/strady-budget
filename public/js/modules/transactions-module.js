@@ -50,7 +50,16 @@ export default {
                             </div>
                             <div class="flex items-center gap-2 pl-2 border-l border-slate-200 h-10">
                                 <label for="sort-order" class="text-sm font-medium text-slate-500 whitespace-nowrap">Trier :</label>
+                                <div class="flex items-center gap-2">
+                                    <button id="btn-expand-all" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Tout développer">
+                                        <i class="fa-solid fa-layer-group text-sm"></i>
+                                    </button>
+                                    <button id="btn-collapse-all" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Tout réduire">
+                                        <i class="fa-solid fa-compress text-sm"></i>
+                                    </button>
+                                </div>
                                 <select id="sort-order" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm font-medium text-slate-800">
+                                    <option value="default" selected>Défaut</option>
                                     <option value="date-desc">Date (récent)</option>
                                     <option value="account">Compte</option>
                                     <option value="type">Type</option>
@@ -102,6 +111,12 @@ export default {
             if (e.target.closest('#btn-mobile-filters')) {
                 const modal = document.getElementById('mobile-filters-modal');
                 if (modal) modal.classList.remove('hidden');
+            }
+            if (e.target.closest('#btn-expand-all')) {
+                window.app.toggleAllCategoryGroups(true);
+            }
+            if (e.target.closest('#btn-collapse-all')) {
+                window.app.toggleAllCategoryGroups(false);
             }
         });
 

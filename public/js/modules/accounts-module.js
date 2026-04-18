@@ -27,6 +27,7 @@ export default {
                             <option value="all">Tous les types</option>
                             <option value="current">Courant</option>
                             <option value="savings">Épargne</option>
+                            <option value="investment">Investissement</option>
                         </select>
 
                         <select id="sort-accounts" class="border-slate-300 rounded-lg shadow-sm border p-2 text-sm">

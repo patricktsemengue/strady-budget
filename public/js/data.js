@@ -91,11 +91,11 @@ export const handleFactoryReset = async (mode = 'starter') => {
 
 export const exportFullBackupCSV = () => {
     // Universal CSV Header
-    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving\n";
+    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment\n";
     
     // 1. Accounts
     state.accounts.forEach(acc => {
-        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0}\n`;
+        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0}\n`;
     });
 
     // 2. Categories
@@ -142,7 +142,7 @@ export const importFullBackupCSV = (event) => {
     reader.onload = async (e) => {
         const text = e.target.result;
         const lines = text.split('\n');
-        const header = lines[0] ? lines[0].trim().toLowerCase() : "";
+        const header = lines[0] ? lines[0].trim().toLowerCase().replace(/"/g, '') : "";
         
         const colIdx = {};
         header.split(',').forEach((col, idx) => colIdx[col.trim()] = idx);
@@ -178,7 +178,8 @@ export const importFullBackupCSV = (event) => {
             const type = getValue("Type").toUpperCase();
             const date = getValue("Date");
             const label = getValue("Label");
-            const value = parseFloat(getValue("Value") || 0);
+            const rawValue = getValue("Value");
+            const value = isNaN(parseFloat(rawValue)) ? 0 : parseFloat(rawValue);
 
             if (type === 'ACCOUNT') {
                 const lowerName = label.toLowerCase();
@@ -191,7 +192,8 @@ export const importFullBackupCSV = (event) => {
                         name: label,
                         createDate: date || new Date().toISOString().split('T')[0],
                         initialBalance: value,
-                        isSaving: getValue("IsSaving") === '1'
+                        isSaving: getValue("IsSaving") === '1',
+                        isInvestmentAccount: getValue("IsInvestment") === '1' || getValue("isInvestmentAccount") === '1'
                     };
                     results.accounts.push(acc);
                     accountMap[lowerName] = deterministicId;
@@ -222,7 +224,14 @@ export const importFullBackupCSV = (event) => {
                     if (accountMap[lower]) return accountMap[lower];
                     
                     const id = `acc_${await generateDeterministicUUID(name)}`;
-                    const newAcc = { id, name, createDate: date || new Date().toISOString().split('T')[0], initialBalance: 0, isSaving: false };
+                    const newAcc = { 
+                        id, 
+                        name, 
+                        createDate: date || new Date().toISOString().split('T')[0], 
+                        initialBalance: 0, 
+                        isSaving: false,
+                        isInvestmentAccount: false 
+                    };
                     results.accounts.push(newAcc);
                     accountMap[lower] = id;
                     return id;

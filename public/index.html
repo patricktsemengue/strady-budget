@@ -275,6 +275,7 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-600 mb-2">Trier par</label>
                     <select id="sort-order-mobile" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="default" selected>Défaut</option>
                         <option value="date-desc">Date (plus récent)</option>
                         <option value="category">Catégorie</option>
                         <option value="account">Compte</option>
@@ -320,9 +321,15 @@
                         <input type="date" id="edit-acc-balance-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
                     </div>
                 </div>
-                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <input type="checkbox" id="edit-acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
-                    <label for="edit-acc-is-savings" class="text-sm font-medium text-slate-700">Considérer comme épargne de précaution</label>
+                <div class="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="edit-acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
+                        <label for="edit-acc-is-savings" class="text-sm font-medium text-slate-700">Considérer comme épargne de précaution</label>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="edit-acc-is-investment" class="h-5 w-5 text-indigo-600 border-slate-300 rounded">
+                        <label for="edit-acc-is-investment" class="text-sm font-medium text-slate-700">Considérer comme compte d'investissement</label>
+                    </div>
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="btn-cancel-acc-edit" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
@@ -355,9 +362,15 @@
                         <input type="date" id="acc-balance-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
                     </div>
                 </div>
-                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <input type="checkbox" id="acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
-                    <label for="acc-is-savings" class="text-sm font-medium text-slate-700">Considérer comme épargne de précaution</label>
+                <div class="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
+                        <label for="acc-is-savings" class="text-sm font-medium text-slate-700">Considérer comme épargne de précaution</label>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="acc-is-investment" class="h-5 w-5 text-indigo-600 border-slate-300 rounded">
+                        <label for="acc-is-investment" class="text-sm font-medium text-slate-700">Considérer comme compte d'investissement</label>
+                    </div>
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="btn-cancel-add-acc" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>

@@ -121,6 +121,7 @@ export const addAccountToFirestore = async (userId, account) => {
         name: account.name,
         createDate: createDate,
         isSaving: !!account.isSaving,
+        isInvestmentAccount: !!account.isInvestmentAccount,
         balanceDirty: false,
         updated_at: serverTimestamp() 
     };
@@ -162,6 +163,7 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
             name: account.name,
             createDate: createDate || oldData.createDate,
             isSaving: !!account.isSaving,
+            isInvestmentAccount: !!account.isInvestmentAccount,
             updated_at: serverTimestamp() 
         };
 
@@ -493,6 +495,7 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
                     name: acc.name,
                     createDate: createDate,
                     isSaving: !!acc.isSaving,
+                    isInvestmentAccount: !!acc.isInvestmentAccount,
                     balanceDirty: false,
                     updated_at: serverTimestamp() 
                 }
@@ -533,12 +536,43 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
     }
 
     if (templates) {
+        const boundaryDateStr = getFunctionalBoundaryDate();
         templates.forEach(rec => {
             allOperations.push({
                 type: 'set',
                 ref: doc(db, `users/${userId}/recurringTemplates`, rec.id),
                 data: { ...rec, updated_at: serverTimestamp() }
             });
+
+            // Generate child transactions for the imported template
+            const generationTemplate = { ...rec };
+            // Ensure we don't generate past the boundary
+            if (!generationTemplate.endDate || generationTemplate.endDate > boundaryDateStr) {
+                generationTemplate.endDate = boundaryDateStr;
+            }
+
+            const dates = calculateAllOccurrences(generationTemplate);
+            for (const date of dates) {
+                const txData = {
+                    label: rec.label,
+                    amount: rec.amount,
+                    date: date,
+                    Category: rec.category,
+                    source: rec.source,
+                    destination: rec.destination,
+                    Model: rec.id,
+                };
+                const txId = generateDeterministicTransactionId(txData);
+                allOperations.push({
+                    type: 'set',
+                    ref: doc(db, `users/${userId}/transactions`, txId),
+                    data: {
+                        id: txId,
+                        ...txData,
+                        updated_at: serverTimestamp()
+                    }
+                });
+            }
         });
     }
 
@@ -643,102 +677,92 @@ export const markSingleAccountBalanceDelta = async (userId, accountId, amount, d
 };
 
 export const provisionStarterData = async (userId) => {
-    const batch = writeBatch(db);
-    const now = new Date();
-    const currentMonthStr = now.toISOString().split('T')[0].substring(0, 7);
-    const todayStr = now.toISOString().split('T')[0];
-    
-    // 1. Categories
-    const categories = [
-        { id: 'cat_salary', label: 'Salaire', icon: 'fa-money-bill-wave', color: '#10b981' },
-        { id: 'cat_food', label: 'Alimentation', icon: 'fa-shopping-basket', color: '#f59e0b' },
-        { id: 'cat_rent', label: 'Logement', icon: 'fa-home', color: '#3b82f6' },
-        { id: 'cat_elec', label: 'Électricité', icon: 'fa-bolt', color: '#fbbf24' },
-        { id: 'cat_water', label: 'Eau', icon: 'fa-tint', color: '#60a5fa' },
-        { id: 'cat_sub', label: 'Abonnements', icon: 'fa-calendar-alt', color: '#8b5cf6' }
-    ];
-    
-    categories.forEach(cat => {
-        const ref = doc(db, `users/${userId}/categories`, cat.id);
-        batch.set(ref, { ...cat, updated_at: serverTimestamp() });
-    });
-    
-    // 2. Accounts
-    const accMainId = 'acc_main';
-    const accSavingsId = 'acc_savings';
-    const firstOfMonth = `${currentMonthStr}-01`;
-    
-    const accounts = [
-        { id: accMainId, name: 'Compte Courant', initialBalance: 1200, createDate: firstOfMonth },
-        { id: accSavingsId, name: 'Livret A / Compte Épargne', initialBalance: 3000, createDate: firstOfMonth }
-    ];
-    
-    accounts.forEach(acc => {
-        const ref = doc(db, `users/${userId}/accounts`, acc.id);
-        batch.set(ref, { 
-            id: acc.id, 
-            name: acc.name, 
-            createDate: acc.createDate, 
-            isSaving: acc.id === accSavingsId,
-            balanceDirty: false,
-            updated_at: serverTimestamp() 
+    try {
+        const response = await fetch('/data/starter-data.json');
+        if (!response.ok) throw new Error('Failed to load starter data');
+        const data = await response.json();
+
+        const batch = writeBatch(db);
+        const now = new Date();
+        const currentMonthStr = now.toISOString().split('T')[0].substring(0, 7);
+        const boundaryDateStr = getFunctionalBoundaryDate();
+
+        // 1. Categories
+        data.categories.forEach(cat => {
+            const ref = doc(db, `users/${userId}/categories`, cat.id);
+            batch.set(ref, { ...cat, updated_at: serverTimestamp() });
         });
-        
-        const balDocId = `${acc.id}_${acc.createDate}`;
-        const balRef = doc(db, `users/${userId}/account_balances`, balDocId);
-        batch.set(balRef, {
-            account_id: acc.id,
-            date: acc.createDate,
-            balance: acc.initialBalance,
-            updated_at: serverTimestamp()
+
+        // 2. Accounts
+        data.accounts.forEach(acc => {
+            const createDate = `${currentMonthStr}-${String(acc.day || 1).padStart(2, '0')}`;
+            const ref = doc(db, `users/${userId}/accounts`, acc.id);
+            batch.set(ref, {
+                id: acc.id,
+                name: acc.name,
+                createDate: createDate,
+                isSaving: acc.isSaving || false,
+                isInvestmentAccount: acc.isInvestmentAccount || false,
+                balanceDirty: false,
+                updated_at: serverTimestamp()
+            });
+
+            const balDocId = `${acc.id}_${createDate}`;
+            const balRef = doc(db, `users/${userId}/account_balances`, balDocId);
+            batch.set(balRef, {
+                account_id: acc.id,
+                date: createDate,
+                balance: acc.initialBalance,
+                updated_at: serverTimestamp()
+            });
         });
-    });
-    
-    // 3. Recurring Templates
-    const templates = [
-        {
-            id: 'rec_salary',
-            label: 'Salaire',
-            amount: 2500,
-            date: firstOfMonth,
-            category: 'cat_salary',
-            source: 'external',
-            destination: accMainId,
-            periodicity: 'M',
-            endDate: null
-        },
-        {
-            id: 'rec_rent',
-            label: 'Loyer',
-            amount: 850,
-            date: `${currentMonthStr}-05`,
-            category: 'cat_rent',
-            source: accMainId,
-            destination: 'external',
-            periodicity: 'M',
-            endDate: null
-        }
-    ];
-    
-    const boundaryDateStr = getFunctionalBoundaryDate();
-    
-    templates.forEach(tpl => {
-        const ref = doc(db, `users/${userId}/recurringTemplates`, tpl.id);
-        batch.set(ref, { ...tpl, updated_at: serverTimestamp() });
-        
-        const generationTemplate = { ...tpl };
-        generationTemplate.endDate = boundaryDateStr;
-        
-        const dates = calculateAllOccurrences(generationTemplate);
-        for (const date of dates) {
+
+        // 3. Recurring Templates
+        data.templates.forEach(tpl => {
+            const date = `${currentMonthStr}-${String(tpl.day || 1).padStart(2, '0')}`;
+            const tplData = { ...tpl, date, endDate: null };
+            delete tplData.day;
+
+            const ref = doc(db, `users/${userId}/recurringTemplates`, tpl.id);
+            batch.set(ref, { ...tplData, updated_at: serverTimestamp() });
+
+            const generationTemplate = { ...tplData };
+            generationTemplate.endDate = boundaryDateStr;
+
+            const dates = calculateAllOccurrences(generationTemplate);
+            for (const d of dates) {
+                const txData = {
+                    label: tpl.label,
+                    amount: tpl.amount,
+                    date: d,
+                    Category: tpl.category,
+                    source: tpl.source,
+                    destination: tpl.destination,
+                    Model: tpl.id,
+                };
+                const txId = generateDeterministicTransactionId(txData);
+                const txRef = doc(db, `users/${userId}/transactions`, txId);
+                batch.set(txRef, {
+                    id: txId,
+                    ...txData,
+                    updated_at: serverTimestamp()
+                });
+            }
+        });
+
+        // 4. Past Transactions
+        data.pastTransactions.forEach(tx => {
+            const d = new Date(now);
+            d.setDate(now.getDate() - (tx.daysAgo || 0));
+            const dateStr = d.toISOString().split('T')[0];
+
             const txData = {
-                label: tpl.label,
-                amount: tpl.amount,
-                date: date,
-                Category: tpl.category,
-                source: tpl.source,
-                destination: tpl.destination,
-                Model: tpl.id,
+                label: tx.label,
+                amount: tx.amount,
+                date: dateStr,
+                Category: tx.category,
+                source: tx.source,
+                destination: tx.destination
             };
             const txId = generateDeterministicTransactionId(txData);
             const txRef = doc(db, `users/${userId}/transactions`, txId);
@@ -747,49 +771,20 @@ export const provisionStarterData = async (userId) => {
                 ...txData,
                 updated_at: serverTimestamp()
             });
-        }
-    });
-    
-    // 4. Past Transactions
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
-    const twoDaysAgo = new Date(now);
-    twoDaysAgo.setDate(now.getDate() - 2);
-    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
-    
-    const pastTx = [
-        { label: 'Courses Carrefour', amount: 85.50, date: yesterdayStr, category: 'cat_food', source: accMainId, destination: 'external' },
-        { label: 'Boulangerie', amount: 4.20, date: twoDaysAgoStr, category: 'cat_food', source: accMainId, destination: 'external' }
-    ];
-    
-    pastTx.forEach(tx => {
-        const txData = {
-            label: tx.label,
-            amount: tx.amount,
-            date: tx.date,
-            Category: tx.category,
-            source: tx.source,
-            destination: tx.destination
-        };
-        const txId = generateDeterministicTransactionId(txData);
-        const txRef = doc(db, `users/${userId}/transactions`, txId);
-        batch.set(txRef, {
-            id: txId,
-            ...txData,
+        });
+
+        // 5. Onboarding Setting
+        const onboardingRef = doc(db, `users/${userId}/settings`, 'onboarding');
+        batch.set(onboardingRef, {
+            starterPackApplied: true,
+            onboardingComplete: true,
             updated_at: serverTimestamp()
         });
-    });
-    
-    // 5. Onboarding Setting
-    const onboardingRef = doc(db, `users/${userId}/settings`, 'onboarding');
-    batch.set(onboardingRef, { 
-        starterPackApplied: true, 
-        onboardingComplete: true,
-        updated_at: serverTimestamp() 
-    });
-    
-    await batch.commit();
-    await markAccountsBalanceDirty(userId);
+
+        await batch.commit();
+        await markAccountsBalanceDirty(userId);
+    } catch (error) {
+        console.error('Provisioning failed:', error);
+        throw error;
+    }
 };

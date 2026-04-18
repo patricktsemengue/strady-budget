@@ -80,14 +80,11 @@ const init = () => {
                     console.log('Service Worker registered');
                     // If user is already logged in, init SW
                     if (auth.currentUser) {
-                        auth.currentUser.getIdToken().then(token => {
-                            reg.active?.postMessage({ 
-                                type: 'INIT_FIREBASE', 
-                                payload: { config: firebaseConfig, token } 
-                            });
+                        reg.active?.postMessage({
+                            type: 'INIT_FIREBASE',
+                            payload: { config: firebaseConfig }
                         });
-                    }
-                })
+                    }                })
                 .catch(err => console.error('SW registration failed:', err));
         });
 
@@ -162,14 +159,13 @@ const init = () => {
         if (user) {
             setStorageUser(user.uid);
             
-            // Init Service Worker with Firebase config and token once user is authenticated
+            // Init Service Worker with Firebase config once user is authenticated
             const syncSWAuth = async (u) => {
                 if ('serviceWorker' in navigator) {
-                    const token = await u.getIdToken();
                     navigator.serviceWorker.ready.then(reg => {
                         reg.active?.postMessage({ 
                             type: 'INIT_FIREBASE', 
-                            payload: { config: firebaseConfig, token } 
+                            payload: { config: firebaseConfig } 
                         });
                     });
                 }
@@ -411,7 +407,9 @@ window.app = {
     openCategoryActions,
     openEditAccount,
     deleteAccount,
-    openAccountActions
+    openAccountActions,
+    toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
+    toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand))
 };
 
 document.addEventListener('DOMContentLoaded', init);

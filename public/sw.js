@@ -1,5 +1,5 @@
 // Service Worker for Client-Side Balance Aggregation
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
     getAuth, signInWithCustomToken, signInWithCredential, GoogleAuthProvider
@@ -29,19 +29,16 @@ self.addEventListener('message', async (event) => {
             const app = initializeApp(payload.config);
             db = getFirestore(app);
             auth = getAuth(app);
-        }
-        
-        if (payload.token) {
-            console.log('SW: Received Auth Token, authenticating...');
-            try {
-                // In Service Workers, we use GoogleAuthProvider.credential(idToken) 
-                // and signInWithCredential for ID tokens.
-                const credential = GoogleAuthProvider.credential(payload.token);
-                await signInWithCredential(auth, credential);
-                console.log('SW: Authenticated successfully');
-            } catch (err) {
-                console.error('SW: Authentication failed', err);
-            }
+            
+            // Listen for auth state changes within the SW
+            // If persistence is shared (same origin), it might pick up the session
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    console.log('SW: Auth state changed - User is signed in:', user.uid);
+                } else {
+                    console.log('SW: Auth state changed - No user');
+                }
+            });
         }
         return;
     }

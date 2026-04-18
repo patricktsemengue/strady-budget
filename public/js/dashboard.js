@@ -10,6 +10,8 @@ export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
     const tableBody = document.getElementById('transactions-table-body');
     
+    if (!container && !tableBody) return;
+
     // Filters & Search - Handling Multi-Select
     const getSelectedValues = (id) => {
         const el = document.getElementById(id);
@@ -22,7 +24,6 @@ export const renderTransactions = () => {
     const categoryFilters = getSelectedValues('filter-category');
     const accountFilters = getSelectedValues('filter-account');
     
-    // If we are on mobile, we might need to check the mobile filters too if the desktop ones aren't the source
     const categoryFiltersMobile = getSelectedValues('filter-category-mobile');
     const accountFiltersMobile = getSelectedValues('filter-account-mobile');
     
@@ -30,14 +31,25 @@ export const renderTransactions = () => {
     const finalAccountFilters = accountFilters.includes('all') ? accountFiltersMobile : accountFilters;
 
     const searchFilter = (document.getElementById('search-transactions')?.value || '').toLowerCase();
-    const sortOrder = document.getElementById('sort-order')?.value || 'date-desc';
+    const sortOrder = document.getElementById('sort-order')?.value || document.getElementById('sort-order-mobile')?.value || 'default';
 
     const monthKey = getMonthKey(state.viewDate);
-    const monthData = state.records[monthKey] || { items: [] };
+    const monthData = state.records[monthKey] || { items: [], status: 'open' };
     
+    // Calculate Previous Month Data for Variance
+    const prevDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() - 1, 1);
+    const prevMonthKey = getMonthKey(prevDate);
+    const prevMonthItems = state.records[prevMonthKey]?.items || [];
+    const prevTotals = {};
+    prevMonthItems.forEach(item => {
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
+        const amount = txInfo.isIncome ? item.amount : (txInfo.isExpense ? -item.amount : 0);
+        prevTotals[item.Category] = (prevTotals[item.Category] || 0) + amount;
+    });
+
     let filteredItems = [...monthData.items];
 
-    // Apply Filters (Multi-select logic)
+    // Apply Filters
     if (!finalCategoryFilters.includes('all')) {
         filteredItems = filteredItems.filter(item => finalCategoryFilters.includes(item.Category));
     }
@@ -45,7 +57,7 @@ export const renderTransactions = () => {
         filteredItems = filteredItems.filter(item => finalAccountFilters.includes(item.source) || finalAccountFilters.includes(item.destination));
     }
 
-    // Apply Search (Label, Category Label, Amount)
+    // Apply Search
     if (searchFilter) {
         filteredItems = filteredItems.filter(item => {
             const category = state.categories.find(c => c.id === item.Category);
@@ -68,112 +80,206 @@ export const renderTransactions = () => {
         const txInfo = getTxDisplayInfo(tx.source, tx.destination);
         if (txInfo.isExpense) return txInfo.src.name;
         if (txInfo.isIncome) return txInfo.dst.name;
-        return txInfo.src.name; // Default for transfer
+        return txInfo.src.name;
     };
 
-    // Sort Logic
-    filteredItems.sort((a, b) => {
-        switch (sortOrder) {
-            case 'account': {
-                const nameA = getPrimaryAccountName(a).toLowerCase();
-                const nameB = getPrimaryAccountName(b).toLowerCase();
-                return nameA.localeCompare(nameB) || new Date(b.date) - new Date(a.date);
-            }
-            case 'type': {
-                const typeA = getType(a);
-                const typeB = getType(b);
-                return typeA.localeCompare(typeB) || new Date(b.date) - new Date(a.date);
-            }
-            case 'category': {
-                const catA = state.categories.find(c => c.id === a.Category);
-                const catB = state.categories.find(c => c.id === b.Category);
-                const orderA = catA ? (catA['index-order'] ?? 999) : 999;
-                const orderB = catB ? (catB['index-order'] ?? 999) : 999;
-                // Primary: Category Order, Secondary: Date
-                if (orderA !== orderB) return orderA - orderB;
-                return new Date(b.date) - new Date(a.date);
-            }
-            case 'amount-desc': return b.amount - a.amount;
-            case 'amount-asc': return a.amount - b.amount;
-            default: return new Date(b.date) - new Date(a.date);
-        }
+    // Grouping Logic
+    const groups = {};
+    filteredItems.forEach(item => {
+        const catId = item.Category || 'uncategorized';
+        if (!groups[catId]) groups[catId] = { items: [], total: 0 };
+        groups[catId].items.push(item);
+        
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
+        const amount = txInfo.isIncome ? item.amount : (txInfo.isExpense ? -item.amount : 0);
+        groups[catId].total += amount;
     });
 
-    // Render mobile cards
+    // Load expanded states from localStorage
+    const expandedStates = JSON.parse(localStorage.getItem('strady_expanded_categories') || '{}');
+
+    // Sort Groups based on Category Index or Total
+    const sortedGroupIds = Object.keys(groups).sort((a, b) => {
+        const catA = state.categories.find(c => c.id === a);
+        const catB = state.categories.find(c => c.id === b);
+        const orderA = catA ? (catA['index-order'] ?? 999) : 999;
+        const orderB = catB ? (catB['index-order'] ?? 999) : 999;
+        return orderA - orderB;
+    });
+
+    // Sub-item sorting logic (internal to each group)
+    const sortSubItems = (items) => {
+        return items.sort((a, b) => {
+            switch (sortOrder) {
+                case 'account': return getPrimaryAccountName(a).localeCompare(getPrimaryAccountName(b));
+                case 'amount-desc': return b.amount - a.amount;
+                case 'amount-asc': return a.amount - b.amount;
+                case 'date-desc': return new Date(b.date) - new Date(a.date);
+                default: return new Date(b.date) - new Date(a.date);
+            }
+        });
+    };
+
+    const renderVariance = (catId, currentTotal) => {
+        const prevTotal = prevTotals[catId] || 0;
+        if (prevTotal === 0 && currentTotal === 0) return '';
+        
+        const diff = currentTotal - prevTotal;
+        const colorClass = diff > 0 ? 'text-green-600' : (diff < 0 ? 'text-rose-600' : 'text-slate-400');
+        const icon = diff > 0 ? 'fa-arrow-trend-up' : (diff < 0 ? 'fa-arrow-trend-down' : 'fa-minus');
+        const sign = diff > 0 ? '+' : '';
+        
+        return `<span class="text-[10px] font-bold ${colorClass} flex items-center gap-1 ml-2">
+            <i class="fa-solid ${icon}"></i> ${sign}${formatCurrency(diff)}
+        </span>`;
+    };
+
+    // Render mobile content
     if (container) {
-        container.innerHTML = filteredItems.map((item, index) => {
-            const category = state.categories.find(c => c.id === item.Category);
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
+        let html = '';
+        sortedGroupIds.forEach(catId => {
+            const group = groups[catId];
+            const category = state.categories.find(c => c.id === catId);
             const isMonthClosed = monthData.status === 'closed';
-            const isRecurring = !!item.Model;
-            return `
-                <li class="p-4 flex items-center justify-between gap-4 group transaction-item-animate" style="animation-delay: ${index * 30}ms">
-                    <div class="flex items-center gap-4 flex-grow truncate">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                        <div class="flex-1 truncate">
-                            <div class="flex items-center gap-2">
-                                <p class="font-semibold text-slate-800 truncate">${item.label}</p>
-                                ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400" title="Transaction récurrente"></i>' : ''}
-                            </div>
-                            <p class="text-xs text-slate-500 font-medium truncate">${txInfo.src.name} <i class="fa-solid fa-arrow-right mx-1 opacity-50"></i> ${txInfo.dst.name}</p>
-                        </div>
-                    </div>
+            const isExpanded = !!expandedStates[catId];
+            
+            const groupHeaderHtml = `
+                <div class="category-group-header flex items-center justify-between p-3 bg-slate-50 border-y border-slate-100 cursor-pointer sticky top-0 z-10" onclick="window.app.toggleCategoryGroup('${catId}')">
                     <div class="flex items-center gap-3">
-                        <div class="text-right whitespace-nowrap">
-                            <p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${formatDateStr(item.date)}</p>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform chevron ${isExpanded ? 'rotate-180' : ''}"></i>
+                        <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px]" style="background-color: ${category?.color || '#94a3b8'}">
+                            <i class="fa-solid ${category?.icon || 'fa-tag'}"></i>
                         </div>
-                        ${!isMonthClosed ? `
-                        <button onclick="window.app.openMobileActions('${item.id}')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Plus d'actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                        ` : ''}
+                        <span class="text-sm font-bold text-slate-700">${category?.label || 'Sans catégorie'}</span>
+                        <span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">${group.items.length}</span>
                     </div>
-                </li>`;
-        }).join('');
+                    <div class="flex items-center">
+                        <span class="text-sm font-bold ${group.total >= 0 ? 'text-slate-700' : 'text-slate-900'}">${formatCurrency(group.total)}</span>
+                        ${renderVariance(catId, group.total)}
+                    </div>
+                </div>
+            `;
+
+            const itemsHtml = `
+                <ul class="divide-y divide-slate-50 transition-all duration-300 ${isExpanded ? '' : 'hidden'}">
+                    ${sortSubItems(group.items).map((item, index) => {
+                        const txInfo = getTxDisplayInfo(item.source, item.destination);
+                        const isRecurring = !!item.Model;
+                        return `
+                            <li class="p-4 flex items-center justify-between gap-4 group transaction-item-animate">
+                                <div class="flex items-center gap-4 flex-grow truncate pl-4">
+                                    <div class="flex-1 truncate">
+                                        <div class="flex items-center gap-2">
+                                            <p class="font-semibold text-slate-800 truncate">${item.label}</p>
+                                            ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400"></i>' : ''}
+                                        </div>
+                                        <p class="text-xs text-slate-500 font-medium truncate">${txInfo.src.name} → ${txInfo.dst.name}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="text-right whitespace-nowrap">
+                                        <p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${formatDateStr(item.date)}</p>
+                                    </div>
+                                    ${!isMonthClosed ? `
+                                    <button onclick="window.app.openMobileActions('${item.id}')" class="p-2 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                                    ` : ''}
+                                </div>
+                            </li>`;
+                    }).join('')}
+                </ul>
+            `;
+
+            html += `<div class="category-group">${groupHeaderHtml}${itemsHtml}</div>`;
+        });
+        container.innerHTML = html || '<div class="p-8 text-center text-slate-400 italic">Aucune transaction trouvée</div>';
     }
 
-    // Render desktop table
+    // Render desktop content
     if (tableBody) {
-        tableBody.innerHTML = filteredItems.map((item, index) => {
-            const category = state.categories.find(c => c.id === item.Category);
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
+        let html = '';
+        sortedGroupIds.forEach(catId => {
+            const group = groups[catId];
+            const category = state.categories.find(c => c.id === catId);
             const isMonthClosed = monthData.status === 'closed';
-            const isRecurring = !!item.Model;
-            return `
-                <tr class="group hover:bg-slate-50 transition-colors transaction-item-animate" style="animation-delay: ${index * 20}ms">
-                    <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatDateStr(item.date)}</td>
-                    <td class="px-6 py-4">
-                        <span class="text-xs font-bold px-2 py-1 rounded-full ${txInfo.ui.color} bg-opacity-10" style="background-color: currentColor; background-clip: padding-box; color: inherit;">${getType(item)}</span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0 text-xs" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-question'}"></i></div>
-                            <span class="text-sm font-medium text-slate-700">${category?.label || 'Sans catégorie'}</span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap">
-                        <span class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm font-semibold text-slate-800">${item.label}</span>
-                            ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-[10px] text-slate-400" title="Transaction récurrente"></i>' : ''}
-                        </div>
-                        <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                            ${txInfo.src.name} <i class="fa-solid fa-arrow-right opacity-30"></i> ${txInfo.dst.name}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex items-center justify-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                            ${!isMonthClosed ? `
-                            <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>
-                            <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-rose-600 transition-colors" title="Supprimer"><i class="fa-solid fa-trash text-xs"></i></button>
+            const isExpanded = !!expandedStates[catId];
 
-                            ` : ''}
+            const groupHeaderHtml = `
+                <tr class="bg-slate-50/80 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.toggleCategoryGroup('${catId}')">
+                    <td colspan="6" class="px-6 py-3 category-group-header-row">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform chevron ${isExpanded ? '' : 'rotate-[-90deg]'}"></i>
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}">
+                                    <i class="fa-solid ${category?.icon || 'fa-tag'}"></i>
+                                </div>
+                                <span class="font-bold text-slate-800">${category?.label || 'Sans catégorie'}</span>
+                                <span class="text-xs bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full font-bold">${group.items.length} items</span>
+                            </div>
+                            <div class="flex items-center gap-6">
+                                ${renderVariance(catId, group.total)}
+                                <span class="text-lg font-black ${group.total >= 0 ? 'text-slate-700' : 'text-slate-900'}">${formatCurrency(group.total)}</span>
+                            </div>
                         </div>
                     </td>
-                </tr>`;
-        }).join('');
+                </tr>
+            `;
+
+            const itemsHtml = sortSubItems(group.items).map((item, index) => {
+                const txInfo = getTxDisplayInfo(item.source, item.destination);
+                const isRecurring = !!item.Model;
+                return `
+                    <tr class="group hover:bg-slate-50/50 transition-colors border-l-4 ${isExpanded ? '' : 'hidden'}" style="border-left-color: ${category?.color || '#cbd5e1'}">
+                        <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatDateStr(item.date)}</td>
+                        <td class="px-6 py-4">
+                            <span class="text-[10px] font-black px-2 py-1 rounded-full ${txInfo.ui.color} bg-white border border-current">${getType(item).toUpperCase()}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-slate-800">${item.label}</span>
+                                ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-[10px] text-slate-400" title="Récurrente"></i>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium">${txInfo.src.name} → ${txInfo.dst.name}</div>
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <span class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${!isMonthClosed ? `
+                                <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            html += groupHeaderHtml + itemsHtml;
+        });
+        tableBody.innerHTML = html || '<tr><td colspan="6" class="p-8 text-center text-slate-400 italic">Aucune transaction trouvée</td></tr>';
     }
+};
+
+export const toggleCategoryGroup = (catId) => {
+    const expandedStates = JSON.parse(localStorage.getItem('strady_expanded_categories') || '{}');
+    expandedStates[catId] = !expandedStates[catId];
+    localStorage.setItem('strady_expanded_categories', JSON.stringify(expandedStates));
+    renderTransactions();
+};
+
+export const toggleAllCategoryGroups = (expand) => {
+    const groups = {};
+    const monthKey = getMonthKey(state.viewDate);
+    const monthData = state.records[monthKey] || { items: [] };
+    
+    monthData.items.forEach(item => {
+        const catId = item.Category || 'uncategorized';
+        groups[catId] = expand;
+    });
+
+    localStorage.setItem('strady_expanded_categories', JSON.stringify(groups));
+    renderTransactions();
 };
 
 export const renderTimeline = () => {
@@ -310,7 +416,7 @@ export const renderDashboard = () => {
     const currentMonthKey = getMonthKey(state.viewDate);
     const currentMonthData = state.records[currentMonthKey] || { items: [], status: 'open' };
 
-    const savedSortOrder = 'date-desc';
+    const savedSortOrder = 'default';
     const sortOrderSelect = document.getElementById('sort-order');
     if (sortOrderSelect) {
         sortOrderSelect.value = savedSortOrder;
@@ -421,9 +527,128 @@ export const renderDashboard = () => {
     }
 
     renderSankeyChart();
+    renderLiquidityChart();
 };
 
 let googleChartsLoaded = false;
+
+export const renderLiquidityChart = () => {
+    const container = document.getElementById('liquidity-chart');
+    const detailsContainer = document.getElementById('liquidity-details');
+    if (!container || !detailsContainer) return;
+
+    if (!googleChartsLoaded) {
+        if (typeof google === 'undefined') {
+            container.innerHTML = 'Google Charts non chargé';
+            return;
+        }
+        google.charts.load('current', {packages:['sankey', 'corechart']});
+        google.charts.setOnLoadCallback(() => {
+            googleChartsLoaded = true;
+            renderLiquidityChart();
+            renderSankeyChart();
+        });
+        return;
+    }
+
+    const currentMonthKey = getMonthKey(state.viewDate);
+    const balances = state.months[currentMonthKey]?.balances || calculateBalances(state.viewDate);
+    
+    // Grouping accounts by type
+    const groupTotals = {
+        'Paiement': 0,
+        'Épargne': 0,
+        'Investissement': 0
+    };
+
+    const typeDetails = {
+        'Paiement': [],
+        'Épargne': [],
+        'Investissement': []
+    };
+
+    state.accounts.forEach(acc => {
+        const balance = balances[acc.id] || 0;
+        let type = 'Paiement';
+        if (acc.isSaving) type = 'Épargne';
+        else if (acc.isInvestmentAccount) type = 'Investissement';
+        
+        groupTotals[type] += balance;
+        typeDetails[type].push({ ...acc, balance });
+    });
+
+    const totalLiquidity = Object.values(groupTotals).reduce((sum, b) => sum + b, 0);
+
+    // Filter out zero/negative groups for the pie chart
+    const chartRows = Object.entries(groupTotals)
+        .filter(([type, total]) => total > 0)
+        .map(([type, total]) => [type, total]);
+
+    if (chartRows.length === 0) {
+        container.innerHTML = '<div class="text-slate-400 italic">Aucune liquidité positive détectée</div>';
+    } else {
+        const data = new google.visualization.DataTable();
+        data.addColumn('string', 'Type de Compte');
+        data.addColumn('number', 'Solde');
+        data.addRows(chartRows);
+
+        const options = {
+            pieHole: 0.4,
+            chartArea: {width: '100%', height: '80%'},
+            legend: { position: 'bottom', alignment: 'center', textStyle: { fontName: 'Inter', fontSize: 11, bold: true } },
+            colors: ['#3b82f6', '#10b981', '#6366f1'], // Blue, Emerald, Indigo
+            backgroundColor: 'transparent',
+            pieSliceTextStyle: { fontName: 'Inter', fontSize: 12, bold: true },
+            tooltip: { textStyle: { fontName: 'Inter' }, showColorCode: true }
+        };
+
+        const chart = new google.visualization.PieChart(container);
+        chart.draw(data, options);
+    }
+
+    // Render grouped details table
+    let detailsHtml = `
+        <div class="space-y-6">
+            ${Object.entries(typeDetails).filter(([type, accounts]) => accounts.length > 0).map(([type, accounts]) => {
+                const groupTotal = groupTotals[type];
+                const groupPct = totalLiquidity > 0 ? (Math.max(0, groupTotal) / totalLiquidity) * 100 : 0;
+                
+                return `
+                    <div class="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+                        <div class="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
+                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">${type}</span>
+                            <div class="text-right">
+                                <span class="text-sm font-bold text-slate-900">${formatCurrency(groupTotal)}</span>
+                                <span class="text-[10px] text-slate-400 font-bold ml-1">(${groupPct.toFixed(1)}%)</span>
+                            </div>
+                        </div>
+                        <div class="p-3 space-y-2">
+                            ${accounts.map(acc => {
+                                const accPct = groupTotal > 0 ? (Math.max(0, acc.balance) / groupTotal) * 100 : 0;
+                                return `
+                                    <div class="flex justify-between items-center px-1">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-semibold text-slate-600">${acc.name}</span>
+                                            <span class="text-[9px] text-slate-400">${accPct.toFixed(0)}% du groupe</span>
+                                        </div>
+                                        <span class="text-xs font-bold ${acc.balance >= 0 ? 'text-slate-700' : 'text-red-600'}">${formatCurrency(acc.balance)}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+            
+            <div class="pt-4 border-t border-slate-200 flex justify-between items-center px-2">
+                <span class="text-sm font-black text-slate-900 uppercase tracking-wider">Total Patrimoine</span>
+                <span class="text-xl font-black text-slate-900">${formatCurrency(totalLiquidity)}</span>
+            </div>
+        </div>
+    `;
+    detailsContainer.innerHTML = detailsHtml;
+};
+
 export const renderSankeyChart = (isExpanded = false) => {
     const containerId = isExpanded ? 'sankey-chart-expanded' : 'sankey-chart';
     const container = document.getElementById(containerId);
@@ -434,9 +659,10 @@ export const renderSankeyChart = (isExpanded = false) => {
             container.innerHTML = 'Google Charts non chargé';
             return;
         }
-        google.charts.load('current', {packages:['sankey']});
+        google.charts.load('current', {packages:['sankey', 'corechart']});
         google.charts.setOnLoadCallback(() => {
             googleChartsLoaded = true;
+            renderLiquidityChart();
             renderSankeyChart(isExpanded);
         });
         return;
@@ -559,8 +785,9 @@ export const renderSankeyChart = (isExpanded = false) => {
 
 // Handle window resize for chart responsiveness
 window.addEventListener('resize', () => {
-    if (googleChartsLoaded && document.getElementById('sankey-chart')) {
-        renderSankeyChart();
+    if (googleChartsLoaded) {
+        if (document.getElementById('sankey-chart')) renderSankeyChart();
+        if (document.getElementById('liquidity-chart')) renderLiquidityChart();
     }
 });
 

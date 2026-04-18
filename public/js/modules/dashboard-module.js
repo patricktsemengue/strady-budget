@@ -71,6 +71,19 @@ export default {
                     </div>
                 </div>
             </div>
+
+            <!-- Liquidity Distribution -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                <h3 class="font-bold text-lg text-slate-800 mb-4">Répartition de la Liquidité</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div id="liquidity-chart" class="w-full h-[320px] bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center text-slate-400 text-sm italic">
+                        Chargement du graphique...
+                    </div>
+                    <div id="liquidity-details" class="space-y-3">
+                        <!-- Table of accounts, balances, and percentages -->
+                    </div>
+                </div>
+            </div>
         </div>
     `,
     render: () => {

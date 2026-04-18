@@ -1,0 +1,82 @@
+{
+  "categories": [
+    { "id": "cat_salary", "label": "Salaire", "icon": "fa-money-bill-wave", "color": "#10b981" },
+    { "id": "cat_food", "label": "Alimentation", "icon": "fa-shopping-basket", "color": "#f59e0b" },
+    { "id": "cat_rent", "label": "Logement", "icon": "fa-home", "color": "#3b82f6" },
+    { "id": "cat_elec", "label": "Électricité", "icon": "fa-bolt", "color": "#fbbf24" },
+    { "id": "cat_water", "label": "Eau", "icon": "fa-tint", "color": "#60a5fa" },
+    { "id": "cat_sub", "label": "Abonnements", "icon": "fa-calendar-alt", "color": "#8b5cf6" },
+    { "id": "cat_insurance", "label": "Assurance", "icon": "fa-shield-halved", "color": "#6366f1" },
+    { "id": "cat_savings", "label": "Épargne", "icon": "fa-piggy-bank", "color": "#ec4899" }
+  ],
+  "accounts": [
+    { "id": "acc_main", "name": "Compte Courant", "initialBalance": 1200, "isSaving": false, "day": 1 },
+    { "id": "acc_savings", "name": "Livret A / Compte Épargne", "initialBalance": 3000, "isSaving": true, "day": 1 }
+  ],
+  "templates": [
+    {
+      "id": "rec_salary",
+      "label": "Salaire",
+      "amount": 2500,
+      "day": 1,
+      "category": "cat_salary",
+      "source": "external",
+      "destination": "acc_main",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_savings",
+      "label": "Épargne mensuelle",
+      "amount": 200,
+      "day": 2,
+      "category": "cat_savings",
+      "source": "acc_main",
+      "destination": "acc_savings",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_rent",
+      "label": "Loyer",
+      "amount": 850,
+      "day": 5,
+      "category": "cat_rent",
+      "source": "acc_main",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_water",
+      "label": "Eau",
+      "amount": 80,
+      "day": 10,
+      "category": "cat_water",
+      "source": "acc_main",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_elec",
+      "label": "Électricité",
+      "amount": 120,
+      "day": 12,
+      "category": "cat_elec",
+      "source": "acc_main",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_insurance",
+      "label": "Assurance",
+      "amount": 45,
+      "day": 15,
+      "category": "cat_insurance",
+      "source": "acc_main",
+      "destination": "external",
+      "periodicity": "M"
+    }
+  ],
+  "pastTransactions": [
+    { "label": "Courses Carrefour", "amount": 85.50, "daysAgo": 1, "category": "cat_food", "source": "acc_main", "destination": "external" },
+    { "label": "Boulangerie", "amount": 4.20, "daysAgo": 2, "category": "cat_food", "source": "acc_main", "destination": "external" }
+  ]
+}
