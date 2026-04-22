@@ -4,8 +4,9 @@ import { renderTimeline, populateCategoryFilter, populateAccountFilter } from '.
 export default {
     id: 'transactions',
     label: 'Flux & Prévisions',
+    group: 'PILOTAGE OPÉRATIONNEL',
     icon: 'fa-columns',
-    order: 2,
+    order: 3,
     showMonthSelection: true,
     getTemplate: () => `
         <div id="view-transactions" class="space-y-6 max-w-6xl mx-auto px-4 pb-24">

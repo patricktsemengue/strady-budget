@@ -2,9 +2,10 @@ import { renderDashboard } from '../dashboard.js';
 
 export default {
     id: 'pilotage-legacy',
-    label: 'Pilotage (Ancien)',
+    label: 'Archives (Ancien)',
+    group: 'CONFIGURATION',
     icon: 'fa-chart-line',
-    order: 8,
+    order: 7,
     showMonthSelection: true,
     getTemplate: () => `
         <div id="view-pilotage-legacy" class="space-y-6 max-w-6xl mx-auto px-4">

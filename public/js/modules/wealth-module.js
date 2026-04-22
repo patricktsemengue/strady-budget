@@ -1,11 +1,13 @@
 import { renderWealthList } from '../wealth.js';
+import { renderTimeline } from '../dashboard.js';
 
 export default {
     id: 'wealth',
     label: 'Patrimoine',
+    group: 'VISION STRATÉGIQUE',
     icon: 'fa-gem',
-    order: 5,
-    showMonthSelection: false,
+    order: 2,
+    showMonthSelection: true,
     showMobileFab: () => true,
     getTemplate: () => `
         <div id="view-wealth" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">
@@ -66,6 +68,7 @@ export default {
         </div>
     `,
     render: () => {
+        renderTimeline();
         renderWealthList();
     },
     init: () => {

@@ -96,13 +96,19 @@
 
     <!-- Shared Month Selection -->
     <div id="shared-month-selection" class="max-w-6xl mx-auto px-4 mt-6 hidden sticky top-[68px] z-40">
-        <div class="bg-white rounded-xl shadow-md border border-slate-100 p-2">
-            <div class="flex items-center gap-2">
-                <button id="prev-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-left"></i></button>
-                <div class="flex-1 overflow-x-auto hide-scroll flex gap-2 px-2" id="month-timeline">
+        <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/50 p-1.5 transition-all">
+            <div class="flex items-center gap-1">
+                <button id="prev-month" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                
+                <div class="flex-1 overflow-x-auto hide-scroll flex gap-1.5 px-1 items-center" id="month-timeline">
                     <!-- Timeline Items Injected -->
                 </div>
-                <button id="next-month" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><i class="fa-solid fa-chevron-right"></i></button>
+                
+                <button id="next-month" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
             </div>
         </div>
     </div>

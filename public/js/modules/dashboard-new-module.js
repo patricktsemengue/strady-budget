@@ -4,6 +4,7 @@ import { renderTimeline } from '../dashboard.js';
 export default {
     id: 'dashboard',
     label: 'Pilotage (CFO)',
+    group: 'VISION STRATÉGIQUE',
     icon: 'fa-gauge-high',
     order: 1,
     showMonthSelection: true,

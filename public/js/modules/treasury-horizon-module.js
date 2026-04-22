@@ -4,8 +4,9 @@ import { renderTimeline } from '../dashboard.js';
 export default {
     id: 'accounts',
     label: 'Trésorerie',
+    group: 'PILOTAGE OPÉRATIONNEL',
     icon: 'fa-chart-column',
-    order: 3,
+    order: 4,
     showMonthSelection: true,
     getTemplate: () => `
         <div id="view-accounts" class="space-y-6 max-w-6xl mx-auto px-4 pb-24">

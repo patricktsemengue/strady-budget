@@ -3,8 +3,9 @@ import { renderCategoriesList } from '../categories.js';
 export default {
     id: 'categories',
     label: 'Analyses',
+    group: 'CONFIGURATION',
     icon: 'fa-tags',
-    order: 6,
+    order: 5,
     showMonthSelection: false,
     getTemplate: () => `
         <div id="view-categories" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">

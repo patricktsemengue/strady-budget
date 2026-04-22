@@ -1,8 +1,9 @@
 export default {
     id: 'settings',
     label: 'Réglages',
+    group: 'CONFIGURATION',
     icon: 'fa-cog',
-    order: 7,
+    order: 6,
     showMonthSelection: false,
     getTemplate: () => `
         <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">

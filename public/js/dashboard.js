@@ -282,7 +282,7 @@ export const toggleAllCategoryGroups = (expand) => {
 export const renderTimeline = () => {
     const container = document.getElementById('month-timeline');
     if (!container) return;
-    
+
     const config = state.monthSelectorConfig;
     const startDate = new Date(config.startDate + 'T00:00:00Z');
     const endDate = new Date(config.endDate + 'T23:59:59Z');
@@ -295,8 +295,18 @@ export const renderTimeline = () => {
     const currentYear = now.getUTCFullYear();
     const currentMonth = now.getUTCMonth();
 
+    let lastYear = null;
+
     while (current <= endDate) {
-        const isSelected = (step === 'month') 
+        const year = current.getUTCFullYear();
+
+        // Add Year Separator
+        if (lastYear !== null && year !== lastYear) {
+            html += `<div class="w-px h-6 bg-slate-200 mx-2 self-center"></div>`;
+        }
+        lastYear = year;
+
+        const isSelected = (step === 'month')
             ? (current.getUTCMonth() === state.viewDate.getUTCMonth() && current.getUTCFullYear() === state.viewDate.getUTCFullYear())
             : (Math.floor(current.getUTCMonth() / 3) === Math.floor(state.viewDate.getUTCMonth() / 3) && current.getUTCFullYear() === state.viewDate.getUTCFullYear());
 
@@ -306,20 +316,26 @@ export const renderTimeline = () => {
 
         let label = '';
         if (step === 'month') {
-            label = new Intl.DateTimeFormat('fr-BE', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(current);
+            label = new Intl.DateTimeFormat('fr-BE', { month: 'short', timeZone: 'UTC' }).format(current).replace('.', '');
+            const yrLabel = current.getUTCFullYear().toString().slice(-2);
+            label = `<span class="uppercase">${label}</span><span class="text-[9px] opacity-60 ml-0.5">${yrLabel}</span>`;
         } else {
             const quarter = Math.floor(current.getUTCMonth() / 3) + 1;
-            label = `T${quarter} ${current.getUTCFullYear().toString().slice(-2)}`;
+            label = `T${quarter} <span class="text-[9px] opacity-60 ml-0.5">${current.getUTCFullYear().toString().slice(-2)}</span>`;
         }
 
-        let bgClass = 'bg-white text-slate-500 hover:bg-slate-50';
+        let bgClass = 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800';
         if (isSelected) {
-            bgClass = 'bg-blue-600 text-white shadow-md';
-        } else if (isToday) {
-            bgClass = 'bg-blue-50 text-blue-600 border border-blue-200';
+            bgClass = 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105 z-10';
         }
 
-        html += `<button onclick="window.app.setViewDate('${current.toISOString()}')" class="flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all ${bgClass}">${label}</button>`;
+        html += `
+            <button onclick="window.app.setViewDate('${current.toISOString()}')" 
+                    class="flex-none px-5 py-2.5 rounded-xl text-[11px] font-black transition-all duration-300 flex flex-col items-center gap-0.5 relative ${bgClass}">
+                ${label}
+                ${isToday && !isSelected ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-500"></div>' : ''}
+            </button>
+        `;
 
         if (step === 'month') {
             current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 1));
@@ -330,11 +346,10 @@ export const renderTimeline = () => {
 
     container.innerHTML = html;
     setTimeout(() => {
-        const selectedBtn = container.querySelector('.bg-blue-600');
+        const selectedBtn = container.querySelector('.bg-indigo-600');
         if(selectedBtn) selectedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
     }, 10);
 };
-
 export const renderAnticipatedExpenses = () => {
     const anticipatedList = document.getElementById('anticipated-list');
     let allNonRecurring = [];

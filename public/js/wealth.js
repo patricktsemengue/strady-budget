@@ -16,11 +16,15 @@ export const renderWealthList = () => {
     
     if (!assetList || !liabilityList) return;
 
-    // Helper to get latest value
+    // Helper to get latest value BEFORE or ON the viewDate
     const getLatestValue = (entityId, isAsset = true) => {
+        // Last day of the selected month
+        const lastDayOfMonth = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 0);
+        const viewDateStr = lastDayOfMonth.toISOString().split('T')[0];
+
         const values = isAsset 
-            ? state.assetValues.filter(v => v.asset_id === entityId)
-            : state.liabilityValues.filter(v => v.liability_id === entityId);
+            ? state.assetValues.filter(v => v.asset_id === entityId && v.date <= viewDateStr)
+            : state.liabilityValues.filter(v => v.liability_id === entityId && v.date <= viewDateStr);
         
         if (values.length === 0) return { value: 0, date: '-', quantity: 0 };
         
@@ -48,7 +52,7 @@ export const renderWealthList = () => {
                     </div>
                     <div class="text-right">
                         <p class="text-lg font-black text-slate-900 leading-none">${formatCurrency(latest.value)}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Estimé le ${latest.date}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Estimation au ${latest.date}</p>
                     </div>
                 </div>
                 <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -56,7 +60,7 @@ export const renderWealthList = () => {
                 </div>
             </div>
         `;
-    }).join('') || '<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">Aucun actif enregistré.</div>';
+    }).join('') || '<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">Aucun actif enregistré pour cette période.</div>';
 
     // Render Liabilities
     liabilityList.innerHTML = state.liabilities.map(liability => {
@@ -76,7 +80,7 @@ export const renderWealthList = () => {
                     </div>
                     <div class="text-right">
                         <p class="text-lg font-black text-rose-600 leading-none">${formatCurrency(latest.value)}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Solde le ${latest.date}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Solde au ${latest.date}</p>
                     </div>
                 </div>
                 <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -84,7 +88,7 @@ export const renderWealthList = () => {
                 </div>
             </div>
         `;
-    }).join('') || '<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">Aucun passif enregistré.</div>';
+    }).join('') || '<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">Aucun passif enregistré pour cette période.</div>';
 
     // Update Totals and Summary
     const netWorth = totalAssets - totalLiabilities;
@@ -106,7 +110,7 @@ export const renderWealthList = () => {
             <div class="bg-slate-900 p-6 rounded-2xl shadow-xl transition-all hover:scale-[1.02]">
                 <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Patrimoine Net (Equity)</p>
                 <p class="text-2xl font-black text-white">${formatCurrency(netWorth)}</p>
-                <p class="text-[10px] font-bold text-slate-400 mt-2 italic">Votre valeur nette réelle</p>
+                <p class="text-[10px] font-bold text-slate-400 mt-2 italic">Valeur nette à cette période</p>
             </div>
         `;
     }
