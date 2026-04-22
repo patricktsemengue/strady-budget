@@ -9,7 +9,41 @@ erDiagram
     USER ||--o{ RECURRING_TEMPLATE : owns
     USER ||--o{ MONTH : owns
     USER ||--o{ ACCOUNT_BALANCE : owns
+    USER ||--o{ ASSET : owns
+    USER ||--o{ LIABILITY : owns
     USER ||--o{ SETTINGS : has
+
+    ASSET {
+        string id PK
+        string name
+        timestamp updated_at
+    }
+
+    ASSET_VALUE {
+        string id PK
+        string asset_id FK
+        string date
+        float value
+        float quantity
+        timestamp updated_at
+    }
+
+    LIABILITY {
+        string id PK
+        string name
+        timestamp updated_at
+    }
+
+    LIABILITY_VALUE {
+        string id PK
+        string liability_id FK
+        string date
+        float value
+        timestamp updated_at
+    }
+
+    ASSET ||--o{ ASSET_VALUE : "has values"
+    LIABILITY ||--o{ LIABILITY_VALUE : "has values"
 
     SETTINGS {
         string id PK "e.g., monthSelector"
@@ -32,6 +66,7 @@ erDiagram
     CATEGORY {
         string id PK
         string label
+        string nature "REVENU, FIXE, QUOTIDIEN, LOISIR, EPARGNE"
         string icon
         string color
         int index_order "Primary sort for Smart Grouping"

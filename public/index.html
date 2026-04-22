@@ -114,7 +114,7 @@
     <!-- Transaction Edit Modal -->
     <div id="transaction-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
-            <h2 id="transaction-modal-title" class="text-xl font-bold mb-4">Éditer la transaction</h2>
+            <h2 id="transaction-modal-title" class="text-xl font-bold mb-4">Éditer le flux</h2>
             <form id="transaction-form">
                 <input type="hidden" id="transaction-edit-id">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,14 +133,6 @@
                     <div>
                         <label for="transaction-category" class="block text-sm font-medium text-slate-600">Catégorie</label>
                         <select id="transaction-category" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm"></select>
-                    </div>
-                    <div>
-                        <label for="transaction-type" class="block text-sm font-medium text-slate-600">Type</label>
-                        <select id="transaction-type" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm">
-                            <option value="expense">Dépense</option>
-                            <option value="income">Revenu</option>
-                            <option value="transfer">Transfert</option>
-                        </select>
                     </div>
                     <div id="source-account-wrapper">
                         <label for="transaction-source" class="block text-sm font-medium text-slate-600">Compte Source</label>
@@ -239,12 +231,101 @@
     <!-- Recurring Choice Modal -->
     <div id="recurring-choice-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
-            <h2 class="text-xl font-bold mb-4">Mise à jour d'une transaction récurrente</h2>
-            <p class="text-slate-600 mb-6">Souhaitez-vous appliquer cette modification à toutes les occurrences de cette transaction récurrente ou seulement à celle-ci ?</p>
+            <h2 class="text-xl font-bold mb-4">Mise à jour d'un flux récurrent</h2>
+            <p class="text-slate-600 mb-6">Souhaitez-vous appliquer cette modification à toutes les occurrences de ce flux récurrent ou seulement à celle-ci ?</p>
             <div class="flex flex-col gap-3">
-                <button id="btn-choice-all" class="bg-slate-800 text-white px-4 py-3 rounded-lg font-medium hover:bg-slate-900 transition-colors">Appliquer à la transaction récurrente (toutes les occurrences)</button>
-                <button id="btn-choice-single" class="bg-white border border-slate-300 text-slate-700 px-4 py-3 rounded-lg font-medium hover:bg-slate-50 transition-colors">Seulement cette transaction</button>
+                <button id="btn-choice-all" class="bg-slate-800 text-white px-4 py-3 rounded-lg font-medium hover:bg-slate-900 transition-colors">Appliquer au flux récurrent (toutes les occurrences)</button>
+                <button id="btn-choice-single" class="bg-white border border-slate-300 text-slate-700 px-4 py-3 rounded-lg font-medium hover:bg-slate-50 transition-colors">Seulement ce flux</button>
                 <button id="btn-choice-cancel" class="text-slate-500 hover:text-slate-700 py-2 text-sm transition-colors">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wealth Add Drawer -->
+    <div id="wealth-add-drawer" class="bottom-drawer shadow-2xl">
+        <div class="drawer-handle"></div>
+        <div class="px-6 py-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Ajouter un actif ou une dette</h2>
+                <button onclick="window.app.closeWealthDrawer()" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="wealth-add-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Type</label>
+                    <select id="wealth-entity-type" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="asset">Actif / Patrimoine (Immo, Shares, ETF...)</option>
+                        <option value="liability">Passif / Dette (Crédit, Emprunt...)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom (unique)</label>
+                    <input type="text" id="wealth-entity-name" required placeholder="Ex: Maison de campagne" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Valeur / Capital</label>
+                        <input type="number" id="wealth-entity-value" required step="0.01" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
+                        <input type="date" id="wealth-entity-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Quantité (optionnel)</label>
+                    <input type="number" id="wealth-entity-quantity" value="1" step="0.0001" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="window.app.closeWealthDrawer()" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
+                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Wealth Details & History Modal -->
+    <div id="wealth-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 id="wealth-details-title" class="text-xl font-bold text-slate-800">Détails</h2>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Historique des valeurs</p>
+                </div>
+                <button onclick="window.app.closeWealthDetails()" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <div class="flex-1 p-5 overflow-y-auto space-y-6">
+                <!-- Add New Value Snapshot -->
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Enregistrer une nouvelle valeur</h4>
+                    <form id="wealth-snapshot-form" class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Montant</label>
+                                <input type="number" id="new-snapshot-value" required step="0.01" class="w-full border-slate-200 rounded-lg p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Date</label>
+                                <input type="date" id="new-snapshot-date" required class="w-full border-slate-200 rounded-lg p-2 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Quantité (si applicable)</label>
+                            <input type="number" id="new-snapshot-quantity" value="1" step="0.0001" class="w-full border-slate-200 rounded-lg p-2 text-sm">
+                        </div>
+                        <button type="submit" class="w-full bg-emerald-600 text-white py-2 rounded-lg text-sm font-bold shadow-md hover:bg-emerald-700 transition-colors mt-2">Valider l'estimation</button>
+                    </form>
+                </div>
+
+                <!-- History List -->
+                <div id="wealth-history-list" class="space-y-3">
+                    <!-- Historical items injected here -->
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3">
+                <button onclick="window.app.deleteWealthEntity()" class="flex-1 bg-white border border-rose-100 text-rose-500 py-3 rounded-xl text-xs font-bold hover:bg-rose-50 transition-colors">Supprimer l'élément</button>
+                <button onclick="window.app.closeWealthDetails()" class="flex-1 bg-slate-800 text-white py-3 rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors">Fermer</button>
             </div>
         </div>
     </div>
@@ -302,7 +383,7 @@
         <div class="drawer-handle"></div>
         <div class="px-6 py-4">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Modifier le compte</h2>
+                <h2 class="text-xl font-bold text-slate-800">Édition Trésorerie</h2>
                 <button id="btn-close-acc-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form id="edit-account-form" class="space-y-4">
@@ -344,7 +425,7 @@
         <div class="drawer-handle"></div>
         <div class="px-6 py-4">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Ajouter un compte</h2>
+                <h2 class="text-xl font-bold text-slate-800">Nouveau compte</h2>
                 <button id="btn-close-add-acc-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form id="add-account-form" class="space-y-4">
@@ -385,14 +466,24 @@
         <div class="drawer-handle"></div>
         <div class="px-6 py-4">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Modifier la catégorie</h2>
+                <h2 class="text-xl font-bold text-slate-800">Édition du Poste</h2>
                 <button id="btn-close-cat-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form id="edit-category-form" class="space-y-4">
                 <input type="hidden" id="edit-cat-id">
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom de la catégorie</label>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nom du poste</label>
                     <input type="text" id="edit-cat-name" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nature du flux</label>
+                    <select id="edit-cat-nature" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="REVENU">REVENUS (Salaires, Dividendes...)</option>
+                        <option value="FIXE">CHARGES FIXES (Loyer, Assurances...)</option>
+                        <option value="QUOTIDIEN">VIE COURANTE (Courses, Transport...)</option>
+                        <option value="LOISIR">LOISIRS (Voyages, Sorties...)</option>
+                        <option value="EPARGNE">ÉPARGNE & INVEST. (Virements épargne...)</option>
+                    </select>
                 </div>
                 <div class="grid grid-cols-1 gap-4">
                     <div>
@@ -434,7 +525,7 @@
         <div class="drawer-handle"></div>
         <div class="px-6 py-4">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Ajouter une catégorie</h2>
+                <h2 class="text-xl font-bold text-slate-800">Nouveau poste</h2>
                 <button id="btn-close-add-cat-drawer" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form id="add-category-form" class="space-y-4">
@@ -471,7 +562,7 @@
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="btn-cancel-add-cat" class="flex-1 bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">Annuler</button>
-                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Ajouter la catégorie</button>
+                    <button type="submit" class="flex-1 bg-slate-800 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-lg">Ajouter le poste</button>
                 </div>
             </form>
         </div>
@@ -490,6 +581,81 @@
             <div class="flex-1 p-8 overflow-auto bg-white flex items-center justify-center">
                 <div id="sankey-chart-expanded" class="w-full h-full min-h-[500px]"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Internal Transfer Modal -->
+    <div id="transfer-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4 text-slate-800">Virement Interne</h2>
+            <form id="transfer-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Source</label>
+                    <select id="transfer-source" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <div class="flex justify-center -my-2 relative z-10">
+                    <div class="bg-white p-2 rounded-full border border-slate-100 shadow-sm text-slate-400">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Destination</label>
+                    <select id="transfer-destination" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Montant</label>
+                        <input type="number" id="transfer-amount" required step="0.01" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
+                        <input type="date" id="transfer-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Libellé</label>
+                    <input type="text" id="transfer-label" value="Virement interne" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="window.app.closeTransferModal()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-medium">Annuler</button>
+                    <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-medium shadow-lg hover:bg-slate-900 transition-colors">Exécuter le virement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Adjustment Modal -->
+    <div id="adjustment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Ajustement de Trésorerie</h2>
+                    <p id="adjustment-acc-name" class="text-xs text-slate-400 font-bold uppercase tracking-wider"></p>
+                </div>
+                <button onclick="window.app.closeAdjustmentModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="adjustment-form" class="space-y-4">
+                <input type="hidden" id="adjustment-acc-id">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
+                    <p class="text-xs text-slate-500 mb-1">Solde actuel dans l'app</p>
+                    <p id="adjustment-current-bal" class="text-lg font-black text-slate-800">--</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nouveau solde (Banque)</label>
+                    <input type="number" id="adjustment-new-bal" required step="0.01" placeholder="0,00" class="w-full border-slate-300 rounded-lg shadow-sm border p-4 text-xl font-black text-slate-800 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Poste d'analyse (Catégorie)</label>
+                    <select id="adjustment-category" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Date de l'ajustement</label>
+                    <input type="date" id="adjustment-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all mt-4">
+                    Valider l'ajustement
+                </button>
+            </form>
         </div>
     </div>
 

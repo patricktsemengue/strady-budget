@@ -18,6 +18,7 @@ The system revolves around the following data entities, all of which are scoped 
 - **CATEGORY**: A user-defined category for transactions.
   - `id`: string (unique, deterministic UUID based on label)
   - `label`: string (unique)
+  - `nature`: string (REVENU, FIXE, QUOTIDIEN, LOISIR, EPARGNE)
   - `icon`: string (FontAwesome class, e.g., `fa-car`)
   - `color`: string (hex code)
   - `index-order`: integer (for sorting)
@@ -48,11 +49,41 @@ The system revolves around the following data entities, all of which are scoped 
   - `date`: string (YYYY-MM-DD)
   - `balance`: float
 
+- **ASSET**: A non-liquid asset (Real Estate, shares, etc.).
+  - `id`: string (unique)
+  - `name`: string (unique)
+- **ASSET_VALUE**: A value snapshot for an asset.
+  - `id`: string (unique)
+  - `asset_id`: string (FK to `ASSET.id`)
+  - `date`: string (YYYY-MM-DD)
+  - `value`: float
+  - `quantity`: float
+- **LIABILITY**: A debt or loan.
+  - `id`: string (unique)
+  - `name`: string (unique)
+- **LIABILITY_VALUE**: A balance snapshot for a liability.
+  - `id`: string (unique)
+  - `liability_id`: string (FK to `LIABILITY.id`)
+  - `date`: string (YYYY-MM-DD)
+  - `value`: float
+
 ---
 
 ## 2. Use Cases
 
-### 2.1 Account Management (CRUD)
+### 2.1 Wealth Management (Snapshot Monitoring)
+
+#### 2.1.1 Track an Asset or Liability
+- **Trigger**: User adds a new Wealth entity.
+- **Process**:
+  1. The system creates the parent entity (`ASSET` or `LIABILITY`).
+  2. The system immediately creates the first value snapshot (`ASSET_VALUE` or `LIABILITY_VALUE`).
+  3. No transactions are generated. Wealth is monitored via periodic "Estimation" updates.
+
+#### 2.1.2 Update Wealth Value
+- **Process**: The user adds a new snapshot with a more recent date. The Dashboard Net Worth calculation always uses the **latest available snapshot** for each entity.
+
+### 2.1 Trésorerie Management (CRUD)
 
 #### 2.1.1 Create an Account
 - **Trigger**: User submits the "Add Account" form.
@@ -81,21 +112,21 @@ The system revolves around the following data entities, all of which are scoped 
   1. The `ACCOUNT` document is deleted from Firestore.
   2. ALL associated `ACCOUNT_BALANCE` records for that account are deleted via a batch operation.
 
-### 2.2 Category Management (CRUD & Reordering)
+### 2.2 Analyses Management (CRUD & Reordering)
 
-#### 2.2.1 Create a Category
-- **Trigger**: User clicks "Add Category" in the settings view.
+#### 2.2.1 Create a Poste (Category)
+- **Trigger**: User clicks "Add Category" in the analyses view.
 - **Process**: A new `CATEGORY` document is created in Firestore.
 
-#### 2.2.2 Edit a Category
+#### 2.2.2 Edit a Poste
 - **Trigger**: User clicks the edit icon for a category.
-- **Process**: The corresponding `CATEGORY` document is updated in Firestore. Category updates (name, icon, color) are allowed even if the category is assigned to transactions, as transactions reference the stable category ID.
+- **Process**: The corresponding `CATEGORY` document is updated in Firestore. Poste updates (name, icon, color) are allowed even if the poste is assigned to transactions, as transactions reference the stable category ID.
 
-#### 2.2.3 Delete a Category
+#### 2.2.3 Delete a Poste
 - **Trigger**: User clicks the delete icon for a category.
 - **Constraints**: A category cannot be deleted if it is currently used in any `TRANSACTION` or `RECURRING_TEMPLATE`.
 
-#### 2.2.4 Reorder Categories
+#### 2.2.4 Reorder Postes
 - **Trigger**: User drags and drops a category.
 - **Process**: Batch update of `index-order` field for all affected categories.
 
@@ -151,14 +182,14 @@ The system revolves around the following data entities, all of which are scoped 
 The application uses a **Modular Plug-and-Play Architecture**. Each feature is a self-contained module that can be added or removed with minimal code changes. The UI is dynamically generated based on the registered modules.
 
 - **Dashboard**: Displays key financial indicators and advanced visualizations.
-- **Transactions**: Dedicated list view for managing month-specific transactions. Features **Smart Grouping** by category with **MoM Variance Analysis**, allowing users to instantly see where spending has increased or decreased compared to the previous month.
-- **Accounts**: Centralized management of financial accounts.
-- **Categories**: Management of transaction categories.
-- **Settings**: System configuration and data maintenance.
+- **Flux & Prévisions**: Dedicated list view for managing month-specific operations. Features **Smart Grouping** by category with **MoM Variance Analysis**, allowing users to instantly see where spending has increased or decreased compared to the previous month.
+- **Trésorerie**: Centralized management of liquid financial accounts.
+- **Patrimoine**: High-level monitoring of assets and liabilities.
+- **Analyses**: Configuration of budget posts and categories.
 
 #### Shared UI System
 - **Global Router**: A centralized `AppRouter` handles view switching via URL hashes and manages the dynamic building of the navigation menu.
-- **Month Selector**: A horizontal timeline selector visible on the Dashboard and Transactions views. It allows for context switching between different financial periods. Changing the month does **not** trigger a balance refresh; it only displays existing data.
+- **Month Selector**: A horizontal timeline selector visible on the Dashboard and Flux & Prévisions views. It allows for context switching between different financial periods. Changing the month does **not** trigger a balance refresh; it only displays existing data.
 - **Dynamic Indicators**: Real-time data status indicator showing if the data is being served from local cache or is "Live" from Firestore.
 - **Mobile Floating Action Button (FAB)**: Provides quick access to "Add Transaction" on relevant views when the selected month is open.
 

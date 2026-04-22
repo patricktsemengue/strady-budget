@@ -63,6 +63,14 @@ export const generateDeterministicTemplateId = (tplData) => {
     return `rec_${btoa(unescape(encodeURIComponent(key)))}`;
 };
 
+export const debounce = (fn, ms) => {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), ms);
+    };
+};
+
 export const getTxDisplayInfo = (source, destination) => {
     const isSrcExt = source === '' || source === 'external';
     const isDstExt = destination === '' || destination === 'external';

@@ -24,13 +24,13 @@ This document outlines the strategic roadmap to evolve **Strady Budget** from a 
 | NW-05 | **Wealth Trajectory Chart** | A simple line chart projecting Net Worth trend based on historical snapshots. | TO-DO |
 | NW-06 | **Liquidity Distribution** | Breakdown of immediately accessible cash vs. illiquid assets. | **DONE** |
 
-## 3. Advanced Transaction Modeling
+## 3. Advanced Flow Modeling
 *Distinguishing between spending and equity building.*
 
 | ID | Requirement | Description | Status |
 |:---|:---|:---|:---|
-| TX-01 | **Principal/Interest Splitting** | Allow a single recurring payment (e.g., Mortgage) to be split: Interest = Expense, Principal = Transfer to Liability. | TO-DO |
-| TX-02 | **Depreciation Schedules** | Automated monthly "Expense" transactions for depreciating assets like vehicles. | TO-DO |
+| TX-01 | **Principal/Interest Splitting** | Allow a single recurring flow (e.g., Mortgage) to be split: Interest = Expense, Principal = Transfer to Liability. | TO-DO |
+| TX-02 | **Depreciation Schedules** | Automated monthly "Expense" flows for depreciating assets like vehicles. | TO-DO |
 | TX-03 | **Investment Reinvestment** | Logic to handle Dividends/Interests that auto-increase an asset balance without leaving the account. | TO-DO |
 
 ## 4. Forecasting & "What-If" Scenarios
@@ -53,7 +53,7 @@ This document outlines the strategic roadmap to evolve **Strady Budget** from a 
 | UX-03 | **The "10-Minute Reconciliation"** | A side-by-side view of "Expected Account Balance" vs "Actual." One-click button to create an "Adjustment Transaction" for any divergence. | TO-DO |
 | UX-04 | **Monthly "Victory" Sweep** | End-of-month notification if the "Safe-to-Spend" buffer was not fully utilized, suggesting a transfer to Investment accounts. | TO-DO |
 | UX-05 | **Health Signal (Traffic Lights)** | Simple Green/Amber/Red indicators for the month: Green = On track, Amber = Buffer used, Red = Savings goals at risk. | TO-DO |
-| UX-06 | **Collapsible Grouping** | Transaction view grouped by Category with collapsible sections and "Expand/Collapse All" global toggle. State is persisted in localStorage. | **DONE** |
+| UX-06 | **Collapsible Grouping** | Flux & Prévisions view grouped by Category with collapsible sections and "Expand/Collapse All" global toggle. State is persisted in localStorage. | **DONE** |
 | UX-07 | **MoM Variance Analysis** | Category headers display the total amount for the month AND a percentage/absolute delta compared to the previous month. | **DONE** |
 
 ## 6. Family Collaboration

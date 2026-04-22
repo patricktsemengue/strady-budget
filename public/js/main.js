@@ -9,11 +9,13 @@ import {
 import { router } from './app-router.js';
 
 // Modules
-import dashboardModule from './modules/dashboard-module.js';
-import transactionsModule from './modules/transactions-module.js';
-import accountsModule from './modules/accounts-module.js';
+import dashboardNewModule from './modules/dashboard-new-module.js';
+import horizonModule from './modules/horizon-module.js';
+import pilotageLegacyModule from './modules/pilotage-legacy-module.js';
+import treasuryHorizonModule from './modules/treasury-horizon-module.js';
 import categoriesModule from './modules/categories-module.js';
 import settingsModule from './modules/settings-module.js';
+import wealthModule from './modules/wealth-module.js';
 
 import { 
     handleAddCategory, 
@@ -46,6 +48,16 @@ import {
     openMobileActions,
     closeMobileActions
 } from './transactions.js';
+import { 
+    handleAddWealthEntity,
+    openWealthDrawer,
+    closeWealthDrawer,
+    openWealthDetails,
+    closeWealthDetails,
+    handleAddValueSnapshot,
+    deleteWealthValue,
+    deleteWealthEntity
+} from './wealth.js';
 
 import { logout, onUserChanged, auth } from './auth.js';
 import { 
@@ -70,6 +82,7 @@ import {
     limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { firebaseConfig } from './firebase-config.js';
+import { debounce } from './utils.js';
 
 const init = () => {
     // Register Service Worker
@@ -134,14 +147,42 @@ const init = () => {
 
     // Initialize Router
     router.setNavContainers('nav-desktop', 'nav-mobile');
-    router.register(dashboardModule);
-    router.register(transactionsModule);
-    router.register(accountsModule);
+    router.register(dashboardNewModule);
+    router.register(horizonModule);
+    router.register(treasuryHorizonModule);
+    router.register(wealthModule);
     router.register(categoriesModule);
+    router.register(pilotageLegacyModule);
     router.register(settingsModule);
 
     setupEventListeners();
     initCategoryEvents();
+
+    // Optimization: Debounce render to group rapid Firestore updates
+    const debouncedUpdateAndRender = debounce((newData) => {
+        updateState({
+            accounts: newData.accounts || [],
+            transactions: newData.transactions || [],
+            categories: newData.categories || defaultCategories,
+            recurringTemplates: newData.recurringTemplates || [],
+            assets: newData.assets || [],
+            assetValues: newData.assetValues || [],
+            liabilities: newData.liabilities || [],
+            liabilityValues: newData.liabilityValues || [],
+            months: newData.months || {},
+            accountBalances: newData.accountBalances || {},
+            onboarding: newData.onboarding || null,
+            emergencyFundMultiplier: newData.emergencyFundMultiplier || 3,
+            monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
+        });
+        
+        if (newData.categories && newData.categories.length === 0) {
+            updateState({ categories: defaultCategories });
+        }
+
+        rebuildRecords(newData.transactions || [], newData.months || {});
+        router.render();
+    }, 50);
 
     // Firebase Auth listener
     onUserChanged(async (user) => {
@@ -232,23 +273,8 @@ const init = () => {
                     
                     isFirstFirestoreUpdate = false;
                 }
-                updateState({
-                    accounts: newData.accounts || [],
-                    transactions: newData.transactions || [],
-                    categories: newData.categories || defaultCategories,
-                    recurringTemplates: newData.recurringTemplates || [],
-                    months: newData.months || {},
-                    accountBalances: newData.accountBalances || {},
-                    onboarding: newData.onboarding || null,
-                    monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
-                });
                 
-                if (newData.categories && newData.categories.length === 0) {
-                    updateState({ categories: defaultCategories });
-                }
-
-                rebuildRecords(newData.transactions || [], newData.months || {});
-                router.render();
+                debouncedUpdateAndRender(newData);
             });
 
             const initialView = window.location.hash.substring(1) || 'dashboard';
@@ -347,28 +373,11 @@ const setupEventListeners = () => {
         closeAddAccountDrawer();
         closeCategoryDrawer();
         closeAddCategoryDrawer();
+        closeWealthDrawer();
     });
 
     addSafeListener('transaction-form', 'submit', handleSaveTransaction);
     addSafeListener('btn-cancel-transaction', 'click', closeTransactionModal);
-    addSafeListener('transaction-type', 'change', (e) => {
-        const type = e.target.value;
-        const sourceWrapper = document.getElementById('source-account-wrapper');
-        const destWrapper = document.getElementById('destination-account-wrapper');
-        if (type === 'income') {
-            if (sourceWrapper) sourceWrapper.classList.add('hidden');
-            if (destWrapper) destWrapper.classList.remove('hidden');
-            document.getElementById('transaction-source').value = '';
-        } else if (type === 'expense') {
-            if (sourceWrapper) sourceWrapper.classList.remove('hidden');
-            if (destWrapper) destWrapper.classList.add('hidden');
-            document.getElementById('transaction-source').value = 'external';
-            document.getElementById('transaction-destination').value = 'external';
-        } else { // transfer
-            if (sourceWrapper) sourceWrapper.classList.remove('hidden');
-            if (destWrapper) destWrapper.classList.remove('hidden');
-        }
-    });
 
     addSafeListener('transaction-is-recurring', 'change', (e) => {
         const recurringFields = document.getElementById('recurring-fields');
@@ -387,7 +396,13 @@ const setupEventListeners = () => {
         import('./dashboard.js').then(m => m.renderTransactions());
         const modal = document.getElementById('mobile-filters-modal');
         if (modal) modal.classList.add('hidden');
-    });};
+    });
+
+    addSafeListener('wealth-add-form', 'submit', handleAddWealthEntity);
+    addSafeListener('wealth-snapshot-form', 'submit', handleAddValueSnapshot);
+    addSafeListener('adjustment-form', 'submit', (e) => import('./accounts.js').then(m => m.handleAdjustmentSubmit(e)));
+    addSafeListener('transfer-form', 'submit', (e) => import('./accounts.js').then(m => m.handleTransferSubmit(e)));
+};
 
 // Expose app to window for HTML event handlers
 window.app = {
@@ -408,6 +423,19 @@ window.app = {
     openEditAccount,
     deleteAccount,
     openAccountActions,
+    openWealthDrawer,
+    closeWealthDrawer,
+    openWealthDetails,
+    closeWealthDetails,
+    deleteWealthValue,
+    deleteWealthEntity,
+    setNatureFilter: (nature) => import('./dashboard.js').then(m => m.setNatureFilter(nature)),
+    openAdjustmentModal: (id) => import('./accounts.js').then(m => m.openAdjustmentModal(id)),
+    closeAdjustmentModal: () => import('./accounts.js').then(m => m.closeAdjustmentModal()),
+    openTransferModal: () => import('./accounts.js').then(m => m.openTransferModal()),
+    closeTransferModal: () => import('./accounts.js').then(m => m.closeTransferModal()),
+    setSettingPreset: (type) => import('./settings.js').then(m => m.setSettingPreset(type)),
+    updateEFMultiplier: (multiplier) => import('./settings.js').then(m => m.updateEFMultiplier(multiplier)),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand))
 };

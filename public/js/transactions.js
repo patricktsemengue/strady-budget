@@ -96,20 +96,13 @@ export const openTransactionModal = (id = null) => {
         const endDateInput = document.getElementById('transaction-end-date');
         if (endDateInput) endDateInput.value = '';
 
-        // Category defaulting logic based on initial empty source/destination
-        // Since both are empty by default, we need to pick a default. 
-        // Let's default to "Dépense" (source = account, destination = external) for new ones?
-        // Actually, the spec says:
-        // "Category. Default value =
-        //  * "Revenu" if source is empty
-        //  * "Autre" if destination is empty"
-        // Let's set an initial state that makes sense.
+        // Default category for this state would be "Autre" (destination is empty)
+        const autreCat = state.categories.find(c => c.label.toLowerCase().includes('autre'));
+        if (autreCat) categorySelect.value = autreCat.id;
+
         if (state.accounts.length > 0) {
             sourceSelect.value = state.accounts[0].id;
             destSelect.value = "";
-            // Default category for this state would be "Autre" (destination is empty)
-            const autreCat = state.categories.find(c => c.label === "Autre");
-            if (autreCat) categorySelect.value = autreCat.id;
         }
     }
     
@@ -117,12 +110,15 @@ export const openTransactionModal = (id = null) => {
     const updateDefaultCategory = () => {
         const source = sourceSelect.value;
         const destination = destSelect.value;
-        if (source === "" && destination !== "") {
-            const revenuCat = state.categories.find(c => c.label === "Revenu");
+        const isSrcExt = source === "" || source === "external";
+        const isDstExt = destination === "" || destination === "external";
+
+        if (isSrcExt && !isDstExt) {
+            const revenuCat = state.categories.find(c => c.nature === "REVENU");
             if (revenuCat) categorySelect.value = revenuCat.id;
-        } else if (destination === "" && source !== "") {
-            const autreCat = state.categories.find(c => c.label === "Autre");
-            if (autreCat) categorySelect.value = autreCat.id;
+        } else if (!isSrcExt && isDstExt) {
+            const quotidienCat = state.categories.find(c => c.nature === "QUOTIDIEN");
+            if (quotidienCat) categorySelect.value = quotidienCat.id;
         }
     };
 

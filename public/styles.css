@@ -137,3 +137,46 @@
     height: 1px;
     background-color: #f1f5f9;
 }
+
+/* Horizon View Styles */
+.horizon-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.horizon-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+
+.horizon-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.horizon-wrapper::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #f1f5f9;
+    border-radius: 20px;
+}
+
+.month-column {
+    scroll-snap-align: center;
+}
+
+@media (min-width: 640px) {
+    .month-column {
+        scroll-snap-align: start;
+    }
+}
+

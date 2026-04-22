@@ -12,31 +12,15 @@ export const renderTransactions = () => {
     
     if (!container && !tableBody) return;
 
-    // Filters & Search - Handling Multi-Select
-    const getSelectedValues = (id) => {
-        const el = document.getElementById(id);
-        if (!el) return ['all'];
-        const values = Array.from(el.selectedOptions).map(opt => opt.value);
-        if (values.length === 0 || values.includes('all')) return ['all'];
-        return values;
-    };
-
-    const categoryFilters = getSelectedValues('filter-category');
-    const accountFilters = getSelectedValues('filter-account');
-    
-    const categoryFiltersMobile = getSelectedValues('filter-category-mobile');
-    const accountFiltersMobile = getSelectedValues('filter-account-mobile');
-    
-    const finalCategoryFilters = categoryFilters.includes('all') ? categoryFiltersMobile : categoryFilters;
-    const finalAccountFilters = accountFilters.includes('all') ? accountFiltersMobile : accountFilters;
-
+    // 1. Filtering Logic
+    const natureFilter = localStorage.getItem('strady_nature_filter') || 'ALL';
     const searchFilter = (document.getElementById('search-transactions')?.value || '').toLowerCase();
     const sortOrder = document.getElementById('sort-order')?.value || document.getElementById('sort-order-mobile')?.value || 'default';
 
     const monthKey = getMonthKey(state.viewDate);
     const monthData = state.records[monthKey] || { items: [], status: 'open' };
     
-    // Calculate Previous Month Data for Variance
+    // Previous Month Data for Variance
     const prevDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() - 1, 1);
     const prevMonthKey = getMonthKey(prevDate);
     const prevMonthItems = state.records[prevMonthKey]?.items || [];
@@ -49,41 +33,56 @@ export const renderTransactions = () => {
 
     let filteredItems = [...monthData.items];
 
-    // Apply Filters
-    if (!finalCategoryFilters.includes('all')) {
-        filteredItems = filteredItems.filter(item => finalCategoryFilters.includes(item.Category));
-    }
-    if (!finalAccountFilters.includes('all')) {
-        filteredItems = filteredItems.filter(item => finalAccountFilters.includes(item.source) || finalAccountFilters.includes(item.destination));
+    // Nature Filter
+    if (natureFilter !== 'ALL') {
+        filteredItems = filteredItems.filter(item => {
+            const cat = state.categories.find(c => c.id === item.Category);
+            return cat && cat.nature === natureFilter;
+        });
     }
 
-    // Apply Search
+    // Search Filter
     if (searchFilter) {
         filteredItems = filteredItems.filter(item => {
             const category = state.categories.find(c => c.id === item.Category);
             const categoryLabel = category ? category.label.toLowerCase() : '';
-            const amountStr = item.amount.toString();
-            return item.label.toLowerCase().includes(searchFilter) || 
-                   categoryLabel.includes(searchFilter) || 
-                   amountStr.includes(searchFilter);
+            return item.label.toLowerCase().includes(searchFilter) || categoryLabel.includes(searchFilter);
         });
     }
 
-    const getType = (tx) => {
-        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
-        if (txInfo.isIncome) return 'Revenu';
-        if (txInfo.isExpense) return 'Dépense';
-        return 'Transfert';
-    };
+    // 2. Net Cash Flow Calculation (Real-time for filtered view)
+    let totalIn = 0;
+    let totalOut = 0;
+    filteredItems.forEach(item => {
+        const txInfo = getTxDisplayInfo(item.source, item.destination);
+        if (txInfo.isIncome) totalIn += item.amount;
+        else if (txInfo.isExpense) totalOut += item.amount;
+    });
 
-    const getPrimaryAccountName = (tx) => {
-        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
-        if (txInfo.isExpense) return txInfo.src.name;
-        if (txInfo.isIncome) return txInfo.dst.name;
-        return txInfo.src.name;
-    };
+    const netBarIn = document.getElementById('net-bar-in');
+    const netBarOut = document.getElementById('net-bar-out');
+    const netBarTotal = document.getElementById('net-bar-total');
+    if (netBarIn) netBarIn.textContent = formatCurrency(totalIn);
+    if (netBarOut) netBarOut.textContent = formatCurrency(totalOut);
+    if (netBarTotal) {
+        const net = totalIn - totalOut;
+        netBarTotal.textContent = (net >= 0 ? '+' : '') + formatCurrency(net);
+        netBarTotal.className = `text-lg font-black italic ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
 
-    // Grouping Logic
+    // Update Nature Filter Pills active state
+    document.querySelectorAll('.nature-pill').forEach(pill => {
+        const onclick = pill.getAttribute('onclick');
+        if (onclick && onclick.includes(`'${natureFilter}'`)) {
+            pill.classList.add('active', 'bg-slate-800', 'text-white');
+            pill.classList.remove('bg-white', 'text-slate-500', 'border');
+        } else {
+            pill.classList.remove('active', 'bg-slate-800', 'text-white');
+            pill.classList.add('bg-white', 'text-slate-500', 'border');
+        }
+    });
+
+    // 3. Grouping & Today Logic
     const groups = {};
     filteredItems.forEach(item => {
         const catId = item.Category || 'uncategorized';
@@ -95,10 +94,7 @@ export const renderTransactions = () => {
         groups[catId].total += amount;
     });
 
-    // Load expanded states from localStorage
     const expandedStates = JSON.parse(localStorage.getItem('strady_expanded_categories') || '{}');
-
-    // Sort Groups based on Category Index or Total
     const sortedGroupIds = Object.keys(groups).sort((a, b) => {
         const catA = state.categories.find(c => c.id === a);
         const catB = state.categories.find(c => c.id === b);
@@ -107,14 +103,17 @@ export const renderTransactions = () => {
         return orderA - orderB;
     });
 
-    // Sub-item sorting logic (internal to each group)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isCurrentMonth = state.viewDate.getMonth() === new Date().getMonth() && state.viewDate.getFullYear() === new Date().getFullYear();
+
     const sortSubItems = (items) => {
         return items.sort((a, b) => {
+            if (sortOrder === 'default' || sortOrder === 'date-desc') {
+                return new Date(b.date) - new Date(a.date);
+            }
             switch (sortOrder) {
-                case 'account': return getPrimaryAccountName(a).localeCompare(getPrimaryAccountName(b));
+                case 'account': return (a.source || '').localeCompare(b.source || '');
                 case 'amount-desc': return b.amount - a.amount;
-                case 'amount-asc': return a.amount - b.amount;
-                case 'date-desc': return new Date(b.date) - new Date(a.date);
                 default: return new Date(b.date) - new Date(a.date);
             }
         });
@@ -123,142 +122,140 @@ export const renderTransactions = () => {
     const renderVariance = (catId, currentTotal) => {
         const prevTotal = prevTotals[catId] || 0;
         if (prevTotal === 0 && currentTotal === 0) return '';
-        
         const diff = currentTotal - prevTotal;
         const colorClass = diff > 0 ? 'text-green-600' : (diff < 0 ? 'text-rose-600' : 'text-slate-400');
         const icon = diff > 0 ? 'fa-arrow-trend-up' : (diff < 0 ? 'fa-arrow-trend-down' : 'fa-minus');
-        const sign = diff > 0 ? '+' : '';
-        
-        return `<span class="text-[10px] font-bold ${colorClass} flex items-center gap-1 ml-2">
-            <i class="fa-solid ${icon}"></i> ${sign}${formatCurrency(diff)}
-        </span>`;
+        return `<span class="text-[10px] font-bold ${colorClass} flex items-center gap-1 ml-2"><i class="fa-solid ${icon}"></i> ${formatCurrency(Math.abs(diff))}</span>`;
     };
 
-    // Render mobile content
+    // Render Logic
     if (container) {
         let html = '';
         sortedGroupIds.forEach(catId => {
             const group = groups[catId];
             const category = state.categories.find(c => c.id === catId);
-            const isMonthClosed = monthData.status === 'closed';
             const isExpanded = !!expandedStates[catId];
             
-            const groupHeaderHtml = `
-                <div class="category-group-header flex items-center justify-between p-3 bg-slate-50 border-y border-slate-100 cursor-pointer sticky top-0 z-10" onclick="window.app.toggleCategoryGroup('${catId}')">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform chevron ${isExpanded ? 'rotate-180' : ''}"></i>
-                        <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px]" style="background-color: ${category?.color || '#94a3b8'}">
-                            <i class="fa-solid ${category?.icon || 'fa-tag'}"></i>
+            const subItems = sortSubItems(group.items);
+            let itemsHtml = '';
+            let todayInserted = false;
+
+            subItems.forEach((item, idx) => {
+                // Insert TODAY line for mobile
+                if (isCurrentMonth && !todayInserted && item.date <= todayStr) {
+                    if (item.date < todayStr || (idx === 0 && item.date === todayStr)) {
+                        itemsHtml += `<li class="today-marker-mobile bg-indigo-600 text-white text-[9px] font-black uppercase py-1 text-center tracking-tighter">AUJOURD'HUI</li>`;
+                        todayInserted = true;
+                    }
+                }
+
+                const txInfo = getTxDisplayInfo(item.source, item.destination);
+                const isFuture = item.date > todayStr;
+
+                itemsHtml += `
+                    <li class="p-4 flex items-center justify-between gap-4 group transition-all ${isFuture ? 'opacity-60 grayscale-[0.5]' : ''}">
+                        <div class="flex items-center gap-4 flex-grow truncate pl-4">
+                            <div class="flex-1 truncate">
+                                <p class="font-semibold text-slate-800 truncate">${item.label}</p>
+                                <p class="text-[10px] text-slate-400 font-medium truncate uppercase">${txInfo.src.name} → ${txInfo.dst.name}</p>
+                            </div>
                         </div>
-                        <span class="text-sm font-bold text-slate-700">${category?.label || 'Sans catégorie'}</span>
-                        <span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">${group.items.length}</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-sm font-bold ${group.total >= 0 ? 'text-slate-700' : 'text-slate-900'}">${formatCurrency(group.total)}</span>
-                        ${renderVariance(catId, group.total)}
-                    </div>
-                </div>
-            `;
+                        <div class="text-right whitespace-nowrap">
+                            <p class="font-bold ${txInfo.ui.color}">${formatCurrency(item.amount)}</p>
+                            <p class="text-[9px] text-slate-400 font-bold uppercase">${formatDateStr(item.date)}</p>
+                        </div>
+                    </li>`;
+            });
 
-            const itemsHtml = `
-                <ul class="divide-y divide-slate-50 transition-all duration-300 ${isExpanded ? '' : 'hidden'}">
-                    ${sortSubItems(group.items).map((item, index) => {
-                        const txInfo = getTxDisplayInfo(item.source, item.destination);
-                        const isRecurring = !!item.Model;
-                        return `
-                            <li class="p-4 flex items-center justify-between gap-4 group transaction-item-animate">
-                                <div class="flex items-center gap-4 flex-grow truncate pl-4">
-                                    <div class="flex-1 truncate">
-                                        <div class="flex items-center gap-2">
-                                            <p class="font-semibold text-slate-800 truncate">${item.label}</p>
-                                            ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-xs text-slate-400"></i>' : ''}
-                                        </div>
-                                        <p class="text-xs text-slate-500 font-medium truncate">${txInfo.src.name} → ${txInfo.dst.name}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <div class="text-right whitespace-nowrap">
-                                        <p class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${formatDateStr(item.date)}</p>
-                                    </div>
-                                    ${!isMonthClosed ? `
-                                    <button onclick="window.app.openMobileActions('${item.id}')" class="p-2 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                                    ` : ''}
-                                </div>
-                            </li>`;
-                    }).join('')}
-                </ul>
-            `;
-
-            html += `<div class="category-group">${groupHeaderHtml}${itemsHtml}</div>`;
+            html += `
+                <div class="category-group">
+                    <div class="category-group-header flex items-center justify-between p-3 bg-slate-50 border-y border-slate-100 cursor-pointer" onclick="window.app.toggleCategoryGroup('${catId}')">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform chevron ${isExpanded ? 'rotate-180' : ''}"></i>
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px]" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-tag'}"></i></div>
+                            <span class="text-sm font-bold text-slate-700">${category?.label || 'Sans catégorie'}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm font-black text-slate-700">${formatCurrency(group.total)}</span>
+                            ${renderVariance(catId, group.total)}
+                        </div>
+                    </div>
+                    <ul class="divide-y divide-slate-50 ${isExpanded ? '' : 'hidden'}">${itemsHtml}</ul>
+                </div>`;
         });
-        container.innerHTML = html || '<div class="p-8 text-center text-slate-400 italic">Aucune transaction trouvée</div>';
+        container.innerHTML = html || '<div class="p-20 text-center text-slate-400 italic">Aucun flux trouvé</div>';
     }
 
-    // Render desktop content
     if (tableBody) {
         let html = '';
         sortedGroupIds.forEach(catId => {
             const group = groups[catId];
             const category = state.categories.find(c => c.id === catId);
-            const isMonthClosed = monthData.status === 'closed';
             const isExpanded = !!expandedStates[catId];
+            const subItems = sortSubItems(group.items);
 
-            const groupHeaderHtml = `
+            let todayInserted = false;
+            let groupHtml = `
                 <tr class="bg-slate-50/80 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.toggleCategoryGroup('${catId}')">
-                    <td colspan="6" class="px-6 py-3 category-group-header-row">
+                    <td colspan="5" class="px-6 py-3 border-y border-slate-100">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4">
                                 <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform chevron ${isExpanded ? '' : 'rotate-[-90deg]'}"></i>
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}">
-                                    <i class="fa-solid ${category?.icon || 'fa-tag'}"></i>
-                                </div>
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-tag'}"></i></div>
                                 <span class="font-bold text-slate-800">${category?.label || 'Sans catégorie'}</span>
-                                <span class="text-xs bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full font-bold">${group.items.length} items</span>
                             </div>
                             <div class="flex items-center gap-6">
                                 ${renderVariance(catId, group.total)}
-                                <span class="text-lg font-black ${group.total >= 0 ? 'text-slate-700' : 'text-slate-900'}">${formatCurrency(group.total)}</span>
+                                <span class="text-lg font-black text-slate-700">${formatCurrency(group.total)}</span>
                             </div>
                         </div>
                     </td>
                 </tr>
             `;
 
-            const itemsHtml = sortSubItems(group.items).map((item, index) => {
+            subItems.forEach((item, idx) => {
+                // TODAY marker for Desktop
+                if (isCurrentMonth && !todayInserted && item.date <= todayStr) {
+                    if (item.date < todayStr || (idx === 0 && item.date === todayStr)) {
+                        groupHtml += `<tr class="${isExpanded ? '' : 'hidden'} today-row-desktop"><td colspan="5" class="bg-indigo-600 text-[10px] font-black text-white py-1 px-6 tracking-widest text-center">AUJOURD'HUI</td></tr>`;
+                        todayInserted = true;
+                    }
+                }
+
                 const txInfo = getTxDisplayInfo(item.source, item.destination);
-                const isRecurring = !!item.Model;
-                return `
-                    <tr class="group hover:bg-slate-50/50 transition-colors border-l-4 ${isExpanded ? '' : 'hidden'}" style="border-left-color: ${category?.color || '#cbd5e1'}">
-                        <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatDateStr(item.date)}</td>
+                const isFuture = item.date > todayStr;
+
+                groupHtml += `
+                    <tr class="group hover:bg-slate-50/50 transition-colors ${isExpanded ? '' : 'hidden'} ${isFuture ? 'opacity-60' : ''} border-l-4" style="border-left-color: ${category?.color || '#cbd5e1'}">
+                        <td class="px-6 py-4 text-xs font-bold text-slate-400 whitespace-nowrap">${formatDateStr(item.date)}</td>
                         <td class="px-6 py-4">
-                            <span class="text-[10px] font-black px-2 py-1 rounded-full ${txInfo.ui.color} bg-white border border-current">${getType(item).toUpperCase()}</span>
+                            <span class="text-[10px] font-black px-2 py-1 rounded-full ${txInfo.ui.color} bg-white border border-current">${txInfo.isIncome ? 'REVENU' : 'DÉPENSE'}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <span class="font-black ${txInfo.ui.color}">${formatCurrency(item.amount)}</span>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-slate-800">${item.label}</span>
-                                ${isRecurring ? '<i class="fa-solid fa-arrows-rotate text-[10px] text-slate-400" title="Récurrente"></i>' : ''}
-                            </div>
-                            <div class="text-[10px] text-slate-400 font-medium">${txInfo.src.name} → ${txInfo.dst.name}</div>
+                            <div class="font-bold text-slate-800 text-sm">${item.label}</div>
+                            <div class="text-[10px] text-slate-400 font-medium uppercase">${txInfo.src.name} → ${txInfo.dst.name}</div>
                         </td>
-                        <td class="px-6 py-4 text-right whitespace-nowrap">
-                            <span class="font-bold ${txInfo.ui.color}">${txInfo.ui.prefix || ''}${formatCurrency(item.amount)}</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                ${!isMonthClosed ? `
-                                <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
-                                <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
-                                ` : ''}
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
                             </div>
                         </td>
                     </tr>`;
-            }).join('');
+            });
 
-            html += groupHeaderHtml + itemsHtml;
+            html += groupHtml;
         });
-        tableBody.innerHTML = html || '<tr><td colspan="6" class="p-8 text-center text-slate-400 italic">Aucune transaction trouvée</td></tr>';
+        tableBody.innerHTML = html || '<tr><td colspan="5" class="p-20 text-center text-slate-400 italic">Aucun flux trouvé</td></tr>';
     }
+};
+
+export const setNatureFilter = (nature) => {
+    localStorage.setItem('strady_nature_filter', nature);
+    renderTransactions();
 };
 
 export const toggleCategoryGroup = (catId) => {
@@ -465,7 +462,7 @@ export const renderDashboard = () => {
     }
 
     const savingsBalance = state.accounts.filter(a => a.isSaving).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
-    const targetFund = monthExpense * 3;
+    const targetFund = monthExpense * (state.emergencyFundMultiplier || 3);
     const progressPct = targetFund > 0 ? Math.min((savingsBalance / targetFund) * 100, 100) : 0;
     const isEmergencyOk = savingsBalance >= targetFund;
     const dashEmergencyFundEl = document.getElementById('dash-emergency-fund');
@@ -475,8 +472,31 @@ export const renderDashboard = () => {
                 <h2 class="text-3xl font-bold ${isEmergencyOk ? 'text-green-600' : 'text-amber-600'}">${formatCurrency(savingsBalance)}</h2>
                 ${isEmergencyOk ? '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>' : ''}
             </div>
-            <p class="text-xs text-slate-400 mt-1 mb-3">Objectif: ${formatCurrency(targetFund)}</p>
-            <div class="w-full bg-slate-100 rounded-full h-2"><div class="${isEmergencyOk ? 'bg-green-500' : 'bg-amber-500'} h-full rounded-full" style="width: ${progressPct}%"></div></div>`;
+            <p class="text-[10px] text-slate-400 mt-1 mb-3">Objectif (${state.emergencyFundMultiplier || 3}m): ${formatCurrency(targetFund)}</p>
+            <div class="w-full bg-slate-100 rounded-full h-1.5"><div class="${isEmergencyOk ? 'bg-green-500' : 'bg-amber-500'} h-full rounded-full" style="width: ${progressPct}%"></div></div>`;
+    }
+
+    // Net Worth Calculation
+    const getLatestSnapshot = (entityId, isAsset = true) => {
+        const values = isAsset 
+            ? state.assetValues.filter(v => v.asset_id === entityId)
+            : state.liabilityValues.filter(v => v.liability_id === entityId);
+        if (values.length === 0) return 0;
+        return values.sort((a, b) => new Date(b.date) - new Date(a.date))[0].value;
+    };
+
+    const totalAssetsVal = state.assets.reduce((sum, a) => sum + getLatestSnapshot(a.id, true), 0);
+    const totalLiabilitiesVal = state.liabilities.reduce((sum, l) => sum + getLatestSnapshot(l.id, false), 0);
+    const netWorth = totalBalance + totalAssetsVal - totalLiabilitiesVal;
+
+    const netWorthEl = document.getElementById('dash-net-worth');
+    if (netWorthEl) {
+        netWorthEl.innerHTML = `
+            <div class="flex items-baseline gap-2">
+                <h2 class="text-3xl font-black text-indigo-600">${formatCurrency(netWorth)}</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Patrimoine Net Total</p>
+        `;
     }
 
     populateCategoryFilter();
@@ -558,15 +578,20 @@ export const renderLiquidityChart = () => {
     const groupTotals = {
         'Paiement': 0,
         'Épargne': 0,
-        'Investissement': 0
+        'Investissement': 0,
+        'Patrimoine': 0,
+        'Dettes': 0
     };
 
     const typeDetails = {
         'Paiement': [],
         'Épargne': [],
-        'Investissement': []
+        'Investissement': [],
+        'Patrimoine': [],
+        'Dettes': []
     };
 
+    // 1. Accounts
     state.accounts.forEach(acc => {
         const balance = balances[acc.id] || 0;
         let type = 'Paiement';
@@ -574,31 +599,56 @@ export const renderLiquidityChart = () => {
         else if (acc.isInvestmentAccount) type = 'Investissement';
         
         groupTotals[type] += balance;
-        typeDetails[type].push({ ...acc, balance });
+        typeDetails[type].push({ name: acc.name, balance });
     });
 
-    const totalLiquidity = Object.values(groupTotals).reduce((sum, b) => sum + b, 0);
+    // 2. Assets
+    const getLatestSnapshotVal = (entityId, isAsset = true) => {
+        const values = isAsset 
+            ? state.assetValues.filter(v => v.asset_id === entityId)
+            : state.liabilityValues.filter(v => v.liability_id === entityId);
+        if (values.length === 0) return 0;
+        return values.sort((a, b) => new Date(b.date) - new Date(a.date))[0].value;
+    };
 
-    // Filter out zero/negative groups for the pie chart
-    const chartRows = Object.entries(groupTotals)
+    state.assets.forEach(asset => {
+        const val = getLatestSnapshotVal(asset.id, true);
+        groupTotals['Patrimoine'] += val;
+        typeDetails['Patrimoine'].push({ name: asset.name, balance: val });
+    });
+
+    // 3. Liabilities
+    state.liabilities.forEach(l => {
+        const val = getLatestSnapshotVal(l.id, false);
+        groupTotals['Dettes'] -= val; // Display as negative in total but positive in absolute distribution if needed? No, debts reduce net worth.
+        typeDetails['Dettes'].push({ name: l.name, balance: -val });
+    });
+
+    const totalNetWorth = Object.values(groupTotals).reduce((sum, b) => sum + b, 0);
+
+    // Distribution chart should probably focus on Assets (Positive values)
+    const distributionTotals = { ...groupTotals };
+    delete distributionTotals['Dettes']; // Usually exclude debt from asset allocation pie
+
+    const chartRows = Object.entries(distributionTotals)
         .filter(([type, total]) => total > 0)
         .map(([type, total]) => [type, total]);
 
     if (chartRows.length === 0) {
-        container.innerHTML = '<div class="text-slate-400 italic">Aucune liquidité positive détectée</div>';
+        container.innerHTML = '<div class="text-slate-400 italic">Aucune donnée de patrimoine détectée</div>';
     } else {
         const data = new google.visualization.DataTable();
-        data.addColumn('string', 'Type de Compte');
-        data.addColumn('number', 'Solde');
+        data.addColumn('string', 'Type');
+        data.addColumn('number', 'Valeur');
         data.addRows(chartRows);
 
         const options = {
             pieHole: 0.4,
             chartArea: {width: '100%', height: '80%'},
-            legend: { position: 'bottom', alignment: 'center', textStyle: { fontName: 'Inter', fontSize: 11, bold: true } },
-            colors: ['#3b82f6', '#10b981', '#6366f1'], // Blue, Emerald, Indigo
+            legend: { position: 'bottom', alignment: 'center', textStyle: { fontName: 'Inter', fontSize: 10, bold: true } },
+            colors: ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#f43f5e'],
             backgroundColor: 'transparent',
-            pieSliceTextStyle: { fontName: 'Inter', fontSize: 12, bold: true },
+            pieSliceTextStyle: { fontName: 'Inter', fontSize: 11, bold: true },
             tooltip: { textStyle: { fontName: 'Inter' }, showColorCode: true }
         };
 
@@ -608,41 +658,36 @@ export const renderLiquidityChart = () => {
 
     // Render grouped details table
     let detailsHtml = `
-        <div class="space-y-6">
-            ${Object.entries(typeDetails).filter(([type, accounts]) => accounts.length > 0).map(([type, accounts]) => {
+        <div class="space-y-4">
+            ${Object.entries(typeDetails).filter(([type, items]) => items.length > 0).map(([type, items]) => {
                 const groupTotal = groupTotals[type];
-                const groupPct = totalLiquidity > 0 ? (Math.max(0, groupTotal) / totalLiquidity) * 100 : 0;
+                const absGroupTotal = Math.abs(groupTotal);
+                const absNetWorth = Math.abs(totalNetWorth);
+                const groupPct = absNetWorth > 0 ? (absGroupTotal / absNetWorth) * 100 : 0;
                 
                 return `
                     <div class="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
                         <div class="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
-                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">${type}</span>
+                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">${type}</span>
                             <div class="text-right">
                                 <span class="text-sm font-bold text-slate-900">${formatCurrency(groupTotal)}</span>
-                                <span class="text-[10px] text-slate-400 font-bold ml-1">(${groupPct.toFixed(1)}%)</span>
                             </div>
                         </div>
-                        <div class="p-3 space-y-2">
-                            ${accounts.map(acc => {
-                                const accPct = groupTotal > 0 ? (Math.max(0, acc.balance) / groupTotal) * 100 : 0;
-                                return `
-                                    <div class="flex justify-between items-center px-1">
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-semibold text-slate-600">${acc.name}</span>
-                                            <span class="text-[9px] text-slate-400">${accPct.toFixed(0)}% du groupe</span>
-                                        </div>
-                                        <span class="text-xs font-bold ${acc.balance >= 0 ? 'text-slate-700' : 'text-red-600'}">${formatCurrency(acc.balance)}</span>
-                                    </div>
-                                `;
-                            }).join('')}
+                        <div class="p-2 space-y-1">
+                            ${items.map(item => `
+                                <div class="flex justify-between items-center px-2 py-1">
+                                    <span class="text-xs font-medium text-slate-600">${item.name}</span>
+                                    <span class="text-xs font-bold ${item.balance >= 0 ? 'text-slate-700' : 'text-rose-600'}">${formatCurrency(item.balance)}</span>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `;
             }).join('')}
             
             <div class="pt-4 border-t border-slate-200 flex justify-between items-center px-2">
-                <span class="text-sm font-black text-slate-900 uppercase tracking-wider">Total Patrimoine</span>
-                <span class="text-xl font-black text-slate-900">${formatCurrency(totalLiquidity)}</span>
+                <span class="text-xs font-black text-slate-900 uppercase tracking-wider">Patrimoine Net Total</span>
+                <span class="text-xl font-black text-indigo-600">${formatCurrency(totalNetWorth)}</span>
             </div>
         </div>
     `;

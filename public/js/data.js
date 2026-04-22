@@ -91,16 +91,16 @@ export const handleFactoryReset = async (mode = 'starter') => {
 
 export const exportFullBackupCSV = () => {
     // Universal CSV Header
-    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment\n";
+    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature\n";
     
     // 1. Accounts
     state.accounts.forEach(acc => {
-        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0}\n`;
+        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},\n`;
     });
 
     // 2. Categories
     state.categories.forEach(cat => {
-        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,\n`;
+        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}"\n`;
     });
 
     // 3. Recurring Templates
@@ -109,7 +109,7 @@ export const exportFullBackupCSV = () => {
         const destName = tpl.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.destination)?.name || 'external');
         const catName = state.categories.find(c => c.id === tpl.category)?.label || '';
         
-        csv += `RECURRING_TEMPLATE,${tpl.date},"${tpl.label}",${tpl.amount},"${sourceName}","${destName}","${catName}",,,${tpl.periodicity},${tpl.endDate || ''},\n`;
+        csv += `RECURRING_TEMPLATE,${tpl.date},"${tpl.label}",${tpl.amount},"${sourceName}","${destName}","${catName}",,,${tpl.periodicity},${tpl.endDate || ''},,,\n`;
     });
 
     // 4. Standalone Transactions
@@ -121,6 +121,24 @@ export const exportFullBackupCSV = () => {
             
             csv += `TRANSACTION,${tx.date},"${tx.label}",${tx.amount},"${sourceName}","${destName}","${catName}",,,,,,\n`;
         }
+    });
+
+    // 5. Assets & Values
+    state.assets.forEach(ast => {
+        csv += `ASSET,,"${ast.name}",,,,,,,,,,\n`;
+        const values = state.assetValues.filter(v => v.asset_id === ast.id);
+        values.forEach(v => {
+            csv += `ASSET_VALUE,${v.date},"${v.quantity}",${v.value},,,${ast.name},,,,,,\n`;
+        });
+    });
+
+    // 6. Liabilities & Values
+    state.liabilities.forEach(lia => {
+        csv += `LIABILITY,,"${lia.name}",,,,,,,,,,\n`;
+        const values = state.liabilityValues.filter(v => v.liability_id === lia.id);
+        values.forEach(v => {
+            csv += `LIABILITY_VALUE,${v.date},,${v.value},,,${lia.name},,,,,,\n`;
+        });
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -155,7 +173,11 @@ export const importFullBackupCSV = (event) => {
             categories: [],
             transactions: [],
             templates: [],
-            duplicates: { accounts: 0, categories: 0, transactions: 0, templates: 0 }
+            assets: [],
+            assetValues: [],
+            liabilities: [],
+            liabilityValues: [],
+            duplicates: { accounts: 0, categories: 0, transactions: 0, templates: 0, assets: 0, liabilities: 0 }
         };
 
         // Maps for resolution
@@ -164,6 +186,12 @@ export const importFullBackupCSV = (event) => {
         
         const categoryMap = {};
         state.categories.forEach(cat => categoryMap[cat.label.toLowerCase()] = cat.id);
+
+        const assetMap = {};
+        state.assets.forEach(ast => assetMap[ast.name.toLowerCase()] = ast.id);
+
+        const liabilityMap = {};
+        state.liabilities.forEach(lia => liabilityMap[lia.name.toLowerCase()] = lia.id);
 
         const existingTxIds = new Set(state.transactions.map(t => t.id));
         const existingTplIds = new Set(state.recurringTemplates.map(t => t.id));
@@ -207,11 +235,42 @@ export const importFullBackupCSV = (event) => {
                     const cat = {
                         id: deterministicId,
                         label: label,
+                        nature: getValue("Nature") || 'QUOTIDIEN',
                         icon: getValue("Icon") || 'fa-tag',
                         color: getValue("Color") || '#94a3b8'
                     };
                     results.categories.push(cat);
                     categoryMap[lowerLabel] = deterministicId;
+                }
+            } else if (type === 'ASSET') {
+                const lowerName = label.toLowerCase();
+                const id = await generateDeterministicUUID(label);
+                if (assetMap[lowerName]) {
+                    results.duplicates.assets++;
+                } else {
+                    results.assets.push({ id, name: label });
+                    assetMap[lowerName] = id;
+                }
+            } else if (type === 'LIABILITY') {
+                const lowerName = label.toLowerCase();
+                const id = await generateDeterministicUUID(label);
+                if (liabilityMap[lowerName]) {
+                    results.duplicates.liabilities++;
+                } else {
+                    results.liabilities.push({ id, name: label });
+                    liabilityMap[lowerName] = id;
+                }
+            } else if (type === 'ASSET_VALUE') {
+                const assetName = getValue("Category"); // We use Category col for parent name in export
+                const assetId = assetMap[assetName.toLowerCase()];
+                if (assetId) {
+                    results.assetValues.push({ asset_id: assetId, value, date, quantity: parseFloat(label) || 1 });
+                }
+            } else if (type === 'LIABILITY_VALUE') {
+                const liaName = getValue("Category");
+                const liaId = liabilityMap[liaName.toLowerCase()];
+                if (liaId) {
+                    results.liabilityValues.push({ liability_id: liaId, value, date, quantity: 1 });
                 }
             } else if (type === 'TRANSACTION' || type === 'RECURRING_TEMPLATE') {
                 const sourceName = getValue("Source");
@@ -283,8 +342,8 @@ export const importFullBackupCSV = (event) => {
 };
 
 const showImportSummaryModal = (results) => {
-    const totalNew = results.accounts.length + results.categories.length + results.transactions.length + results.templates.length;
-    const totalDups = results.duplicates.accounts + results.duplicates.categories + results.duplicates.transactions + results.duplicates.templates;
+    const totalNew = results.accounts.length + results.categories.length + results.transactions.length + results.templates.length + results.assets.length + results.liabilities.length;
+    const totalDups = results.duplicates.accounts + results.duplicates.categories + results.duplicates.transactions + results.duplicates.templates + results.duplicates.assets + results.duplicates.liabilities;
 
     const modalHtml = `
         <div id="import-summary-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -315,20 +374,24 @@ const showImportSummaryModal = (results) => {
                         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Détails des nouveaux éléments</h4>
                         <div class="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
                             <div class="p-3 flex justify-between items-center text-sm">
-                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-wallet text-slate-400"></i> Comptes</span>
+                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-wallet text-slate-400"></i> Trésorerie</span>
                                 <span class="font-bold text-slate-800">${results.accounts.length}</span>
                             </div>
                             <div class="p-3 flex justify-between items-center text-sm">
-                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-tags text-slate-400"></i> Catégories</span>
+                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-gem text-slate-400"></i> Patrimoine (Actifs)</span>
+                                <span class="font-bold text-slate-800">${results.assets.length}</span>
+                            </div>
+                            <div class="p-3 flex justify-between items-center text-sm">
+                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-hand-holding-dollar text-slate-400"></i> Dettes</span>
+                                <span class="font-bold text-slate-800">${results.liabilities.length}</span>
+                            </div>
+                            <div class="p-3 flex justify-between items-center text-sm">
+                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-tags text-slate-400"></i> Analyses (Postes)</span>
                                 <span class="font-bold text-slate-800">${results.categories.length}</span>
                             </div>
                             <div class="p-3 flex justify-between items-center text-sm">
-                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-receipt text-slate-400"></i> Transactions</span>
-                                <span class="font-bold text-slate-800">${results.transactions.length}</span>
-                            </div>
-                            <div class="p-3 flex justify-between items-center text-sm">
-                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-rotate text-slate-400"></i> Récurrences</span>
-                                <span class="font-bold text-slate-800">${results.templates.length}</span>
+                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-receipt text-slate-400"></i> Flux & Prévisions</span>
+                                <span class="font-bold text-slate-800">${results.transactions.length + results.templates.length}</span>
                             </div>
                         </div>
                     </div>
@@ -368,7 +431,11 @@ const showImportSummaryModal = (results) => {
                 results.accounts, 
                 results.transactions, 
                 results.templates, 
-                results.categories
+                results.categories,
+                results.assets,
+                results.assetValues,
+                results.liabilities,
+                results.liabilityValues
             );
             
             showNotification(`Importation réussie : ${totalNew} nouveaux éléments ajoutés.`);

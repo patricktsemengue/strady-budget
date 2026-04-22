@@ -1,9 +1,11 @@
 import { state } from './state.js';
-import { generateId, getMonthKey, generateDeterministicUUID } from './utils.js';
+import { generateId, getMonthKey, generateDeterministicUUID, getTxDisplayInfo } from './utils.js';
 import { currentUserId } from './storage.js';
-import { addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore } from './firestore-service.js';
+import { 
+    addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore,
+    addTransactionToFirestore
+} from './firestore-service.js';
 import { showNotification } from './ui.js';
-import { router } from './app-router.js';
 import { calculateBalances } from './calculations.js';
 
 export const openAddAccountDrawer = () => {
@@ -189,141 +191,230 @@ export const closeAccountActions = () => {
 export const formatCurrency = (amount) => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(amount);
 
 /**
- * Renders the list of accounts in the accounts view.
+ * Renders the grouped list of accounts in the Trésorerie view.
  */
 export const renderAccountsList = () => {
     const list = document.getElementById('mgmt-accounts-list');
-    const tableBody = document.getElementById('mgmt-accounts-table-body');
-    if ((!list && !tableBody) || !state.transactions || !state.recurringTemplates) return;
+    const summary = document.getElementById('treasury-summary');
+    if (!list || !state.accounts) return;
 
-    // Filters & Search
-    const searchFilter = (document.getElementById('search-accounts')?.value || '').toLowerCase();
-    const typeFilter = document.getElementById('filter-account-type')?.value || 'all';
-    const sortOrder = document.getElementById('sort-accounts')?.value || 'name-asc';
+    const balances = calculateBalances(state.viewDate);
 
-    // Use pre-calculated balances if available for the selected month, otherwise fallback to on-the-fly calculation
-    const monthKey = getMonthKey(state.viewDate);
-    const balances = state.months[monthKey]?.balances || calculateBalances(state.viewDate);
+    // Grouping Logic
+    const groups = {
+        'FLUX COURANTS': [],
+        'ÉPARGNE DE PRÉCAUTION': [],
+        'PORTEFEUILLES D\'INVEST.': []
+    };
 
-    let filteredAccounts = [...state.accounts];
+    let totalLiquid = 0;
+    let totalSavings = 0;
+    let totalInvest = 0;
 
-    // Apply Filters
-    if (typeFilter === 'current') {
-        filteredAccounts = filteredAccounts.filter(acc => !acc.isSaving && !acc.isInvestmentAccount);
-    } else if (typeFilter === 'savings') {
-        filteredAccounts = filteredAccounts.filter(acc => acc.isSaving);
-    } else if (typeFilter === 'investment') {
-        filteredAccounts = filteredAccounts.filter(acc => acc.isInvestmentAccount);
-    }
-
-    // Apply Search (Name, Balance)
-    if (searchFilter) {
-        filteredAccounts = filteredAccounts.filter(acc => {
-            const balance = balances[acc.id] || 0;
-            return acc.name.toLowerCase().includes(searchFilter) || 
-                   balance.toString().includes(searchFilter);
-        });
-    }
-
-    // Sort Logic
-    filteredAccounts.sort((a, b) => {
-        const balA = balances[a.id] || 0;
-        const balB = balances[b.id] || 0;
-        switch (sortOrder) {
-            case 'name-asc': return a.name.localeCompare(b.name);
-            case 'name-desc': return b.name.localeCompare(a.name);
-            case 'balance-desc': return balB - balA;
-            case 'balance-asc': return balA - balB;
-            default: return 0;
+    state.accounts.forEach(acc => {
+        const bal = balances[acc.id] || 0;
+        if (acc.isInvestmentAccount) {
+            groups['PORTEFEUILLES D\'INVEST.'].push({ ...acc, balance: bal });
+            totalInvest += bal;
+        } else if (acc.isSaving) {
+            groups['ÉPARGNE DE PRÉCAUTION'].push({ ...acc, balance: bal });
+            totalSavings += bal;
+        } else {
+            groups['FLUX COURANTS'].push({ ...acc, balance: bal });
+            totalLiquid += bal;
         }
     });
 
-    const renderItem = (acc) => {
-        const balance = balances[acc.id] || 0;
-        const balColor = balance >= 0 ? 'text-slate-900' : 'text-red-600';
-        const isDirty = acc.balanceDirty !== false;
+    // Render Summary
+    if (summary) {
+        summary.innerHTML = `
+            <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Liquidité Opérationnelle</p>
+                <p class="text-xl font-black text-slate-800">${formatCurrency(totalLiquid)}</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Épargne</p>
+                <p class="text-xl font-black text-blue-600">${formatCurrency(totalSavings)}</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Investissements</p>
+                <p class="text-xl font-black text-indigo-600">${formatCurrency(totalInvest)}</p>
+            </div>
+        `;
+    }
 
-        let typeLabel = 'Compte courant';
-        let typeIconClass = 'fa-wallet text-slate-400';
-        if (acc.isSaving) {
-            typeLabel = 'Épargne';
-            typeIconClass = 'fa-piggy-bank text-blue-500';
-        } else if (acc.isInvestmentAccount) {
-            typeLabel = 'Investissement';
-            typeIconClass = 'fa-money-bill-trend-up text-indigo-500';
-        }
+    // Render Groups
+    const renderGroup = (label, accounts) => {
+        if (accounts.length === 0) return '';
+        
+        const itemsHtml = accounts.map(acc => {
+            const isDirty = acc.balanceDirty !== false;
+            return `
+                <div class="bg-white rounded-xl border border-slate-100 p-4 hover:border-indigo-200 transition-all flex items-center justify-between group shadow-sm">
+                    <div class="flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
+                        <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                            <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : (acc.isInvestmentAccount ? 'fa-money-bill-trend-up' : 'fa-wallet')}"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800 flex items-center gap-2">
+                                ${acc.name}
+                                ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs"></i>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">${acc.isSaving ? 'Épargne' : (acc.isInvestmentAccount ? 'Investissement' : 'Compte Courant')}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right">
+                            <div class="text-lg font-black ${acc.balance >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.balance)}</div>
+                            <div class="text-[10px] text-slate-400 font-medium">Solde calculé</div>
+                        </div>
+                        <button onclick="window.app.openAdjustmentModal('${acc.id}')" class="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                            Ajuster
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
         return `
-            <div class="p-4 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between group" onclick="window.app.openAccountActions('${acc.id}')">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                        <i class="fa-solid ${typeIconClass}"></i>
-                    </div>
-                    <div>
-                        <div class="font-bold text-slate-800 flex items-center gap-2">
-                            ${acc.name}
-                            ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs" title="Calcul en cours..."></i>' : ''}
-                        </div>
-                        <div class="text-xs text-slate-500">${typeLabel}</div>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div class="font-bold ${balColor}">${formatCurrency(balance)}</div>
-                    <div class="text-xs text-slate-400">Solde estimé</div>
-                </div>
+            <div class="space-y-3">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">${label}</h3>
+                <div class="grid grid-cols-1 gap-3">${itemsHtml}</div>
             </div>
         `;
     };
 
-    const renderRow = (acc) => {
-        const balance = balances[acc.id] || 0;
-        const balColor = balance >= 0 ? 'text-slate-900' : 'text-red-600';
-        const isDirty = acc.balanceDirty !== false;
+    list.innerHTML = Object.entries(groups).map(([label, accounts]) => renderGroup(label, accounts)).join('');
+};
 
-        let typeLabel = 'Courant';
-        let typeBadge = 'bg-slate-100 text-slate-700';
-        let typeIcon = 'fa-wallet';
-        
-        if (acc.isSaving) {
-            typeLabel = 'Épargne';
-            typeBadge = 'bg-blue-100 text-blue-700';
-            typeIcon = 'fa-piggy-bank';
-        } else if (acc.isInvestmentAccount) {
-            typeLabel = 'Investissement';
-            typeBadge = 'bg-indigo-100 text-indigo-700';
-            typeIcon = 'fa-money-bill-trend-up';
-        }
+// --- Adjustment Logic ---
 
-        return `
-            <tr class="hover:bg-slate-50 transition-colors cursor-pointer group" onclick="window.app.openAccountActions('${acc.id}')">
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                            <i class="fa-solid ${typeIcon}"></i>
-                        </div>
-                        <span class="font-semibold text-slate-800 flex items-center gap-2">
-                            ${acc.name}
-                            ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs"></i>' : ''}
-                        </span>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <span class="px-2 py-1 rounded-full text-xs font-medium ${typeBadge}">
-                        ${typeLabel}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-right">
-                    <div class="font-bold ${balColor}">${formatCurrency(balance)}</div>
-                </td>
-                <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="text-slate-400 hover:text-blue-600">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
+export const openAdjustmentModal = (accountId) => {
+    const acc = state.accounts.find(a => a.id === accountId);
+    if (!acc) return;
+
+    const balances = calculateBalances(state.viewDate);
+    const currentBal = balances[accountId] || 0;
+
+    document.getElementById('adjustment-acc-id').value = accountId;
+    document.getElementById('adjustment-acc-name').textContent = acc.name;
+    document.getElementById('adjustment-current-bal').textContent = formatCurrency(currentBal);
+    document.getElementById('adjustment-new-bal').value = currentBal.toFixed(2);
+    document.getElementById('adjustment-date').value = new Date().toISOString().split('T')[0];
+
+    // Populate category dropdown
+    const catSelect = document.getElementById('adjustment-category');
+    catSelect.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+    
+    // Select "Autre" or similar by default if possible
+    const otherCat = state.categories.find(c => c.label.toLowerCase().includes('autre'));
+    if (otherCat) catSelect.value = otherCat.id;
+
+    document.getElementById('adjustment-modal').classList.remove('hidden');
+};
+
+export const closeAdjustmentModal = () => {
+    document.getElementById('adjustment-modal').classList.add('hidden');
+};
+
+export const handleAdjustmentSubmit = async (e) => {
+    e.preventDefault();
+    const accountId = document.getElementById('adjustment-acc-id').value;
+    const newBal = parseFloat(document.getElementById('adjustment-new-bal').value);
+    const catId = document.getElementById('adjustment-category').value;
+    const date = document.getElementById('adjustment-date').value;
+
+    const balances = calculateBalances(state.viewDate);
+    const currentBal = balances[accountId] || 0;
+    const diff = newBal - currentBal;
+
+    if (diff === 0) {
+        closeAdjustmentModal();
+        return;
+    }
+
+    const isCredit = diff > 0;
+    const amount = Math.abs(diff);
+
+    const txData = {
+        label: "Ajustement de trésorerie",
+        amount: amount,
+        date: date,
+        Category: catId,
+        source: isCredit ? 'external' : accountId,
+        destination: isCredit ? accountId : 'external',
+        Model: null
     };
 
-    if (list) list.innerHTML = filteredAccounts.map(renderItem).join('');
-    if (tableBody) tableBody.innerHTML = filteredAccounts.map(renderRow).join('');
+    try {
+        const id = generateId(); // Manual adjustments get unique IDs
+        await addTransactionToFirestore(currentUserId, { ...txData, id });
+        closeAdjustmentModal();
+        showNotification(`Trésorerie ajustée de ${formatCurrency(diff)}`);
+    } catch (err) {
+        console.error(err);
+        showNotification("Erreur lors de l'ajustement", "error");
+    }
+};
+
+// --- Internal Transfer Logic ---
+
+export const openTransferModal = () => {
+    const sourceSelect = document.getElementById('transfer-source');
+    const destSelect = document.getElementById('transfer-destination');
+    
+    const options = state.accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+    sourceSelect.innerHTML = options;
+    destSelect.innerHTML = options;
+
+    if (state.accounts.length >= 2) {
+        sourceSelect.selectedIndex = 0;
+        destSelect.selectedIndex = 1;
+    }
+
+    document.getElementById('transfer-amount').value = '';
+    document.getElementById('transfer-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('transfer-label').value = "Virement interne";
+
+    document.getElementById('transfer-modal').classList.remove('hidden');
+};
+
+export const closeTransferModal = () => {
+    document.getElementById('transfer-modal').classList.add('hidden');
+};
+
+export const handleTransferSubmit = async (e) => {
+    e.preventDefault();
+    const srcId = document.getElementById('transfer-source').value;
+    const dstId = document.getElementById('transfer-destination').value;
+    const amount = parseFloat(document.getElementById('transfer-amount').value);
+    const date = document.getElementById('transfer-date').value;
+    const label = document.getElementById('transfer-label').value || "Virement interne";
+
+    if (srcId === dstId) {
+        showNotification("Les comptes source et destination doivent être différents.", "error");
+        return;
+    }
+
+    if (isNaN(amount) || amount <= 0) return;
+
+    const txData = {
+        label,
+        amount,
+        date,
+        Category: state.categories.find(c => c.label.toLowerCase().includes('virement') || c.label.toLowerCase().includes('autre'))?.id || '',
+        source: srcId,
+        destination: dstId,
+        Model: null
+    };
+
+    try {
+        const id = generateId();
+        await addTransactionToFirestore(currentUserId, { ...txData, id });
+        closeTransferModal();
+        showNotification("Virement exécuté avec succès.");
+    } catch (err) {
+        console.error(err);
+        showNotification("Erreur lors du virement", "error");
+    }
 };

@@ -1,73 +1,78 @@
-Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,isInvestmentAccount
-ACCOUNT,2025-12-31,"(Ep) 1_10eme_Fri",19637,"","","","","","","","1",""
-ACCOUNT,2025-12-31,"(Ep) 1_10eme_Mao",1860,"","","","","","","","1",""
-ACCOUNT,2025-12-31,"(Ep) Ael",6207,"","","","","","","","1",""
-ACCOUNT,2025-12-31,"(Ep) Aos",8700,"","","","","","","","1",""
-ACCOUNT,2025-12-31,"(Ep) Enih",7674,"","","","","","","","1",""
-ACCOUNT,2025-12-31,"(Pr) Depense_Non_Courante",2596,"","","","","","","","",""
-ACCOUNT,2025-12-31,"(Pr) Depense_Courante_Sante_Ecole",7351,"","","","","","","","",""
-ACCOUNT,2025-12-31,"(C) CBC",0,"","","","","","","","",""
-ACCOUNT,2025-12-31,"(C) Belfius_Mao",0,"","","","","","","","",""
-ACCOUNT,2025-12-31,"(C) Belfius_Fri",0,"","","","","","","","",""
-ACCOUNT,2025-12-31,"(I) ETF_SAXO_ENFANTS",7000,"","","","","","","","","1"
-ACCOUNT,2025-12-31,"(I) Saxo_Mao",45000,"","","","","","","","","1"
-ACCOUNT,2025-12-31,"(I) Degiro_Mao",24000,"","","","","","","","","1"
-CATEGORY,,"1-Revenue",,"","","","fa-coins","#f43f5e","","","",""
-CATEGORY,,"2-Saving",,"","","","fa-piggy-bank","#f59e0b","","","",""
-CATEGORY,,"3-Depenses fixes",,"","","","fa-file-shield","#f59e0b","","","",""
-CATEGORY,,"4-Depenses variables",,"","","","fa-house","#f97316","","","",""
-CATEGORY,,"5- Charges differees",,"","","","fa-box-archive","#14b8a6","","","",""
-CATEGORY,,"6-Bien-etre Programme",,"","","","fa-receipt","#ec4899","","","",""
-CATEGORY,,"7-Divers et hors budget",,"","","","fa-gift","#14b8a6","","","",""
-CATEGORY,,"8-Discretionnaire",,"","","","fa-bolt","#fbbf24","","","",""
-RECURRING_TEMPLATE,2026-01-01,"Salary (Mao)",3000,"external","(C) CBC","1-Revenue","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Allowances",594,"external","(C) Belfius_Mao","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"1-10th (Mao)",50,"(C) CBC","(Ep) 1_10eme_Mao","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"ETF (Aos - Enih - Ael)",150,"(C) CBC","(I) ETF_SAXO_ENFANTS","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"CBC La Louviere",1152,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Assurance Solde Restant dû",60,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Dette 30K",478,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Engie",380,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Swde",237,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Alimentation",400,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Hygiene",275,"(C) Belfius_Mao","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Proximus",52,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Frais Bancaire BELFIUS (mao)",5,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Argent de poche (mao)",11,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Croix Rouges",14,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Mutualia -  Sante (mao)",15,"(C) CBC","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Assurance CBC - habitation / Familiale",65,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Revenu Cadastrale",125,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Taxes Communales",25,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision EP PENSION (Mao)",90,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Petites Vacances & weekend (mao)",,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","6-Bien-etre Programme","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Aide et Soutien familial",50,"(C) CBC","external","8-Discretionnaire","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"LDD (lili)",100,"(C) CBC","external","8-Discretionnaire","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Frais divers (prixtel, ...)",10,"(C) CBC","external","8-Discretionnaire","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Salary (Fri)",1900,"external","(C) Belfius_Fri","1-Revenue","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"1-10th (Fri)",300,"(C) Belfius_Fri","(Ep) 1_10eme_Fri","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"(Ep) Aos (Fri)",100,"(C) Belfius_Fri","(Ep) Ael","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"(Ep) Enih (Fri)",100,"(C) Belfius_Fri","(Ep) Aos","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"(Ep) Ael (Fri)",100,"(C) Belfius_Fri","(Ep) Enih","2-Saving","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Frais Formation",15,"(C) Belfius_Fri","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Frais Bancaire BELFIUS (Fri)",10,"(C) Belfius_Fri","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Argent de poche",200,"(C) Belfius_Fri","external","3-Depenses fixes","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Aide menagere",100,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","4-Depenses variables","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Garderie Activite Extra Scolaire + interets sur compte",200,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","4-Depenses variables","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Visite medicale - soins - pharmacie",70,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","4-Depenses variables","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision  Sorties & Resto",50,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","4-Depenses variables","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Mutualia -  Sante",15,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Yuzzu Assurance NISSAN",160,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision EP PENSION",90,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Nissan CT + TC",25,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","5- Charges differees","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision USA 2026",75,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","6-Bien-etre Programme","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Petites Vacances & weekend",0,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","6-Bien-etre Programme","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Noël",0,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","6-Bien-etre Programme","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison - Travaux Maison",50,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","7-Divers et hors budget","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision SWDE",15,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","7-Divers et hors budget","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Engie",10,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","7-Divers et hors budget","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Auto Reparations",20,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","7-Divers et hors budget","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Interets & Divers hors budgets",15,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","7-Divers et hors budget","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Daddy",100,"(C) Belfius_Fri","external","8-Discretionnaire","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provison Tema",30,"(C) Belfius_Fri","external","8-Discretionnaire","","","M","","",""
-RECURRING_TEMPLATE,2026-01-01,"Provision Hygiene-Tresse",50,"(C) Belfius_Fri","external","8-Discretionnaire","","","M","","",""
+Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature
+ACCOUNT,2025-12-31,"(Ep) Ael",0,,,,,,1,0,
+ACCOUNT,2025-12-31,"(Pr) Depense_Courante_Sante_Ecole",0,,,,,,0,0,
+ACCOUNT,2025-12-31,"(C) Belfius_Fri",0,,,,,,0,0,
+ACCOUNT,2025-12-31,"(C) CBC",0,,,,,,0,0,
+ACCOUNT,2025-12-31,"(Ep) 1_10eme_Mao",0,,,,,,1,0,
+ACCOUNT,2025-12-31,"(I) Saxo_Mao",0,,,,,,0,1,
+ACCOUNT,2025-12-31,"(C) Belfius_Mao",0,,,,,,0,0,
+ACCOUNT,2025-12-31,"(Ep) Enih",0,,,,,,1,0,
+ACCOUNT,2025-12-31,"(I) Degiro_Mao",0,,,,,,0,1,
+ACCOUNT,2025-12-31,"(Ep) Aos",0,,,,,,1,0,
+ACCOUNT,2025-12-31,"(I) ETF_SAXO_ENFANTS",0,,,,,,0,1,
+ACCOUNT,2026-01-01,"(Pr) Depense_Courante_Sante_Ecoles",0,,,,,,0,0,
+ACCOUNT,2025-12-31,"(Pr) Depense_Non_Courante",0,,,,,,0,0,
+ACCOUNT,2025-12-31,"(Ep) 1_10eme_Fri",0,,,,,,1,0,
+CATEGORY,,"EPARGNES",,,,,"fa-piggy-bank","#f59e0b",,,,,"EPARGNE"
+CATEGORY,,"DIVERS ET HORS BUDGET",,,,,"fa-face-smile","#f97316",,,,,"QUOTIDIEN"
+CATEGORY,,"BIEN ETRE PROGRAMME - VOYAGES",,,,,"fa-gamepad","#10b981",,,,,"LOISIR"
+CATEGORY,,"CHARGES FIXES",,,,,"fa-receipt","#8b5cf6",,,,,"FIXE"
+CATEGORY,,"DISCRETIONARIES",,,,,"fa-gift","#10b981",,,,,"QUOTIDIEN"
+CATEGORY,,"CHARGES VARIABLES",,,,,"fa-basket-shopping","#ec4899",,,,,"QUOTIDIEN"
+CATEGORY,,"CHARGES DIFFEREES",,,,,"fa-box-archive","#14b8a6",,,,,"QUOTIDIEN"
+CATEGORY,,"REVENUS",,,,,"fa-coins","#f43f5e",,,,,"REVENU"
+RECURRING_TEMPLATE,2026-01-01,"(Ep) Ael (Fri)",100,"(C) Belfius_Fri","(Ep) Enih","EPARGNES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"(Ep) Aos (Fri)",100,"(C) Belfius_Fri","(Ep) Ael","EPARGNES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"(Ep) Enih (Fri)",100,"(C) Belfius_Fri","(Ep) Aos","EPARGNES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"1-10th (Mao)",50,"(C) CBC","(Ep) 1_10eme_Mao","EPARGNES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"1-10th (Fri)",300,"(C) Belfius_Fri","(Ep) 1_10eme_Fri","EPARGNES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Alimentation",400,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Assurance Solde Restant dû",60,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Argent de poche (mao)",11,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Argent de poche",200,"(C) Belfius_Fri","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"CBC La Louviere",1152,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Croix Rouges",14,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Dette 30K",478,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"ETF (Aos - Enih - Ael)",150,"(C) CBC","(I) ETF_SAXO_ENFANTS","EPARGNES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Engie",380,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Frais Bancaire BELFIUS (Fri)",10,"(C) Belfius_Fri","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Frais Bancaire BELFIUS (mao)",5,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Frais Formation",15,"(C) Belfius_Fri","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Frais divers (prixtel, ...)",10,"(C) CBC","external","DISCRETIONARIES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Hygiene",275,"(C) Belfius_Mao","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"LDD (lili)",100,"(C) CBC","external","DISCRETIONARIES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision  Sorties & Resto",50,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","CHARGES VARIABLES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Aide et Soutien familial",50,"(C) CBC","external","DISCRETIONARIES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Aide menagere",100,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","CHARGES VARIABLES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Assurance CBC - habitation / Familiale",65,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Auto Reparations",20,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","DIVERS ET HORS BUDGET",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Garderie Activite Extra Scolaire + interets sur compte",200,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","CHARGES VARIABLES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Daddy",100,"(C) Belfius_Fri","external","DISCRETIONARIES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision EP PENSION (Mao)",90,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision EP PENSION",90,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Engie",10,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","DIVERS ET HORS BUDGET",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Hygiene-Tresse",50,"(C) Belfius_Fri","external","DISCRETIONARIES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Mutualia -  Sante (mao)",15,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Mutualia -  Sante",15,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision SWDE",15,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","DIVERS ET HORS BUDGET",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Taxes Communales",25,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision USA 2026",75,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","BIEN ETRE PROGRAMME - VOYAGES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Visite medicale - soins - pharmacie",70,"(C) Belfius_Fri","(Pr) Depense_Courante_Sante_Ecole","CHARGES VARIABLES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provision Yuzzu Assurance NISSAN",160,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison - Travaux Maison",50,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","DIVERS ET HORS BUDGET",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Interets & Divers hors budgets",15,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","DIVERS ET HORS BUDGET",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Nissan CT + TC",25,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Noël",0,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","BIEN ETRE PROGRAMME - VOYAGES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Petites Vacances & weekend (mao)",0,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","BIEN ETRE PROGRAMME - VOYAGES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Petites Vacances & weekend",0,"(C) Belfius_Fri","(Pr) Depense_Non_Courante","BIEN ETRE PROGRAMME - VOYAGES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Revenu Cadastrale",125,"(C) Belfius_Mao","(Pr) Depense_Courante_Sante_Ecoles","CHARGES DIFFEREES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Provison Tema",30,"(C) Belfius_Fri","external","DISCRETIONARIES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Proximus",52,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Salary (Mao)",3000,"external","(C) CBC","REVENUS",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Salary (Fri)",1900,"external","(C) Belfius_Fri","REVENUS",,,M,,,,
+RECURRING_TEMPLATE,2026-01-01,"Swde",237,"(C) CBC","external","CHARGES FIXES",,,M,,,,
+RECURRING_TEMPLATE,2026-04-01,"Allowances",594,"external","(C) Belfius_Mao","REVENUS",,,M,,,,
+ASSET,,"Rue de La Grande Louvière 100",,,,,,,,,,
+ASSET_VALUE,2022-11-03,"1",285000,,,Rue de La Grande Louvière 100,,,,,,
+LIABILITY,,"Rue de La Grande Louvière 100",,,,,,,,,,
+LIABILITY_VALUE,2022-11-30,,256000,,,Rue de La Grande Louvière 100,,,,,,

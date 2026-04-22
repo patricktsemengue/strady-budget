@@ -1,39 +1,43 @@
 import { renderDashboard } from '../dashboard.js';
 
 export default {
-    id: 'dashboard',
-    label: 'Tableau de bord',
-    icon: 'fa-chart-pie',
-    order: 1,
+    id: 'pilotage-legacy',
+    label: 'Pilotage (Ancien)',
+    icon: 'fa-chart-line',
+    order: 8,
     showMonthSelection: true,
     getTemplate: () => `
-        <div id="view-dashboard" class="space-y-6 max-w-6xl mx-auto px-4">
-            <h1 class="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+        <div id="view-pilotage-legacy" class="space-y-6 max-w-6xl mx-auto px-4">
+            <h1 class="text-2xl font-bold text-slate-800">Pilotage (Ancien)</h1>
 
             <!-- KPI Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-sm text-slate-500 font-medium mb-1">Solde Global Actuel</p>
-                    <h2 class="text-3xl font-bold text-slate-800" id="dash-total-balance">--</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patrimoine Net</p>
+                    <div id="dash-net-worth">--</div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-sm text-slate-500 font-medium mb-1">Revenus (Ce mois)</p>
-                    <h2 class="text-3xl font-bold text-success" id="dash-month-income">--</h2>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Liquidité Globale</p>
+                    <h2 class="text-2xl font-black text-slate-800" id="dash-total-balance">--</h2>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-sm text-slate-500 font-medium mb-1">Dépenses (Ce mois)</p>
-                    <h2 class="text-3xl font-bold text-danger" id="dash-month-expense">--</h2>
-                    <p id="dash-month-diff" class="text-xs font-medium mt-2"></p>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Revenus</p>
+                    <h2 class="text-2xl font-bold text-success" id="dash-month-income">--</h2>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-sm text-slate-500 font-medium mb-1">Fond d'urgence</p>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dépenses</p>
+                    <h2 class="text-2xl font-bold text-danger" id="dash-month-expense">--</h2>
+                    <p id="dash-month-diff" class="text-[10px] font-medium mt-1"></p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fond d'urgence</p>
                     <div id="dash-emergency-fund">--</div>
                 </div>
             </div>
 
             <!-- Anticipated Non-Recurring Transactions -->
             <div id="anticipated-highlight" class="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
-                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Transactions à venir (3 mois, non-récurrentes)</h3>
+                <h3 class="text-amber-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Flux à venir (3 mois, hors récurrences)</h3>
                 <div id="anticipated-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
 

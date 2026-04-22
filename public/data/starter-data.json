@@ -1,82 +1,157 @@
 {
   "categories": [
-    { "id": "cat_salary", "label": "Salaire", "icon": "fa-money-bill-wave", "color": "#10b981" },
-    { "id": "cat_food", "label": "Alimentation", "icon": "fa-shopping-basket", "color": "#f59e0b" },
-    { "id": "cat_rent", "label": "Logement", "icon": "fa-home", "color": "#3b82f6" },
-    { "id": "cat_elec", "label": "Électricité", "icon": "fa-bolt", "color": "#fbbf24" },
-    { "id": "cat_water", "label": "Eau", "icon": "fa-tint", "color": "#60a5fa" },
-    { "id": "cat_sub", "label": "Abonnements", "icon": "fa-calendar-alt", "color": "#8b5cf6" },
-    { "id": "cat_insurance", "label": "Assurance", "icon": "fa-shield-halved", "color": "#6366f1" },
-    { "id": "cat_savings", "label": "Épargne", "icon": "fa-piggy-bank", "color": "#ec4899" }
+    { "id": "cat_salary", "label": "Salaire (Entrées)", "nature": "REVENU", "icon": "fa-money-bill-wave", "color": "#10b981" },
+    { "id": "cat_rent_in", "label": "Revenu Locatif", "nature": "REVENU", "icon": "fa-building-circle-check", "color": "#059669" },
+    { "id": "cat_savings", "label": "Épargne & Invest.", "nature": "EPARGNE", "icon": "fa-piggy-bank", "color": "#6366f1" },
+    { "id": "cat_housing", "label": "Logement & Prêts", "nature": "FIXE", "icon": "fa-house-lock", "color": "#3b82f6" },
+    { "id": "cat_energy", "label": "Énergie & Eau", "nature": "FIXE", "icon": "fa-bolt", "color": "#fbbf24" },
+    { "id": "cat_insurance", "label": "Assurances", "nature": "FIXE", "icon": "fa-shield-halved", "color": "#64748b" },
+    { "id": "cat_food", "label": "Vie Courante (Courses)", "nature": "QUOTIDIEN", "icon": "fa-shopping-basket", "color": "#f59e0b" },
+    { "id": "cat_school", "label": "Enfant & Scolarité", "nature": "QUOTIDIEN", "icon": "fa-graduation-cap", "color": "#ec4899" },
+    { "id": "cat_transport", "label": "Transport", "nature": "QUOTIDIEN", "icon": "fa-car", "color": "#ef4444" },
+    { "id": "cat_leisure", "label": "Loisirs & Sorties", "nature": "LOISIR", "icon": "fa-gamepad", "color": "#8b5cf6" }
   ],
   "accounts": [
-    { "id": "acc_main", "name": "Compte Courant", "initialBalance": 1200, "isSaving": false, "day": 1 },
-    { "id": "acc_savings", "name": "Livret A / Compte Épargne", "initialBalance": 3000, "isSaving": true, "day": 1 }
+    { "id": "acc_joint", "name": "Compte Joint (Ménage)", "initialBalance": 2500, "isSaving": false, "day": 1 },
+    { "id": "acc_savings", "name": "Épargne de Sécurité", "initialBalance": 8500, "isSaving": true, "day": 1 },
+    { "id": "acc_invest", "name": "Portefeuille Actions", "initialBalance": 2500, "isInvestmentAccount": true, "day": 1 }
   ],
   "templates": [
     {
-      "id": "rec_salary",
-      "label": "Salaire",
-      "amount": 2500,
+      "id": "rec_sal_p1",
+      "label": "Salaire Parent 1 (Median BE)",
+      "amount": 2450,
       "day": 1,
       "category": "cat_salary",
       "source": "external",
-      "destination": "acc_main",
+      "destination": "acc_joint",
       "periodicity": "M"
     },
     {
-      "id": "rec_savings",
-      "label": "Épargne mensuelle",
-      "amount": 200,
-      "day": 2,
-      "category": "cat_savings",
-      "source": "acc_main",
-      "destination": "acc_savings",
+      "id": "rec_sal_p2",
+      "label": "Salaire Parent 2 (Median BE)",
+      "amount": 2380,
+      "day": 1,
+      "category": "cat_salary",
+      "source": "external",
+      "destination": "acc_joint",
       "periodicity": "M"
     },
     {
-      "id": "rec_rent",
-      "label": "Loyer",
-      "amount": 850,
+      "id": "rec_rent_income",
+      "label": "Loyer Appartement (Revenu)",
+      "amount": 800,
       "day": 5,
-      "category": "cat_rent",
-      "source": "acc_main",
+      "category": "cat_rent_in",
+      "source": "external",
+      "destination": "acc_joint",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_house_mortgage",
+      "label": "Prêt Maison (RP)",
+      "amount": 1250,
+      "day": 2,
+      "category": "cat_housing",
+      "source": "acc_joint",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_apt_mortgage",
+      "label": "Prêt Appartement Locatif",
+      "amount": 600,
+      "day": 5,
+      "category": "cat_housing",
+      "source": "acc_joint",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_car_loan",
+      "label": "Prêt Auto",
+      "amount": 320,
+      "day": 10,
+      "category": "cat_transport",
+      "source": "acc_joint",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_elec_gas",
+      "label": "Électricité & Gaz",
+      "amount": 280,
+      "day": 15,
+      "category": "cat_energy",
+      "source": "acc_joint",
       "destination": "external",
       "periodicity": "M"
     },
     {
       "id": "rec_water",
-      "label": "Eau",
-      "amount": 80,
-      "day": 10,
-      "category": "cat_water",
-      "source": "acc_main",
-      "destination": "external",
-      "periodicity": "M"
-    },
-    {
-      "id": "rec_elec",
-      "label": "Électricité",
-      "amount": 120,
-      "day": 12,
-      "category": "cat_elec",
-      "source": "acc_main",
-      "destination": "external",
-      "periodicity": "M"
-    },
-    {
-      "id": "rec_insurance",
-      "label": "Assurance",
+      "label": "Provision Eau",
       "amount": 45,
-      "day": 15,
-      "category": "cat_insurance",
-      "source": "acc_main",
+      "day": 20,
+      "category": "cat_energy",
+      "source": "acc_joint",
       "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_insurances",
+      "label": "Pack Assurances (Auto/Hab/Fam)",
+      "amount": 145,
+      "day": 25,
+      "category": "cat_insurance",
+      "source": "acc_joint",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_life_ins",
+      "label": "Assurance Vie",
+      "amount": 100,
+      "day": 28,
+      "category": "cat_insurance",
+      "source": "acc_joint",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_school",
+      "label": "Frais Scolaires & Cantine",
+      "amount": 120,
+      "day": 5,
+      "category": "cat_school",
+      "source": "acc_joint",
+      "destination": "external",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_monthly_savings",
+      "label": "Virement Épargne Automatique",
+      "amount": 500,
+      "day": 2,
+      "category": "cat_savings",
+      "source": "acc_joint",
+      "destination": "acc_savings",
       "periodicity": "M"
     }
   ],
   "pastTransactions": [
-    { "label": "Courses Carrefour", "amount": 85.50, "daysAgo": 1, "category": "cat_food", "source": "acc_main", "destination": "external" },
-    { "label": "Boulangerie", "amount": 4.20, "daysAgo": 2, "category": "cat_food", "source": "acc_main", "destination": "external" }
+    { "label": "Courses Delhaize", "amount": 145.20, "daysAgo": 1, "category": "cat_food", "source": "acc_joint", "destination": "external" },
+    { "label": "Plein Essence", "amount": 75.00, "daysAgo": 3, "category": "cat_transport", "source": "acc_joint", "destination": "external" },
+    { "label": "Resto Famille", "amount": 92.50, "daysAgo": 4, "category": "cat_leisure", "source": "acc_joint", "destination": "external" }
+  ],
+  "assets": [
+    { "id": "ast_house", "name": "Maison (Résidence Principale)", "value": 300000, "quantity": 1 },
+    { "id": "ast_apt", "name": "Appartement Locatif", "value": 185000, "quantity": 1 },
+    { "id": "ast_crypto", "name": "Bitcoin (Portefeuille)", "value": 1000, "quantity": 0.015 },
+    { "id": "ast_shares", "name": "Actions Entreprise (ESPP)", "value": 2500, "quantity": 100 }
+  ],
+  "liabilities": [
+    { "id": "lia_house_mortgage", "name": "Hypothèque Maison (RP)", "value": 265000 },
+    { "id": "lia_apt_mortgage", "name": "Crédit Appartement Locatif", "value": 120000 },
+    { "id": "lia_car", "name": "Financement Auto", "value": 15000 }
   ]
 }

@@ -32,7 +32,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     unsubscribeFromData();
     if (!userId) return;
 
-    let initialLoadsPending = 8; // Increased for onboarding
+    let initialLoadsPending = 12; // Increased for onboarding + wealth entities
     const onInitialLoadComplete = () => {
         initialLoadsPending--;
         if (initialLoadsPending === 0) {
@@ -44,6 +44,10 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         accounts: [],
         categories: [],
         transactions: [],
+        assets: [],
+        assetValues: [],
+        liabilities: [],
+        liabilityValues: [],
         months: {},
         accountBalances: {},
         recurringTemplates: [],
@@ -62,6 +66,13 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     const settingsUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'monthSelector'), (docSnap) => {
         if (docSnap.exists()) {
             localState.monthSelectorConfig = docSnap.data();
+        }
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
+
+    const efUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'emergencyFund'), (docSnap) => {
+        if (docSnap.exists()) {
+            localState.emergencyFundMultiplier = docSnap.data().multiplier || 3;
         }
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
@@ -88,6 +99,26 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
 
+    const assetUnsub = onSnapshot(collection(db, `users/${userId}/assets`), (snapshot) => {
+        localState.assets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
+
+    const assetValueUnsub = onSnapshot(collection(db, `users/${userId}/asset_values`), (snapshot) => {
+        localState.assetValues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
+
+    const liabilityUnsub = onSnapshot(collection(db, `users/${userId}/liabilities`), (snapshot) => {
+        localState.liabilities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
+
+    const liabilityValueUnsub = onSnapshot(collection(db, `users/${userId}/liability_values`), (snapshot) => {
+        localState.liabilityValues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
+
     const monthsUnsub = onSnapshot(collection(db, `users/${userId}/months`), (snapshot) => {
         localState.months = {};
         snapshot.docs.forEach(doc => { localState.months[doc.id] = doc.data(); });
@@ -109,7 +140,60 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
 
-    unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, balUnsub, recUnsub, settingsUnsub, onboardingUnsub);
+    unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, balUnsub, recUnsub, settingsUnsub, onboardingUnsub, assetUnsub, assetValueUnsub, liabilityUnsub, liabilityValueUnsub);
+};
+
+// Wealth Operations
+export const addAssetToFirestore = async (userId, asset) => {
+    const docRef = doc(db, `users/${userId}/assets`, asset.id);
+    await setDoc(docRef, { ...asset, updated_at: serverTimestamp() });
+};
+
+export const deleteAssetFromFirestore = async (userId, assetId) => {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, `users/${userId}/assets`, assetId));
+    
+    const q = query(collection(db, `users/${userId}/asset_values`), where("asset_id", "==", assetId));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(d => batch.delete(d.ref));
+    
+    await batch.commit();
+};
+
+export const addAssetValueToFirestore = async (userId, val) => {
+    const id = generateId();
+    const docRef = doc(db, `users/${userId}/asset_values`, id);
+    await setDoc(docRef, { ...val, id, updated_at: serverTimestamp() });
+};
+
+export const deleteAssetValueFromFirestore = async (userId, valId) => {
+    await deleteDoc(doc(db, `users/${userId}/asset_values`, valId));
+};
+
+export const addLiabilityToFirestore = async (userId, liability) => {
+    const docRef = doc(db, `users/${userId}/liabilities`, liability.id);
+    await setDoc(docRef, { ...liability, updated_at: serverTimestamp() });
+};
+
+export const deleteLiabilityFromFirestore = async (userId, liabilityId) => {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, `users/${userId}/liabilities`, liabilityId));
+    
+    const q = query(collection(db, `users/${userId}/liability_values`), where("liability_id", "==", liabilityId));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(d => batch.delete(d.ref));
+    
+    await batch.commit();
+};
+
+export const addLiabilityValueToFirestore = async (userId, val) => {
+    const id = generateId();
+    const docRef = doc(db, `users/${userId}/liability_values`, id);
+    await setDoc(docRef, { ...val, id, updated_at: serverTimestamp() });
+};
+
+export const deleteLiabilityValueFromFirestore = async (userId, valId) => {
+    await deleteDoc(doc(db, `users/${userId}/liability_values`, valId));
 };
 
 export const addAccountToFirestore = async (userId, account) => {
@@ -224,7 +308,9 @@ export const updateCategoryOrderInFirestore = async (userId, updates) => {
     const batch = writeBatch(db);
     updates.forEach(update => {
         const docRef = doc(db, `users/${userId}/categories`, update.id);
-        batch.update(docRef, { 'index-order': update['index-order'], updated_at: serverTimestamp() });
+        const data = { 'index-order': update['index-order'], updated_at: serverTimestamp() };
+        if (update.nature) data.nature = update.nature;
+        batch.update(docRef, data);
     });
     await batch.commit();
 };
@@ -451,36 +537,48 @@ export const deleteRecurringSeriesInFirestore = async (userId, templateId) => {
 };
 
 export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransactions) => {
-    const batch = writeBatch(db);
-    let commitNeeded = false;
-    let opsCount = 0;
+    const CHUNK_SIZE = 500;
+    let allRefs = [];
     
     if (deleteTransactions) {
         const txSnap = await getDocs(collection(db, `users/${userId}/transactions`));
-        txSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
+        txSnap.forEach(docSnap => allRefs.push(docSnap.ref));
         const moSnap = await getDocs(collection(db, `users/${userId}/months`));
-        moSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
+        moSnap.forEach(docSnap => allRefs.push(docSnap.ref));
         const recSnap = await getDocs(collection(db, `users/${userId}/recurringTemplates`));
-        recSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
-        commitNeeded = true;
+        recSnap.forEach(docSnap => allRefs.push(docSnap.ref));
     }
     
     if (deleteAccounts) {
         const accSnap = await getDocs(collection(db, `users/${userId}/accounts`));
-        accSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
+        accSnap.forEach(docSnap => allRefs.push(docSnap.ref));
         
         const balSnap = await getDocs(collection(db, `users/${userId}/account_balances`));
-        balSnap.forEach(docSnap => { batch.delete(docSnap.ref); opsCount++; });
-        
-        commitNeeded = true;
+        balSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        const astSnap = await getDocs(collection(db, `users/${userId}/assets`));
+        astSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        const astvSnap = await getDocs(collection(db, `users/${userId}/asset_values`));
+        astvSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        const liaSnap = await getDocs(collection(db, `users/${userId}/liabilities`));
+        liaSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        const liavSnap = await getDocs(collection(db, `users/${userId}/liability_values`));
+        liavSnap.forEach(docSnap => allRefs.push(docSnap.ref));
     }
     
-    if (commitNeeded && opsCount > 0) {
+    // Process deletions in batches of 500
+    for (let i = 0; i < allRefs.length; i += CHUNK_SIZE) {
+        const batch = writeBatch(db);
+        const chunk = allRefs.slice(i, i + CHUNK_SIZE);
+        chunk.forEach(ref => batch.delete(ref));
         await batch.commit();
     }
 };
 
-export const importDataToFirestore = async (userId, accounts, transactions, templates, categories) => {
+export const importDataToFirestore = async (userId, accounts, transactions, templates, categories, assets, assetValues, liabilities, liabilityValues) => {
     const CHUNK_SIZE = 500;
     const allOperations = [];
 
@@ -573,6 +671,48 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
                     }
                 });
             }
+        });
+    }
+
+    if (assets) {
+        assets.forEach(ast => {
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/assets`, ast.id),
+                data: { ...ast, updated_at: serverTimestamp() }
+            });
+        });
+    }
+
+    if (assetValues) {
+        assetValues.forEach(val => {
+            const id = generateId();
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/asset_values`, id),
+                data: { ...val, id, updated_at: serverTimestamp() }
+            });
+        });
+    }
+
+    if (liabilities) {
+        liabilities.forEach(lia => {
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/liabilities`, lia.id),
+                data: { ...lia, updated_at: serverTimestamp() }
+            });
+        });
+    }
+
+    if (liabilityValues) {
+        liabilityValues.forEach(val => {
+            const id = generateId();
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/liability_values`, id),
+                data: { ...val, id, updated_at: serverTimestamp() }
+            });
         });
     }
 
@@ -685,6 +825,7 @@ export const provisionStarterData = async (userId) => {
         const batch = writeBatch(db);
         const now = new Date();
         const currentMonthStr = now.toISOString().split('T')[0].substring(0, 7);
+        const todayStr = now.toISOString().split('T')[0];
         const boundaryDateStr = getFunctionalBoundaryDate();
 
         // 1. Categories
@@ -773,7 +914,41 @@ export const provisionStarterData = async (userId) => {
             });
         });
 
-        // 5. Onboarding Setting
+        // 5. Assets
+        (data.assets || []).forEach(ast => {
+            const assetRef = doc(db, `users/${userId}/assets`, ast.id);
+            batch.set(assetRef, { id: ast.id, name: ast.name, updated_at: serverTimestamp() });
+
+            const valId = generateId();
+            const valRef = doc(db, `users/${userId}/asset_values`, valId);
+            batch.set(valRef, {
+                id: valId,
+                asset_id: ast.id,
+                date: todayStr,
+                value: ast.value,
+                quantity: ast.quantity || 1,
+                updated_at: serverTimestamp()
+            });
+        });
+
+        // 6. Liabilities
+        (data.liabilities || []).forEach(lia => {
+            const liaRef = doc(db, `users/${userId}/liabilities`, lia.id);
+            batch.set(liaRef, { id: lia.id, name: lia.name, updated_at: serverTimestamp() });
+
+            const valId = generateId();
+            const valRef = doc(db, `users/${userId}/liability_values`, valId);
+            batch.set(valRef, {
+                id: valId,
+                liability_id: lia.id,
+                date: todayStr,
+                value: lia.value,
+                quantity: 1,
+                updated_at: serverTimestamp()
+            });
+        });
+
+        // 7. Onboarding Setting
         const onboardingRef = doc(db, `users/${userId}/settings`, 'onboarding');
         batch.set(onboardingRef, {
             starterPackApplied: true,
