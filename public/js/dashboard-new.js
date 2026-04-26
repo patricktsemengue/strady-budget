@@ -77,6 +77,70 @@ const getMonthlyMetrics = (date) => {
     };
 };
 
+export const openKPIInfo = (kpiKey) => {
+    const defs = {
+        net_worth: {
+            title: t('dashboard.net_worth'),
+            icon: 'fa-chart-line',
+            definition: t('help_cards.kpi.net_worth.definition'),
+            usage: t('help_cards.kpi.net_worth.usage')
+        },
+        runway: {
+            title: t('dashboard.runway'),
+            icon: 'fa-shield-heart',
+            definition: t('help_cards.kpi.runway.definition'),
+            usage: t('help_cards.kpi.runway.usage')
+        },
+        budget_health: {
+            title: t('dashboard.budget_health'),
+            icon: 'fa-gauge-high',
+            definition: t('help_cards.kpi.budget_health.definition'),
+            usage: t('help_cards.kpi.budget_health.usage')
+        },
+        ffi: {
+            title: t('help_cards.kpi.ffi.title'),
+            icon: 'fa-crown',
+            definition: t('help_cards.kpi.ffi.definition'),
+            usage: t('help_cards.kpi.ffi.usage')
+        },
+        dna: {
+            title: t('help_cards.kpi.dna.title'),
+            icon: 'fa-dna',
+            definition: t('help_cards.kpi.dna.definition'),
+            usage: t('help_cards.kpi.dna.usage')
+        },
+        safe_to_spend: {
+            title: t('dashboard.safe_to_spend'),
+            icon: 'fa-wallet',
+            definition: t('help_cards.kpi.safe_to_spend.definition'),
+            usage: t('help_cards.kpi.safe_to_spend.usage')
+        },
+        balance_sheet: {
+            title: t('dashboard.balance_sheet'),
+            icon: 'fa-scale-balanced',
+            definition: t('help_cards.kpi.balance_sheet.definition'),
+            usage: t('help_cards.kpi.balance_sheet.usage')
+        }
+    };
+
+    const info = defs[kpiKey];
+    if (!info) return;
+
+    const modal = document.getElementById('info-modal');
+    document.getElementById('info-modal-title').textContent = info.title;
+    document.getElementById('info-modal-definition').textContent = info.definition;
+    document.getElementById('info-modal-usage').textContent = info.usage;
+    
+    const iconContainer = document.getElementById('info-modal-icon');
+    iconContainer.innerHTML = `<i class="fa-solid ${info.icon} text-xl"></i>`;
+
+    modal.classList.remove('hidden');
+};
+
+export const closeInfoModal = () => {
+    document.getElementById('info-modal').classList.add('hidden');
+};
+
 export const renderStrategicDashboard = () => {
     const container = document.getElementById('strategic-dashboard-content');
     if (!container) return;
@@ -195,13 +259,18 @@ export const renderStrategicDashboard = () => {
             <!-- Strategic KPI Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Net Worth Card -->
-                <div onclick="window.app.openWealthEvolution()" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:border-indigo-300 transition-all hover:shadow-lg group">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden hover:border-indigo-300 transition-all hover:shadow-lg group">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.net_worth')}</p>
-                        <h2 class="text-4xl font-black text-indigo-600">${formatCurrency(netWorth)}</h2>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.net_worth')}</p>
+                            <h2 class="text-4xl font-black text-indigo-600">${formatCurrency(netWorth)}</h2>
+                        </div>
+                        <button onclick="window.app.openKPIInfo('net_worth')" class="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
                     </div>
-                    <div class="mt-4 flex items-center justify-between">
+                    <div onclick="window.app.openWealthEvolution()" class="mt-4 flex items-center justify-between cursor-pointer relative z-10">
                         <span class="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">Bilan de Situation</span>
                         <i class="fa-solid fa-chart-line text-indigo-300 group-hover:text-indigo-600 transition-colors"></i>
                     </div>
@@ -209,12 +278,17 @@ export const renderStrategicDashboard = () => {
 
                 <!-- Improvement 3: Smart Runway (Based on Burn Rate) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.runway')}</p>
-                        <div class="flex items-baseline gap-2">
-                            <h2 class="text-4xl font-black ${standardRunway >= runwayGoal ? 'text-emerald-600' : 'text-amber-600'}">${standardRunway.toFixed(1)}</h2>
-                            <span class="text-slate-400 font-bold text-xs uppercase">${t('dashboard.months')}</span>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.runway')}</p>
+                            <div class="flex items-baseline gap-2">
+                                <h2 class="text-4xl font-black ${standardRunway >= runwayGoal ? 'text-emerald-600' : 'text-amber-600'}">${standardRunway.toFixed(1)}</h2>
+                                <span class="text-slate-400 font-bold text-xs uppercase">${t('dashboard.months')}</span>
+                            </div>
                         </div>
+                        <button onclick="window.app.openKPIInfo('runway')" class="p-2 text-slate-300 hover:text-amber-500 transition-colors">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
                     </div>
                     <div class="mt-4 space-y-3">
                         <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -229,13 +303,18 @@ export const renderStrategicDashboard = () => {
 
                 <!-- Santé Budgétaire (70/20/10) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.budget_health')} (70/20/10)</p>
-                        <div class="flex h-4 w-full rounded-full overflow-hidden mt-2 bg-slate-100">
-                            <div class="bg-slate-400 h-full" style="width: ${Math.min(100, needsPct)}%" title="Besoins (70% cible)"></div>
-                            <div class="bg-amber-400 h-full" style="width: ${Math.min(100, leisurePct)}%" title="Loisirs (20% cible)"></div>
-                            <div class="bg-emerald-400 h-full" style="width: ${Math.min(100, savingsPct)}%" title="Épargne (10% cible)"></div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.budget_health')} (70/20/10)</p>
+                            <div class="flex h-4 w-full rounded-full overflow-hidden mt-2 bg-slate-100">
+                                <div class="bg-slate-400 h-full" style="width: ${Math.min(100, needsPct)}%" title="Besoins (70% cible)"></div>
+                                <div class="bg-amber-400 h-full" style="width: ${Math.min(100, leisurePct)}%" title="Loisirs (20% cible)"></div>
+                                <div class="bg-emerald-400 h-full" style="width: ${Math.min(100, savingsPct)}%" title="Épargne (10% cible)"></div>
+                            </div>
                         </div>
+                        <button onclick="window.app.openKPIInfo('budget_health')" class="p-2 text-slate-300 hover:text-slate-600 transition-colors">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
                     </div>
                     <div class="mt-4 grid grid-cols-3 gap-2">
                         <div class="text-center">
@@ -255,12 +334,17 @@ export const renderStrategicDashboard = () => {
 
                 <!-- Indice de Souveraineté (FFI) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Souveraineté (FFI)</p>
-                        <div class="flex items-baseline gap-2">
-                            <h2 class="text-4xl font-black ${ffiIndex >= 100 ? 'text-emerald-600' : 'text-indigo-600'}">${ffiIndex.toFixed(0)}%</h2>
-                            <span class="text-slate-400 font-bold text-[10px] uppercase">couverture</span>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Souveraineté (FFI)</p>
+                            <div class="flex items-baseline gap-2">
+                                <h2 class="text-4xl font-black ${ffiIndex >= 100 ? 'text-emerald-600' : 'text-indigo-600'}">${ffiIndex.toFixed(0)}%</h2>
+                                <span class="text-slate-400 font-bold text-[10px] uppercase">couverture</span>
+                            </div>
                         </div>
+                        <button onclick="window.app.openKPIInfo('ffi')" class="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
                     </div>
                     <div class="mt-4 space-y-3">
                         <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -275,16 +359,21 @@ export const renderStrategicDashboard = () => {
 
                 <!-- Revenue DNA Donut -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">DNA des Revenus</p>
+                    <div class="flex justify-between items-start">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">${t('dashboard.dna_title')}</p>
+                        <button onclick="window.app.openKPIInfo('dna')" class="p-2 text-slate-300 hover:text-emerald-500 transition-colors">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
+                    </div>
                     <div id="revenue-dna-chart" class="w-full h-32"></div>
                     <div class="flex justify-between items-center mt-2 px-2">
                         <div class="flex items-center gap-1.5">
                             <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
-                            <span class="text-[9px] font-bold text-slate-500">Actif</span>
+                            <span class="text-[9px] font-bold text-slate-500">${t('dashboard.dna_active')}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span class="text-[9px] font-bold text-slate-500">Passif</span>
+                            <span class="text-[9px] font-bold text-slate-500">${t('dashboard.dna_passive')}</span>
                         </div>
                     </div>
                 </div>
@@ -296,7 +385,12 @@ export const renderStrategicDashboard = () => {
                 <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
                     <div class="flex justify-between items-start mb-8">
                         <div>
-                            <h3 class="font-bold text-xl text-slate-800">${t('dashboard.safe_to_spend')}</h3>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-xl text-slate-800">${t('dashboard.safe_to_spend')}</h3>
+                                <button onclick="window.app.openKPIInfo('safe_to_spend')" class="text-slate-300 hover:text-indigo-500 transition-colors">
+                                    <i class="fa-solid fa-circle-info text-sm"></i>
+                                </button>
+                            </div>
                             <p class="text-sm text-slate-500 italic">Budget disponible après obligations</p>
                         </div>
                         <div class="text-right">
@@ -327,25 +421,30 @@ export const renderStrategicDashboard = () => {
 
                 <!-- Balance Sheet Map -->
                 <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                    <h3 class="font-bold text-xl text-slate-800 mb-6">Structure du Bilan</h3>
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-xl text-slate-800">${t('dashboard.balance_sheet')}</h3>
+                        <button onclick="window.app.openKPIInfo('balance_sheet')" class="text-slate-300 hover:text-indigo-500 transition-colors">
+                            <i class="fa-solid fa-circle-info text-sm"></i>
+                        </button>
+                    </div>
                     <div class="flex h-12 w-full rounded-xl overflow-hidden shadow-inner border border-slate-200">
-                        <div class="bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" style="width: ${(netWorth / (netWorth + totalLiabilitiesVal)) * 100}%" title="Capital Net">PATRIMOINE NET</div>
-                        <div class="bg-rose-400 flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" style="width: ${(totalLiabilitiesVal / (netWorth + totalLiabilitiesVal)) * 100}%" title="Dettes">DETTES</div>
+                        <div class="bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" style="width: ${(netWorth / (netWorth + totalLiabilitiesVal)) * 100}%" title="Capital Net">${t('wealth.net_equity').toUpperCase()}</div>
+                        <div class="bg-rose-400 flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" style="width: ${(totalLiabilitiesVal / (netWorth + totalLiabilitiesVal)) * 100}%" title="Dettes">${t('wealth.liabilities_label').split('(')[0].trim().toUpperCase()}</div>
                     </div>
                     <div class="flex justify-between mt-4">
                         <div class="flex items-center gap-2">
                             <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
-                            <span class="text-xs font-bold text-slate-600">Possédé (${((netWorth / (netWorth + totalLiabilitiesVal)) * 100).toFixed(0)}%)</span>
+                            <span class="text-xs font-bold text-slate-600">${t('common.owned', 'Possédé')} (${((netWorth / (netWorth + totalLiabilitiesVal)) * 100).toFixed(0)}%)</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <div class="w-3 h-3 rounded-full bg-rose-400"></div>
-                            <span class="text-xs font-bold text-slate-600">Dettes (${((totalLiabilitiesVal / (netWorth + totalLiabilitiesVal)) * 100).toFixed(0)}%)</span>
+                            <span class="text-xs font-bold text-slate-600">${t('common.debts', 'Dettes')} (${((totalLiabilitiesVal / (netWorth + totalLiabilitiesVal)) * 100).toFixed(0)}%)</span>
                         </div>
                     </div>
                     <div class="mt-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
                         <p class="text-sm text-indigo-900 font-medium leading-relaxed italic">
                             <i class="fa-solid fa-lightbulb mr-2 text-indigo-400"></i>
-                            Votre capacité d'autofinancement mensuelle est de <b>${formatCurrency(m0.income - m0.expense)}</b>.
+                            ${t('dashboard.self_financing_msg', { amount: formatCurrency(m0.income - m0.expense) })}
                         </p>
                     </div>
                 </div>

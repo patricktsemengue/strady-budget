@@ -9,6 +9,16 @@ export default {
     icon: 'fa-gauge-high',
     order: 2,
     showMonthSelection: true,
+    getHelpContent: () => ({
+        title: t('help_cards.dashboard.title'),
+        purpose: t('help_cards.dashboard.purpose'),
+        actions: [
+            { icon: "fa-chart-line", label: t('help_cards.dashboard.action1_label'), desc: t('help_cards.dashboard.action1_desc') },
+            { icon: "fa-shield-heart", label: t('help_cards.dashboard.action2_label'), desc: t('help_cards.dashboard.action2_desc') },
+            { icon: "fa-gauge-high", label: t('help_cards.dashboard.action3_label'), desc: t('help_cards.dashboard.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => null,
     getTemplate: () => `
         <div id="view-dashboard" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">
             <div class="flex justify-between items-center mb-4">

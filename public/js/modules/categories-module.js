@@ -8,6 +8,20 @@ export default {
     icon: 'fa-tags',
     order: 1,
     showMonthSelection: false,
+    getHelpContent: () => ({
+        title: t('help_cards.categories.title'),
+        purpose: t('help_cards.categories.purpose'),
+        actions: [
+            { icon: "fa-tags", label: t('help_cards.categories.action1_label'), desc: t('help_cards.categories.action1_desc') },
+            { icon: "fa-leaf", label: t('help_cards.categories.action2_label'), desc: t('help_cards.categories.action2_desc') },
+            { icon: "fa-arrow-down-up-across-line", label: t('help_cards.categories.action3_label'), desc: t('help_cards.categories.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => ({
+        icon: 'fa-tag',
+        color: 'bg-amber-600',
+        action: () => window.app.openAddCategoryDrawer()
+    }),
     getTemplate: () => `
         <div id="view-categories" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">
             <div class="flex justify-between items-center">

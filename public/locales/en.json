@@ -5,8 +5,6 @@
     "education": "Philosophy & Guide",
     "transactions": "Cash-Flow & Forecast",
     "accounts": "My Treasury",
-    "horizon_flux": "Horizon (Flows)",
-    "horizon_soldes": "Horizon (Balances)",
     "categories": "Analysis Categories",
     "settings": "Settings",
     "groups": {
@@ -29,8 +27,38 @@
     "next": "Next",
     "skip": "Skip",
     "close": "Close",
+    "owned": "Owned",
+    "debts": "Debts",
+    "type": "Type",
+    "label": "Label",
+    "label_placeholder": "Enter a name...",
+    "asset": "Asset",
+    "liability": "Liability",
+    "actions": "Actions",
+    "actions_category": "Category Actions",
+    "actions_account": "Account Actions",
+    "edit_category": "Edit Category",
+    "delete_category": "Delete Category",
+    "edit_account": "Edit Account",
+    "delete_account": "Delete Account",
+    "edit_transaction": "Edit Transaction",
+    "delete_transaction": "Delete Transaction",
+    "recurring_edit_title": "Recurring Flow Update",
+    "recurring_edit_msg": "Do you want to apply this change to all occurrences of this recurring flow or only to this one?",
+    "apply_all": "Entire series",
+    "apply_single": "Only this flow",
     "success_logout": "You have been logged out",
-    "error_logout": "Error during logout"
+    "error_logout": "Error during logout",
+    "source": "Source",
+    "destination": "Destination",
+    "icon": "Icon"
+  },
+  "nature": {
+    "REVENU": "INCOME",
+    "FIXE": "FIXED CHARGES",
+    "QUOTIDIEN": "DAILY LIFE",
+    "LOISIR": "LEISURE",
+    "EPARGNE": "SAVINGS & INVEST."
   },
   "dashboard": {
     "title": "Strategic Steering",
@@ -45,7 +73,44 @@
     "cash_drag": "CFO Opportunity: Cash Drag detected",
     "months": "months",
     "actual": "(Actual)",
-    "wealth_evolution": "Net Worth Evolution"
+    "wealth_evolution": "Net Worth Evolution",
+    "balance_sheet": "Balance Sheet Structure",
+    "self_financing_msg": "Your monthly self-financing capacity is <b>{{amount}}</b>.",
+    "dna_title": "Income DNA",
+    "dna_active": "Active",
+    "dna_passive": "Passive",
+    "kpi": {
+      "net_worth": {
+        "definition": "It's the sum of everything you own (Accounts, Savings, Real Estate, Stocks) minus everything you owe (Credits, Debts).",
+        "usage": "This is the ultimate indicator of your real wealth. The goal is to see it grow over the long term, either through savings or asset appreciation."
+      },
+      "runway": {
+        "definition": "The number of months you can maintain your current standard of living solely with your available savings, if your income were to stop tomorrow.",
+        "usage": "A runway of 3 to 6-months is considered a solid 'Emergency Fund'. Below that, you are vulnerable. Above that, you might have too much cash sitting idle."
+      },
+      "budget_health": {
+        "definition": "A golden rule for structuring income: 70% for Needs (Fixed + Daily), 20% for Wants (Leisure), and a minimum of 10% for Savings.",
+        "usage": "If your needs exceed 70%, you lack maneuverability. If your savings are under 10%, your wealth growth is too slow."
+      },
+      "ffi": {
+        "title": "Sovereignty (FFI)",
+        "definition": "The Financial Independence Index measures what percentage of your vital expenses (Rent, Bills) is covered by your passive income (Rents, Dividends).",
+        "usage": "At 100%, you are free: you no longer need to work to pay your essential bills. This is the goal of financial sovereignty."
+      },
+      "dna": {
+        "title": "Income DNA",
+        "definition": "Analyzes the source of your money: Active Income (linked to your time/work) vs. Passive Income (linked to your assets/investments).",
+        "usage": "The goal is to diversify your DNA to reduce dependence on salary and increase the share of income decorrelated from your time."
+      },
+      "safe_to_spend": {
+        "definition": "The amount you actually have left for 'fun' spending this month, once all your fixed bills and recurring templates are deducted.",
+        "usage": "If this number is positive, you can spend with peace of mind. If it's negative, you're dipping into your savings without knowing it."
+      },
+      "balance_sheet": {
+        "definition": "Visualizes the ratio between your Net Equity (what you truly own) and your Debts (what belongs to the bank).",
+        "usage": "The goal is to increase the blue part (Owned) over the months by paying off your loans and accumulating assets without going into debt."
+      }
+    }
   },
   "settings": {
     "title": "System Settings",
@@ -132,7 +197,7 @@
       },
       "ffi": {
         "title": "Sovereignty Index (FFI)",
-        "desc": "The **Financial Independence Index** measures your freedom. It represents the percentage of your **Fixed Expenses** (Rent, Bills) covered by your **Passive Income** (Dividends, Rents received). At 100%, you are sovereign: your assets pay your vital bills, even if you stop working.",
+        "desc": "The **Financial Independence Index** mesure your freedom. It represents the percentage of your **Fixed Expenses** (Rent, Bills) covered by your **Passive Income** (Dividends, Rents received). At 100%, you are sovereign: your assets pay your vital bills, even if you stop working.",
         "target": "Target: 100%",
         "help": "Mark your income as 'Passive' in the Categories tab to activate this KPI."
       }
@@ -158,7 +223,9 @@
     "steps": {
       "accounts": {
         "title": "Your Accounts",
-        "message": "Welcome! We have set up your main accounts. The **Joint Account** for daily use and a **Security Fund** for your projects."
+        "message": "Welcome! We have set up your main accounts. The **Joint Account** for daily use and a **Security Fund** for your projects.",
+        "is_savings": "Consider as emergency savings",
+        "is_investment": "Consider as investment account"
       },
       "categories": {
         "title": "Categories & Classification",
@@ -176,6 +243,111 @@
         "title": "Strategic Dashboard",
         "message": "Let's finish here! The 'Safe-to-Spend' tells you exactly what you can spend without compromising your goals."
       }
+    }
+  },
+  "wealth": {
+    "title": "Wealth & Balance Sheet",
+    "subtitle": "Asset tracking and debt reduction",
+    "assets_label": "ASSETS (What I own)",
+    "liabilities_label": "LIABILITIES (What I owe)",
+    "balance_title": "Balance Sheet Equilibrium",
+    "balance_desc": "<b>Net Worth</b> represents your real wealth (Assets - Debts). Each loan repayment decreases your liabilities and mechanically increases your net worth, even if your savings remain stable.",
+    "asset_type_help": "Real Estate / Valued Asset",
+    "liability_type_help": "Debt / Bank Loan",
+    "estimation_at": "Estimation at {{date}}",
+    "balance_at": "Balance at {{date}}",
+    "no_assets": "No assets recorded for this period.",
+    "no_liabilities": "No liabilities recorded for this period.",
+    "total_assets": "Total Assets",
+    "total_liabilities": "Total Liabilities",
+    "net_equity": "Net Worth (Equity)",
+    "net_equity_help": "Net value at this period",
+    "history_empty": "No value history.",
+    "fill_required": "Please fill in all required fields.",
+    "save_success": "Successfully saved!",
+    "save_error": "Error during save",
+    "delete_success": "Deleted.",
+    "modal_details": "Details",
+    "modal_history": "Value history",
+    "modal_new_value": "Record a new value",
+    "modal_amount": "Amount",
+    "modal_date": "Date",
+    "modal_quantity": "Quantity",
+    "modal_update": "Update",
+    "modal_delete": "Delete this asset/liability"
+  },
+  "help_cards": {
+    "badge": "Screen Focus",
+    "btn_help": "Screen Help",
+    "dashboard": {
+      "title": "Strategic Steering",
+      "purpose": "This screen is your financial control tower. It aggregates your data to give you a clear vision of your overall financial health and real spending capacity.",
+      "action1_label": "Monitor Net Worth",
+      "action1_desc": "Track the evolution of your real wealth (Cash + Assets - Debts).",
+      "action2_label": "Check Security Fund",
+      "action2_desc": "Ensure you have enough reserve to cover expenses in case of the unexpected.",
+      "action3_label": "Analyze Burn Rate",
+      "action3_desc": "Compare your real spending pace against your income."
+    },
+    "transactions": {
+      "title": "Flows & Forecasts",
+      "purpose": "Steer your current operations and anticipate the future. Strady projects your income and expense models to show your financial trajectory.",
+      "action1_label": "Add a Flow",
+      "action1_desc": "Record a one-time expense or create a recurring template.",
+      "action2_label": "Filter by Nature",
+      "action2_desc": "Analyze your expenses by type (Fixed, Daily Life, Leisure).",
+      "action3_label": "Visualize Sankey",
+      "action3_desc": "Get a graphical view of money inflows and outflows."
+    },
+    "wealth": {
+      "title": "Wealth Management",
+      "purpose": "Track your long-term assets and debts. This view allows you to move beyond the monthly budget to manage your overall wealth growth.",
+      "action1_label": "Add Asset/Liability",
+      "action1_desc": "Record real estate, brokerage accounts, or loans.",
+      "action2_label": "Update Values",
+      "action2_desc": "Periodically update your asset values for an accurate Net Worth calculation.",
+      "action3_label": "Historical Evolution",
+      "action3_desc": "Visualize the trajectory of your wealth over the long term."
+    },
+    "accounts": {
+      "title": "Treasury Management",
+      "purpose": "Configure your real bank accounts. This is where you define your financial starting points (initial balances) for each account.",
+      "action1_label": "Create an Account",
+      "action1_desc": "Add your checking, savings, or investment accounts to track their balances.",
+      "action2_label": "Reconcile Balances",
+      "action2_desc": "Adjust the app balance to exactly match your bank.",
+      "action3_label": "Internal Transfer",
+      "action3_desc": "Record a money transfer between two of your accounts without affecting your overall budget."
+    },
+    "categories": {
+      "title": "Analysis & Categories",
+      "purpose": "Categories are the labels you put on your money. Properly configuring them allows Strady to accurately calculate your budgetary health.",
+      "action1_label": "Customize Categories",
+      "action1_desc": "Change icons, colors, and names of your categories to reflect your life.",
+      "action2_label": "Identify Passive Income",
+      "action2_desc": "Check 'Passive Income' so your dividends or rents feed your Sovereignty Index.",
+      "action3_label": "Reorganize Order",
+      "action3_desc": "The order defined here will be used to display your tables and charts."
+    },
+    "education": {
+      "title": "Philosophy & Guide",
+      "purpose": "Strady is not just a technical tool, it's a method. Learn the principles of financial sovereignty to transform your relationship with money.",
+      "action1_label": "Master Concepts",
+      "action1_desc": "Discover 70/20/10, Pay Yourself First, and the FFI index.",
+      "action2_label": "Follow the Guide",
+      "action2_desc": "Learn the 4 key steps to steering your budget like a pro.",
+      "action3_label": "Launch Tour",
+      "action3_desc": "Restart the guided tour to review basic features."
+    },
+    "settings": {
+      "title": "System Settings",
+      "purpose": "Personalize your Strady experience. Manage display preferences, backups, and account security.",
+      "action1_label": "Adjust Horizon",
+      "action1_desc": "Define how far ahead you want to see your financial forecasts.",
+      "action2_label": "Export Data",
+      "action2_desc": "Create a security backup or transfer your data to another device.",
+      "action3_label": "Change Language",
+      "action3_desc": "Switch between French and English for the entire interface."
     }
   },
   "confirm": {

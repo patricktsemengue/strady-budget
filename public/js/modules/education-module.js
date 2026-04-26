@@ -8,6 +8,16 @@ export default {
     icon: 'fa-graduation-cap',
     order: 1,
     showMonthSelection: false,
+    getHelpContent: () => ({
+        title: t('help_cards.education.title'),
+        purpose: t('help_cards.education.purpose'),
+        actions: [
+            { icon: "fa-graduation-cap", label: t('help_cards.education.action1_label'), desc: t('help_cards.education.action1_desc') },
+            { icon: "fa-book-open", label: t('help_cards.education.action2_label'), desc: t('help_cards.education.action2_desc') },
+            { icon: "fa-wand-magic-sparkles", label: t('help_cards.education.action3_label'), desc: t('help_cards.education.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => null,
     getTemplate: () => `
         <div id="view-education" class="max-w-4xl mx-auto px-4 pb-20">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">

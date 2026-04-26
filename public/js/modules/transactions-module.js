@@ -10,10 +10,24 @@ export default {
     icon: 'fa-list-check',
     order: 1,
     showMonthSelection: true,
-    showMobileFab: () => {
+    getHelpContent: () => ({
+        title: t('help_cards.transactions.title'),
+        purpose: t('help_cards.transactions.purpose'),
+        actions: [
+            { icon: "fa-plus-circle", label: t('help_cards.transactions.action1_label'), desc: t('help_cards.transactions.action1_desc') },
+            { icon: "fa-filter", label: t('help_cards.transactions.action2_label'), desc: t('help_cards.transactions.action2_desc') },
+            { icon: "fa-chart-pie", label: t('help_cards.transactions.action3_label'), desc: t('help_cards.transactions.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => {
         const monthKey = getMonthKey(state.viewDate);
         const isMonthClosed = state.records[monthKey]?.status === 'closed';
-        return !isMonthClosed;
+        if (isMonthClosed) return null;
+        return {
+            icon: 'fa-plus',
+            color: 'bg-slate-800',
+            action: () => window.app.openTransactionModal()
+        };
     },
     getTemplate: () => `
         <div id="view-transactions" class="space-y-6 max-w-6xl mx-auto px-4 relative pb-24">
@@ -134,6 +148,15 @@ export default {
                 const modal = document.getElementById('mobile-filters-modal');
                 if (modal) modal.classList.remove('hidden');
             }
+            if (e.target.closest('#btn-close-filters-modal') || e.target.closest('#btn-close-filters-cancel')) {
+                const modal = document.getElementById('mobile-filters-modal');
+                if (modal) modal.classList.add('hidden');
+            }
+            if (e.target.closest('#btn-apply-filters')) {
+                const modal = document.getElementById('mobile-filters-modal');
+                if (modal) modal.classList.add('hidden');
+                renderTransactions();
+            }
             if (e.target.closest('#btn-expand-all')) {
                 window.app.toggleAllCategoryGroups(true);
             }
@@ -144,6 +167,10 @@ export default {
                 const modal = document.getElementById('sankey-modal');
                 if (modal) modal.classList.remove('hidden');
                 import('../dashboard.js').then(m => m.renderSankeyChart(true));
+            }
+            if (e.target.closest('#btn-close-sankey-modal')) {
+                const modal = document.getElementById('sankey-modal');
+                if (modal) modal.classList.add('hidden');
             }
         });
 

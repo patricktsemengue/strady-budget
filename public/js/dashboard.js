@@ -153,16 +153,21 @@ export const renderTransactions = () => {
                 const isFuture = item.date > todayStr;
 
                 itemsHtml += `
-                    <li class="p-4 flex items-center justify-between gap-4 group transition-all ${isFuture ? 'opacity-60 grayscale-[0.5]' : ''}">
+                    <li onclick="window.app.openMobileActions('${item.id}')" class="p-4 flex items-center justify-between gap-4 group transition-all active:bg-slate-100 cursor-pointer ${isFuture ? 'opacity-60 grayscale-[0.5]' : ''}">
                         <div class="flex items-center gap-4 flex-grow truncate pl-4">
                             <div class="flex-1 truncate">
                                 <p class="font-semibold text-slate-800 truncate">${item.label}</p>
                                 <p class="text-[10px] text-slate-400 font-medium truncate uppercase">${txInfo.src.name} → ${txInfo.dst.name}</p>
                             </div>
                         </div>
-                        <div class="text-right whitespace-nowrap">
-                            <p class="font-bold ${txInfo.ui.color}">${formatCurrency(item.amount)}</p>
-                            <p class="text-[9px] text-slate-400 font-bold uppercase">${formatDateStr(item.date)}</p>
+                        <div class="flex items-center gap-3 whitespace-nowrap">
+                            <div class="text-right">
+                                <p class="font-bold ${txInfo.ui.color}">${formatCurrency(item.amount)}</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase">${formatDateStr(item.date)}</p>
+                            </div>
+                            <div class="text-slate-300">
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </div>
                         </div>
                     </li>`;
             });

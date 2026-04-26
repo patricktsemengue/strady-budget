@@ -303,7 +303,22 @@ export const openMobileActions = (id) => {
     const content = document.getElementById('mobile-actions-content');
     const title = document.getElementById('mobile-actions-title');
 
-    title.textContent = tx.label;
+    const txInfo = getTxDisplayInfo(tx.source, tx.destination);
+    const category = state.categories.find(c => c.id === tx.Category);
+    const formattedAmount = new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(tx.amount);
+
+    title.innerHTML = `
+        <div class="flex items-center gap-4 text-left">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white shrink-0" style="background-color: ${category?.color || '#94a3b8'}">
+                <i class="fa-solid ${category?.icon || 'fa-tag'} text-xl"></i>
+            </div>
+            <div class="flex-1 truncate">
+                <p class="font-black text-slate-800 text-lg leading-tight truncate">${tx.label}</p>
+                <p class="text-[11px] font-bold ${txInfo.ui.color} uppercase tracking-wider">${formattedAmount} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
+            </div>
+        </div>
+    `;
+    
     modal.classList.remove('hidden');
     
     // Animation
@@ -314,10 +329,12 @@ export const openMobileActions = (id) => {
     // Setup action button listeners (once)
     const setupAction = (btnId, actionFn) => {
         const btn = document.getElementById(btnId);
-        btn.onclick = () => {
-            closeMobileActions();
-            actionFn(currentMobileActionId);
-        };
+        if (btn) {
+            btn.onclick = () => {
+                closeMobileActions();
+                actionFn(currentMobileActionId);
+            };
+        }
     };
 
     setupAction('mobile-action-edit', editTransaction);

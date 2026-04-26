@@ -1,6 +1,7 @@
 import { state, updateState } from './state.js';
 import { markAccountsBalanceDirty } from './firestore-service.js';
 import { currentUserId } from './storage.js';
+import { t } from './i18n.js';
 
 class AppRouter {
     constructor() {
@@ -153,15 +154,71 @@ class AppRouter {
         // Show/Hide Mobile FAB
         const mobileFab = document.getElementById('mobile-fab');
         if (mobileFab) {
-            if (this.currentModule.showMobileFab && this.currentModule.showMobileFab()) {
+            if (this.currentModule.getFabConfig) {
+                const config = this.currentModule.getFabConfig();
+                if (config) {
+                    mobileFab.classList.remove('hidden');
+                    mobileFab.className = `md:hidden fixed bottom-6 right-6 w-14 h-14 ${config.color || 'bg-slate-800'} text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
+                    mobileFab.innerHTML = `<i class="fa-solid ${config.icon || 'fa-plus'} text-xl"></i>`;
+                    mobileFab.onclick = config.action;
+                } else {
+                    mobileFab.classList.add('hidden');
+                }
+            } else if (this.currentModule.showMobileFab && this.currentModule.showMobileFab()) {
                 mobileFab.classList.remove('hidden');
+                mobileFab.className = `md:hidden fixed bottom-6 right-6 w-14 h-14 bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
+                mobileFab.innerHTML = `<i class="fa-solid fa-plus text-xl"></i>`;
+                mobileFab.onclick = () => window.app.openTransactionModal();
             } else {
                 mobileFab.classList.add('hidden');
             }
         }
 
+        // Help Card Logic
+        const helpId = `help_dismissed_${this.currentModule.id}`;
+        const isDismissed = localStorage.getItem(helpId) === 'true';
+        const helpContent = this.currentModule.getHelpContent ? this.currentModule.getHelpContent() : null;
+        
+        let helpHtml = '';
+        if (helpContent && !isDismissed) {
+            helpHtml = `
+                <div class="max-w-6xl mx-auto px-4 mt-4">
+                    <div id="screen-help-card" class="help-card animate-fadeIn">
+                        <button onclick="window.app.dismissHelp('${this.currentModule.id}')" class="help-card-close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <div class="help-badge">${t('help_cards.badge')}</div>
+                        <h2 class="text-lg font-black text-slate-800 mb-2">${helpContent.title}</h2>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-4">${helpContent.purpose}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 border-t border-slate-100 pt-4">
+                            ${helpContent.actions.map(action => `
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid ${action.icon} text-[10px]"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-700">${action.label}</p>
+                                        <p class="text-[10px] text-slate-400 font-medium">${action.desc}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (helpContent) {
+            // Mini button to reopen
+            helpHtml = `
+                <div class="max-w-6xl mx-auto px-4 mt-2 flex justify-end">
+                    <button onclick="window.app.showHelp('${this.currentModule.id}')" class="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+                        <i class="fa-solid fa-circle-question"></i> ${t('help_cards.btn_help')}
+                    </button>
+                </div>
+            `;
+        }
+
         // Render Module Template
-        appContent.innerHTML = this.currentModule.getTemplate();
+        appContent.innerHTML = helpHtml + this.currentModule.getTemplate();
         
         // Call Module Render logic
         try {
@@ -169,6 +226,16 @@ class AppRouter {
         } catch (renderErr) {
             console.error(`[Router] Render failed for ${this.currentModule.id}:`, renderErr);
         }
+    }
+
+    dismissHelp(moduleId) {
+        localStorage.setItem(`help_dismissed_${moduleId}`, 'true');
+        this.render();
+    }
+
+    showHelp(moduleId) {
+        localStorage.removeItem(`help_dismissed_${moduleId}`);
+        this.render();
     }
 }
 

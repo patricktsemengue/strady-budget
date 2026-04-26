@@ -5,29 +5,21 @@ export default {
     get label() { return t('nav.settings'); },
     get group() { return t('nav.groups.config'); },
     icon: 'fa-cog',
-    order: 6,
+    order: 10,
     showMonthSelection: false,
+    getHelpContent: () => ({
+        title: t('help_cards.settings.title'),
+        purpose: t('help_cards.settings.purpose'),
+        actions: [
+            { icon: "fa-calendar-days", label: t('help_cards.settings.action1_label'), desc: t('help_cards.settings.action1_desc') },
+            { icon: "fa-vault", label: t('help_cards.settings.action2_label'), desc: t('help_cards.settings.action2_desc') },
+            { icon: "fa-language", label: t('help_cards.settings.action3_label'), desc: t('help_cards.settings.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => null,
     getTemplate: () => `
         <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">
             <h1 class="text-2xl font-bold text-slate-800">${t('settings.title')}</h1>
-
-            <!-- Language Section -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                    <h3 class="font-bold text-lg text-slate-800">${t('settings.language.title')}</h3>
-                    <p class="text-sm text-slate-500">${t('settings.language.subtitle')}</p>
-                </div>
-                <div class="p-6">
-                    <div class="flex items-center gap-4 bg-slate-50 p-1 rounded-2xl border border-slate-100 max-w-sm">
-                        <button onclick="window.app.changeLanguage('fr')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${getCurrentLanguage() === 'fr' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}">
-                            <span class="mr-2">🇫🇷</span> Français
-                        </button>
-                        <button onclick="window.app.changeLanguage('en')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${getCurrentLanguage() === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}">
-                            <span class="mr-2">🇬🇧</span> English
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- 1. Horizon de Pilotage -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">

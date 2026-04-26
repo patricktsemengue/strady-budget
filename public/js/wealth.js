@@ -48,12 +48,12 @@ export const renderWealthList = () => {
                         </div>
                         <div>
                             <h4 class="font-bold text-slate-800 leading-tight">${asset.name}</h4>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Actif Immobilier/Valorisé</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${t('wealth.asset_type_help')}</p>
                         </div>
                     </div>
                     <div class="text-right">
                         <p class="text-lg font-black text-slate-900 leading-none">${formatCurrency(latest.value)}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Estimation au ${latest.date}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">${t('wealth.estimation_at', { date: latest.date })}</p>
                     </div>
                 </div>
                 <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -61,7 +61,7 @@ export const renderWealthList = () => {
                 </div>
             </div>
         `;
-    }).join('') || '<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">Aucun actif enregistré pour cette période.</div>';
+    }).join('') || `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">${t('wealth.no_assets')}</div>`;
 
     // Render Liabilities
     liabilityList.innerHTML = state.liabilities.map(liability => {
@@ -76,12 +76,12 @@ export const renderWealthList = () => {
                         </div>
                         <div>
                             <h4 class="font-bold text-slate-800 leading-tight">${liability.name}</h4>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Dette / Emprunt Bancaire</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${t('wealth.liability_type_help')}</p>
                         </div>
                     </div>
                     <div class="text-right">
                         <p class="text-lg font-black text-rose-600 leading-none">${formatCurrency(latest.value)}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Solde au ${latest.date}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">${t('wealth.balance_at', { date: latest.date })}</p>
                     </div>
                 </div>
                 <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -89,7 +89,7 @@ export const renderWealthList = () => {
                 </div>
             </div>
         `;
-    }).join('') || '<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">Aucun passif enregistré pour cette période.</div>';
+    }).join('') || `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">${t('wealth.no_liabilities')}</div>`;
 
     // Update Totals and Summary
     const netWorth = totalAssets - totalLiabilities;
@@ -99,19 +99,19 @@ export const renderWealthList = () => {
     if (summary) {
         summary.innerHTML = `
             <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total des Actifs</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('wealth.total_assets')}</p>
                 <p class="text-2xl font-black text-slate-800">${formatCurrency(totalAssets)}</p>
                 <div class="mt-2 h-1 w-12 bg-emerald-500 rounded-full"></div>
             </div>
             <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total des Dettes</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('wealth.total_liabilities')}</p>
                 <p class="text-2xl font-black text-rose-600">${formatCurrency(totalLiabilities)}</p>
                 <div class="mt-2 h-1 w-12 bg-rose-500 rounded-full"></div>
             </div>
             <div class="bg-slate-900 p-6 rounded-2xl shadow-xl transition-all hover:scale-[1.02]">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Patrimoine Net (Equity)</p>
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">${t('wealth.net_equity')}</p>
                 <p class="text-2xl font-black text-white">${formatCurrency(netWorth)}</p>
-                <p class="text-[10px] font-bold text-slate-400 mt-2 italic">Valeur nette à cette période</p>
+                <p class="text-[10px] font-bold text-slate-400 mt-2 italic">${t('wealth.net_equity_help')}</p>
             </div>
         `;
     }
@@ -126,7 +126,7 @@ export const handleAddWealthEntity = async (e) => {
     const quantity = parseFloat(document.getElementById('wealth-entity-quantity').value || 1);
 
     if (!name || isNaN(value) || !date) {
-        showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
+        showNotification(t('wealth.fill_required'), 'error');
         return;
     }
 
@@ -141,12 +141,13 @@ export const handleAddWealthEntity = async (e) => {
         }
         
         closeWealthDrawer();
-        showNotification('Enregistré avec succès !');
+        showNotification(t('wealth.save_success'));
     } catch (err) {
         console.error(err);
-        showNotification('Erreur lors de l\'enregistrement', 'error');
+        showNotification(t('wealth.save_error'), 'error');
     }
 };
+
 
 export const openWealthDrawer = () => {
     document.getElementById('wealth-add-form').reset();
@@ -195,7 +196,7 @@ export const openWealthDetails = (id, type) => {
                 <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
         </div>
-    `).join('') || '<p class="text-center text-slate-400 italic py-4">Aucun historique de valeur.</p>';
+    `).join('') || `<p class="text-center text-slate-400 italic py-4">${t('wealth.history_empty')}</p>`;
 
     modal.classList.remove('hidden');
 };
@@ -257,7 +258,7 @@ export const deleteWealthEntity = async () => {
             await deleteLiabilityFromFirestore(currentUserId, currentWealthEntityId);
         }
         closeWealthDetails();
-        showNotification('Supprimé.');
+        showNotification(t('wealth.delete_success'));
     } catch (err) {
         console.error(err);
     }

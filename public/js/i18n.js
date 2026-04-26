@@ -42,6 +42,20 @@ export const t = (key, options) => {
     return i18next.t(key, options);
 };
 
+export const translatePage = () => {
+    const elements = document.querySelectorAll('[data-i18n]');
+    elements.forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const translated = t(key);
+        
+        if (el.tagName === 'INPUT' && el.getAttribute('placeholder')) {
+            el.setAttribute('placeholder', translated);
+        } else {
+            el.innerHTML = translated;
+        }
+    });
+};
+
 export const changeLanguage = async (lng) => {
     if (typeof i18next === 'undefined') return;
     await i18next.changeLanguage(lng);

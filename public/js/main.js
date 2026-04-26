@@ -1,5 +1,6 @@
 import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
 import { setStorageUser } from './storage.js';
+import { initI18n, t, changeLanguage, getCurrentLanguage, translatePage } from './i18n.js';
 import { 
     showNotification, 
     setDataStatusIndicator, 
@@ -12,8 +13,6 @@ import { router } from './app-router.js';
 import dashboardNewModule from './modules/dashboard-new-module.js';
 import transactionsModule from './modules/transactions-module.js';
 import accountsModule from './modules/accounts-module.js';
-import horizonModule from './modules/horizon-module.js';
-import treasuryHorizonModule from './modules/treasury-horizon-module.js';
 import wealthModule from './modules/wealth-module.js';
 import educationModule from './modules/education-module.js';
 import categoriesModule from './modules/categories-module.js';
@@ -86,7 +85,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { firebaseConfig } from './firebase-config.js';
 import { debounce } from './utils.js';
-import { initI18n, t, changeLanguage } from './i18n.js';
 
 const init = async () => {
     try {
@@ -102,6 +100,22 @@ const init = async () => {
         // Initialize i18n
         try {
             await initI18n();
+            // Translate static parts of index.html
+            translatePage();
+            
+            // Set active language button
+            const currentLng = getCurrentLanguage();
+            const btnFr = document.getElementById('lang-fr');
+            const btnEn = document.getElementById('lang-en');
+            if (btnFr && btnEn) {
+                if (currentLng === 'fr') {
+                    btnFr.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
+                    btnEn.classList.add('text-slate-400');
+                } else {
+                    btnEn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
+                    btnFr.classList.add('text-slate-400');
+                }
+            }
         } catch (i18nErr) {
             console.warn('[Main] i18n initialization failed, using fallbacks:', i18nErr);
         }
@@ -161,8 +175,6 @@ const init = async () => {
         router.register(educationModule);
         router.register(transactionsModule);
         router.register(accountsModule);
-        router.register(horizonModule);
-        router.register(treasuryHorizonModule);
         router.register(categoriesModule);
         router.register(settingsModule);
 
@@ -351,7 +363,11 @@ window.app = {
     openMobileActions, closeMobileActions, closeCategoryActions, closeAccountActions,
     renderAccountsList, openEditCategory, deleteCategory, openCategoryActions,
     openEditAccount, deleteAccount, openAccountActions, openWealthDrawer, closeWealthDrawer,
+    openAddAccountDrawer: () => import('./accounts.js').then(m => m.openAddAccountDrawer()),
+    openAddCategoryDrawer: () => import('./categories.js').then(m => m.openAddCategoryDrawer()),
     openWealthDetails, closeWealthDetails, deleteWealthValue, deleteWealthEntity,
+    dismissHelp: (id) => router.dismissHelp(id),
+    showHelp: (id) => router.showHelp(id),
     setNatureFilter: (nature) => import('./dashboard.js').then(m => m.setNatureFilter(nature)),
     openAdjustmentModal: (id) => import('./accounts.js').then(m => m.openAdjustmentModal(id)),
     closeAdjustmentModal: () => import('./accounts.js').then(m => m.closeAdjustmentModal()),
@@ -360,7 +376,9 @@ window.app = {
     setSettingPreset: (type) => import('./settings.js').then(m => m.setSettingPreset(type)),
     updateEFMultiplier: (multiplier) => import('./settings.js').then(m => m.updateEFMultiplier(multiplier)),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
-    toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand))
+    toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),
+    openKPIInfo: (key) => import('./dashboard-new.js').then(m => m.openKPIInfo(key)),
+    closeInfoModal: () => import('./dashboard-new.js').then(m => m.closeInfoModal())
 };
 
 document.addEventListener('DOMContentLoaded', init);

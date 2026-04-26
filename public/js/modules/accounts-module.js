@@ -8,7 +8,21 @@ export default {
     get group() { return t('nav.groups.operations'); },
     icon: 'fa-building-columns',
     order: 2,
-    showMonthSelection: true,
+    showMonthSelection: false,
+    getHelpContent: () => ({
+        title: t('help_cards.accounts.title'),
+        purpose: t('help_cards.accounts.purpose'),
+        actions: [
+            { icon: "fa-university", label: t('help_cards.accounts.action1_label'), desc: t('help_cards.accounts.action1_desc') },
+            { icon: "fa-arrows-rotate", label: t('help_cards.accounts.action2_label'), desc: t('help_cards.accounts.action2_desc') },
+            { icon: "fa-right-left", label: t('help_cards.accounts.action3_label'), desc: t('help_cards.accounts.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => ({
+        icon: 'fa-university',
+        color: 'bg-emerald-600',
+        action: () => window.app.openAddAccountDrawer()
+    }),
     getTemplate: () => `
         <div id="view-accounts" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">
             <div class="flex justify-between items-center">

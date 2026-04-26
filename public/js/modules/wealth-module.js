@@ -9,16 +9,29 @@ export default {
     icon: 'fa-gem',
     order: 3,
     showMonthSelection: true,
-    showMobileFab: () => true,
+    getHelpContent: () => ({
+        title: t('help_cards.wealth.title'),
+        purpose: t('help_cards.wealth.purpose'),
+        actions: [
+            { icon: "fa-plus-circle", label: t('help_cards.wealth.action1_label'), desc: t('help_cards.wealth.action1_desc') },
+            { icon: "fa-clock-rotate-left", label: t('help_cards.wealth.action2_label'), desc: t('help_cards.wealth.action2_desc') },
+            { icon: "fa-chart-area", label: t('help_cards.wealth.action3_label'), desc: t('help_cards.wealth.action3_desc') }
+        ]
+    }),
+    getFabConfig: () => ({
+        icon: 'fa-gem',
+        color: 'bg-rose-600',
+        action: () => window.app.openWealthDrawer()
+    }),
     getTemplate: () => `
         <div id="view-wealth" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Patrimoine & Bilan</h1>
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">Suivi des actifs et du désendettement</p>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">${t('wealth.title')}</h1>
+                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">${t('wealth.subtitle')}</p>
                 </div>
                 <button onclick="window.app.openWealthDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-900 flex items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
-                    <i class="fa-solid fa-plus text-xs"></i> Ajouter
+                    <i class="fa-solid fa-plus text-xs"></i> ${t('common.add')}
                 </button>
             </div>
 
@@ -34,7 +47,7 @@ export default {
                 <!-- Assets Side -->
                 <section class="space-y-4">
                     <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-                        <h3 class="font-black text-slate-400 uppercase tracking-widest text-xs">ACTIFS (Ce que je possède)</h3>
+                        <h3 class="font-black text-slate-400 uppercase tracking-widest text-xs">${t('wealth.assets_label')}</h3>
                         <span id="total-assets-label" class="text-xs font-black text-emerald-600">-- €</span>
                     </div>
                     <div id="wealth-assets-list" class="space-y-3">
@@ -45,7 +58,7 @@ export default {
                 <!-- Liabilities Side -->
                 <section class="space-y-4">
                     <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-                        <h3 class="font-black text-slate-400 uppercase tracking-widest text-xs">PASSIFS (Ce que je dois)</h3>
+                        <h3 class="font-black text-slate-400 uppercase tracking-widest text-xs">${t('wealth.liabilities_label')}</h3>
                         <span id="total-liabilities-label" class="text-xs font-black text-rose-600">-- €</span>
                     </div>
                     <div id="wealth-liabilities-list" class="space-y-3">
@@ -59,10 +72,9 @@ export default {
                     <i class="fa-solid fa-scale-balanced"></i>
                 </div>
                 <div>
-                    <h4 class="font-bold text-indigo-900">Équilibre du Bilan</h4>
+                    <h4 class="font-bold text-indigo-900">${t('wealth.balance_title')}</h4>
                     <p class="text-sm text-indigo-700 mt-1 leading-relaxed">
-                        Le <b>Patrimoine Net</b> représente votre richesse réelle (Actifs - Dettes). 
-                        Chaque remboursement de crédit diminue vos passifs et augmente mécaniquement votre patrimoine net, même si votre épargne reste stable.
+                        ${t('wealth.balance_desc')}
                     </p>
                 </div>
             </div>
