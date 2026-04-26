@@ -2,6 +2,7 @@ import { t, getCurrentLanguage } from '../i18n.js';
 
 export default {
     id: 'settings',
+    accentColor: 'slate',
     get label() { return t('nav.settings'); },
     get group() { return t('nav.groups.config'); },
     icon: 'fa-cog',

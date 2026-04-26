@@ -4,6 +4,7 @@ import { t } from '../i18n.js';
 
 export default {
     id: 'dashboard',
+    accentColor: 'indigo',
     get label() { return t('nav.dashboard'); },
     get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gauge-high',

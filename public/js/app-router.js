@@ -138,14 +138,22 @@ class AppRouter {
         // Update Nav Active State
         Object.values(this.modules).forEach(m => {
             const btns = [document.getElementById(`nav-${m.id}`), document.getElementById(`nav-${m.id}-mobile`)];
+            const accent = m.accentColor || 'indigo';
+            
             btns.forEach(btn => {
                 if (!btn) return;
                 const isActive = m.id === this.currentModule.id;
+                
+                // Reset common colors
+                const colors = ['indigo', 'emerald', 'rose', 'amber', 'slate', 'violet', 'blue'];
+                colors.forEach(c => {
+                    btn.classList.remove(`text-${c}-600`, `border-${c}-600`, `bg-${c}-50/50`);
+                });
+
                 if (isActive) {
-                    btn.classList.add('text-indigo-600', 'border-indigo-600', 'bg-indigo-50/50');
+                    btn.classList.add(`text-${accent}-600`, `border-${accent}-600`, `bg-${accent}-50/50`);
                     btn.classList.remove('border-transparent');
                 } else {
-                    btn.classList.remove('text-indigo-600', 'border-indigo-600', 'bg-indigo-50/50');
                     btn.classList.add('border-transparent');
                 }
             });
@@ -178,22 +186,23 @@ class AppRouter {
         const helpId = `help_dismissed_${this.currentModule.id}`;
         const isDismissed = localStorage.getItem(helpId) === 'true';
         const helpContent = this.currentModule.getHelpContent ? this.currentModule.getHelpContent() : null;
+        const currentAccent = this.currentModule.accentColor || 'indigo';
         
         let helpHtml = '';
         if (helpContent && !isDismissed) {
             helpHtml = `
                 <div class="max-w-6xl mx-auto px-4 mt-4">
-                    <div id="screen-help-card" class="help-card animate-fadeIn">
+                    <div id="screen-help-card" class="help-card animate-fadeIn border-l-4 border-${currentAccent}-600">
                         <button onclick="window.app.dismissHelp('${this.currentModule.id}')" class="help-card-close">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                        <div class="help-badge">${t('help_cards.badge')}</div>
+                        <div class="help-badge bg-${currentAccent}-50 text-${currentAccent}-700">${t('help_cards.badge')}</div>
                         <h2 class="text-lg font-black text-slate-800 mb-2">${helpContent.title}</h2>
                         <p class="text-sm text-slate-600 leading-relaxed mb-4">${helpContent.purpose}</p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 border-t border-slate-100 pt-4">
                             ${helpContent.actions.map(action => `
                                 <div class="flex items-start gap-3">
-                                    <div class="mt-1 w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                    <div class="mt-1 w-5 h-5 rounded-full bg-${currentAccent}-50 text-${currentAccent}-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid ${action.icon} text-[10px]"></i>
                                     </div>
                                     <div>
@@ -210,7 +219,7 @@ class AppRouter {
             // Mini button to reopen
             helpHtml = `
                 <div class="max-w-6xl mx-auto px-4 mt-2 flex justify-end">
-                    <button onclick="window.app.showHelp('${this.currentModule.id}')" class="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+                    <button onclick="window.app.showHelp('${this.currentModule.id}')" class="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-${currentAccent}-600 transition-colors flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
                         <i class="fa-solid fa-circle-question"></i> ${t('help_cards.btn_help')}
                     </button>
                 </div>

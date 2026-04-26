@@ -45,13 +45,16 @@ export const t = (key, options) => {
 export const translatePage = () => {
     const elements = document.querySelectorAll('[data-i18n]');
     elements.forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        const translated = t(key);
+        const attrValue = el.getAttribute('data-i18n');
         
-        if (el.tagName === 'INPUT' && el.getAttribute('placeholder')) {
-            el.setAttribute('placeholder', translated);
+        // Support [attr]key syntax (e.g., [placeholder]common.label)
+        if (attrValue.startsWith('[')) {
+            const parts = attrValue.split(']');
+            const attrName = parts[0].substring(1);
+            const key = parts[1];
+            el.setAttribute(attrName, t(key));
         } else {
-            el.innerHTML = translated;
+            el.innerHTML = t(attrValue);
         }
     });
 };

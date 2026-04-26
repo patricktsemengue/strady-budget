@@ -462,9 +462,11 @@ export const renderRevenueDNAChart = (active, passive) => {
     const container = document.getElementById('revenue-dna-chart');
     if (!container) return;
 
-    if (typeof google === 'undefined' || !google.visualization) {
-        google.charts.load('current', {packages:['corechart']});
-        google.charts.setOnLoadCallback(() => renderRevenueDNAChart(active, passive));
+    if (typeof google === 'undefined' || !google.visualization || !google.visualization.arrayToDataTable) {
+        if (typeof google !== 'undefined' && google.charts) {
+            google.charts.load('current', {packages:['corechart']});
+            google.charts.setOnLoadCallback(() => renderRevenueDNAChart(active, passive));
+        }
         return;
     }
 
@@ -499,9 +501,11 @@ export const renderWealthEvolutionChart = () => {
     const container = document.getElementById('wealth-evolution-chart');
     if (!container) return;
 
-    if (typeof google === 'undefined' || !google.visualization) {
-        google.charts.load('current', {packages:['corechart']});
-        google.charts.setOnLoadCallback(renderWealthEvolutionChart);
+    if (typeof google === 'undefined' || !google.visualization || !google.visualization.DataTable) {
+        if (typeof google !== 'undefined' && google.charts) {
+            google.charts.load('current', {packages:['corechart']});
+            google.charts.setOnLoadCallback(renderWealthEvolutionChart);
+        }
         return;
     }
 

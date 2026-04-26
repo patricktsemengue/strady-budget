@@ -3,6 +3,7 @@ import { t } from '../i18n.js';
 
 export default {
     id: 'categories',
+    accentColor: 'amber',
     get label() { return t('nav.categories'); },
     get group() { return t('nav.groups.config'); },
     icon: 'fa-tags',

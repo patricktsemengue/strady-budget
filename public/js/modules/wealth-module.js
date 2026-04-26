@@ -4,6 +4,7 @@ import { t } from '../i18n.js';
 
 export default {
     id: 'wealth',
+    accentColor: 'rose',
     get label() { return t('nav.wealth'); },
     get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gem',

@@ -7,7 +7,10 @@ const ASSETS_TO_CACHE = [
     '/login.html',
     '/styles.css',
     '/manifest.json',
-    '/S-fav-icon.png',
+    '/S-fav-icon.png'
+];
+
+const EXTERNAL_ASSETS = [
     'https://cdn.tailwindcss.com',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
     'https://unpkg.com/i18next/dist/umd/i18next.min.js'
@@ -28,7 +31,17 @@ let auth;
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS_TO_CACHE);
+            // Local assets: standard addAll
+            const localPromise = cache.addAll(ASSETS_TO_CACHE);
+            
+            // External assets: no-cors mode to avoid CORS blocks
+            const externalPromises = EXTERNAL_ASSETS.map(url => {
+                return fetch(new Request(url, { mode: 'no-cors' }))
+                    .then(response => cache.put(url, response))
+                    .catch(err => console.warn(`SW: Failed to cache external asset: ${url}`, err));
+            });
+
+            return Promise.all([localPromise, ...externalPromises]);
         })
     );
     self.skipWaiting();

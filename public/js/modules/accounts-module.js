@@ -4,6 +4,7 @@ import { t } from '../i18n.js';
 
 export default {
     id: 'accounts',
+    accentColor: 'emerald',
     get label() { return t('nav.accounts'); },
     get group() { return t('nav.groups.operations'); },
     icon: 'fa-building-columns',
