@@ -150,6 +150,34 @@
       "cta": "Ready to pilot my budget!"
     }
   },
+  "tour": {
+    "assistant_label": "STRADY GUIDE • STEP {{current}}/{{total}}",
+    "btn_skip": "Skip tour",
+    "btn_next": "Next",
+    "btn_finish": "Finish",
+    "steps": {
+      "accounts": {
+        "title": "Your Accounts",
+        "message": "Welcome! We have set up your main accounts. The **Joint Account** for daily use and a **Security Fund** for your projects."
+      },
+      "categories": {
+        "title": "Categories & Classification",
+        "message": "Categories allow you to classify your flows by nature: **Income**, **Fixed** (bills), **Daily** or **Leisure**. This is the basis of your analysis."
+      },
+      "transactions": {
+        "title": "Forecasting Engine",
+        "message": "This is where the magic happens! Your income and bills are **templates**. Strady uses them to project your balance over 36 months."
+      },
+      "wealth": {
+        "title": "Global Wealth",
+        "message": "Beyond the budget, track your assets (house, crypto) and liabilities (loans). Your **Net Worth** is calculated automatically."
+      },
+      "dashboard": {
+        "title": "Strategic Dashboard",
+        "message": "Let's finish here! The 'Safe-to-Spend' tells you exactly what you can spend without compromising your goals."
+      }
+    }
+  },
   "confirm": {
     "delete_record": "Delete this record?",
     "delete_wealth": "Do you want to permanently delete {{label}} and all its history?",

@@ -164,7 +164,11 @@ class AppRouter {
         appContent.innerHTML = this.currentModule.getTemplate();
         
         // Call Module Render logic
-        this.currentModule.render();
+        try {
+            this.currentModule.render();
+        } catch (renderErr) {
+            console.error(`[Router] Render failed for ${this.currentModule.id}:`, renderErr);
+        }
     }
 }
 

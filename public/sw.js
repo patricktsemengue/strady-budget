@@ -1,5 +1,18 @@
 // Service Worker for Client-Side Balance Aggregation
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
+const CACHE_NAME = `strady-cache-${VERSION}`;
+const ASSETS_TO_CACHE = [
+    '/',
+    '/index.html',
+    '/login.html',
+    '/styles.css',
+    '/manifest.json',
+    '/S-fav-icon.png',
+    'https://cdn.tailwindcss.com',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
+    'https://unpkg.com/i18next/dist/umd/i18next.min.js'
+];
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
     getAuth, signInWithCustomToken, signInWithCredential, GoogleAuthProvider
@@ -13,11 +26,42 @@ let db;
 let auth;
 
 self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(ASSETS_TO_CACHE);
+        })
+    );
     self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
     event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+    // Only cache GET requests
+    if (event.request.method !== 'GET') return;
+    
+    // Skip Firebase and internal API calls to ensure fresh data
+    if (event.request.url.includes('firestore.googleapis.com') || 
+        event.request.url.includes('google.com/recaptcha')) return;
+
+    event.respondWith(
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
+        })
+    );
 });
 
 self.addEventListener('message', async (event) => {

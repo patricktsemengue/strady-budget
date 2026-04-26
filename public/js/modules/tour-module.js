@@ -1,44 +1,48 @@
 import { state, updateState } from '../state.js';
 import { router } from '../app-router.js';
+import { t } from '../i18n.js';
 
 class TourModule {
     constructor() {
         this.id = 'tour';
         this.hidden = true;
-        this.steps = [
+    }
+
+    get steps() {
+        return [
             {
                 view: 'accounts',
                 target: '#nav-accounts',
-                title: 'Vos Comptes',
-                message: 'Bienvenue ! Nous avons configuré vos comptes principaux. Le **Compte Joint** pour le quotidien et une **Épargne de Sécurité** pour vos projets.',
+                title: t('tour.steps.accounts.title'),
+                message: t('tour.steps.accounts.message'),
                 position: 'bottom'
             },
             {
                 view: 'categories',
                 target: '#nav-categories',
-                title: 'Catégories & Classification',
-                message: 'Les catégories permettent de classer vos flux par nature : **Revenu**, **Fixe** (factures), **Quotidien** ou **Loisir**. C\'est la base de votre analyse.',
+                title: t('tour.steps.categories.title'),
+                message: t('tour.steps.categories.message'),
                 position: 'bottom'
             },
             {
                 view: 'transactions',
                 target: '#nav-transactions',
-                title: 'Moteur de Prévision',
-                message: 'C\'est ici que la magie opère ! Vos revenus et factures sont des **modèles**. Strady les utilise pour projeter votre solde sur 36 mois.',
+                title: t('tour.steps.transactions.title'),
+                message: t('tour.steps.transactions.message'),
                 position: 'bottom'
             },
             {
                 view: 'wealth',
                 target: '#nav-wealth',
-                title: 'Patrimoine Global',
-                message: 'Au-delà du budget, suivez vos actifs (maison, crypto) et passifs (emprunts). Votre **Richesse Nette** est calculée automatiquement.',
+                title: t('tour.steps.wealth.title'),
+                message: t('tour.steps.wealth.message'),
                 position: 'bottom'
             },
             {
                 view: 'dashboard',
                 target: '#nav-dashboard',
-                title: 'Le Tableau de Bord',
-                message: 'Terminons ici ! Le "Safe-to-Spend" vous indique exactement ce que vous pouvez dépenser sans compromettre vos objectifs.',
+                title: t('tour.steps.dashboard.title'),
+                message: t('tour.steps.dashboard.message'),
                 position: 'bottom'
             }
         ];
@@ -136,6 +140,7 @@ class TourModule {
         }
 
         const progress = ((state.onboarding.currentStep + 1) / this.steps.length) * 100;
+        const label = t('tour.assistant_label', { current: state.onboarding.currentStep + 1, total: this.steps.length });
 
         assistant.innerHTML = `
             <div class="h-1 bg-slate-100 w-full">
@@ -148,7 +153,7 @@ class TourModule {
                     </div>
                     <div>
                         <h4 class="text-sm font-black uppercase tracking-tight text-slate-800">${step.title}</h4>
-                        <p class="text-[10px] text-slate-400 font-bold">GUIDE STRADY • ÉTAPE ${state.onboarding.currentStep + 1}/${this.steps.length}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">${label}</p>
                     </div>
                     <button id="tour-close" class="ml-auto text-slate-300 hover:text-slate-500 transition-colors">
                         <i class="fa-solid fa-xmark"></i>
@@ -161,10 +166,10 @@ class TourModule {
                 
                 <div class="flex items-center justify-between">
                     <button id="tour-skip" class="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">
-                        Passer le tour
+                        ${t('tour.btn_skip')}
                     </button>
                     <button id="tour-next" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg transition-all shadow-md shadow-indigo-200 flex items-center">
-                        ${state.onboarding.currentStep === this.steps.length - 1 ? 'Terminer' : 'Suivant'}
+                        ${state.onboarding.currentStep === this.steps.length - 1 ? t('tour.btn_finish') : t('tour.btn_next')}
                         <i class="fa-solid fa-arrow-right ml-2"></i>
                     </button>
                 </div>

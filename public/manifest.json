@@ -1,0 +1,17 @@
+{
+  "name": "Strady Budget",
+  "short_name": "Strady",
+  "description": "Financial Sovereignty Navigator",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "S-fav-icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

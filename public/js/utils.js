@@ -25,6 +25,13 @@ export const generateId = () => {
 
 export const generateDeterministicUUID = async (label) => {
     if (!label) return generateId();
+    
+    // Safety check for non-HTTPS environments where crypto.subtle is undefined
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        console.warn('[Utils] crypto.subtle not available. Falling back to random ID.');
+        return generateId();
+    }
+
     const encoder = new TextEncoder();
     const data = encoder.encode(label.toLowerCase().trim());
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);

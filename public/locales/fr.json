@@ -150,6 +150,34 @@
       "cta": "Prêt à piloter mon budget !"
     }
   },
+  "tour": {
+    "assistant_label": "GUIDE STRADY • ÉTAPE {{current}}/{{total}}",
+    "btn_skip": "Passer le tour",
+    "btn_next": "Suivant",
+    "btn_finish": "Terminer",
+    "steps": {
+      "accounts": {
+        "title": "Vos Comptes",
+        "message": "Bienvenue ! Nous avons configuré vos comptes principaux. Le **Compte Joint** pour le quotidien et une **Épargne de Sécurité** pour vos projets."
+      },
+      "categories": {
+        "title": "Catégories & Classification",
+        "message": "Les catégories permettent de classer vos flux par nature : **Revenu**, **Fixe** (factures), **Quotidien** ou **Loisir**. C'est la base de votre analyse."
+      },
+      "transactions": {
+        "title": "Moteur de Prévision",
+        "message": "C'est ici que la magie opère ! Vos revenus et factures sont des **modèles**. Strady les utilise pour projeter votre solde sur 36 mois."
+      },
+      "wealth": {
+        "title": "Patrimoine Global",
+        "message": "Au-delà du budget, suivez vos actifs (maison, crypto) et passifs (emprunts). Votre **Richesse Nette** est calculée automatiquement."
+      },
+      "dashboard": {
+        "title": "Le Tableau de Bord",
+        "message": "Terminons ici ! Le 'Safe-to-Spend' vous indique exactement ce que vous pouvez dépenser sans compromettre vos objectifs."
+      }
+    }
+  },
   "confirm": {
     "delete_record": "Supprimer cet enregistrement ?",
     "delete_wealth": "Voulez-vous supprimer définitivement {{label}} et tout son historique ?",
