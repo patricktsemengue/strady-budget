@@ -4,6 +4,7 @@ import { state, getFunctionalBoundaryDate } from './state.js';
 import { updateSettingsInFirestore } from './firestore-service.js';
 import { currentUserId } from './storage.js';
 import { showNotification } from './ui.js';
+import { t } from './i18n.js';
 
 export const renderSettings = () => {
     console.log("Rendering Strategic Settings View");
@@ -53,11 +54,11 @@ export const setSettingPreset = (type) => {
 export const updateEFMultiplier = async (multiplier) => {
     try {
         await updateSettingsInFirestore(currentUserId, 'emergencyFund', { multiplier });
-        showNotification(`Objectif fond de sécurité mis à jour : ${multiplier} mois.`);
+        showNotification(t('settings.notifications.ef_updated', { multiplier }));
         updateEFMultiplierUI();
     } catch (err) {
         console.error(err);
-        showNotification('Erreur lors de la mise à jour de l\'objectif.', 'error');
+        showNotification(t('settings.notifications.ef_error'), 'error');
     }
 };
 
@@ -83,12 +84,12 @@ export const handleSaveMonthSelectorConfig = async (e) => {
     const functionalBoundary = getFunctionalBoundaryDate();
 
     if (new Date(startDate) > new Date(endDate)) {
-        showNotification('La date de début doit être antérieure à la date de fin.', 'error');
+        showNotification(t('settings.notifications.horizon_invalid'), 'error');
         return;
     }
 
     if (endDate > functionalBoundary) {
-        showNotification(`La date de fin ne peut pas dépasser la limite fonctionnelle (${functionalBoundary}).`, 'error');
+        showNotification(t('settings.notifications.horizon_boundary', { boundary: functionalBoundary }), 'error');
         endDateInput.value = functionalBoundary;
         return;
     }
@@ -99,9 +100,9 @@ export const handleSaveMonthSelectorConfig = async (e) => {
             endDate,
             step: 'month'
         });
-        showNotification('Configuration du sélecteur enregistrée.');
+        showNotification(t('settings.notifications.horizon_saved'));
     } catch (err) {
         console.error(err);
-        showNotification('Erreur lors de l\'enregistrement de la configuration.', 'error');
+        showNotification(t('settings.notifications.horizon_error'), 'error');
     }
 };

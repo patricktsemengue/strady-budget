@@ -1,10 +1,11 @@
 import { renderWealthList } from '../wealth.js';
 import { renderTimeline } from '../dashboard.js';
+import { t } from '../i18n.js';
 
 export default {
     id: 'wealth',
-    label: 'Patrimoine',
-    group: 'VISION STRATÉGIQUE',
+    get label() { return t('nav.wealth'); },
+    get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gem',
     order: 2,
     showMonthSelection: true,

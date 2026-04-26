@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { generateId, getMonthKey, getTxDisplayInfo, generateDeterministicTransactionId, generateDeterministicTemplateId } from './utils.js';
 import { currentUserId } from './storage.js';
+import { t } from './i18n.js';
 import { 
     addTransactionToFirestore, 
     deleteTransactionFromFirestore, 
@@ -191,7 +192,7 @@ export const handleSaveTransaction = async (e) => {
             const tx = state.records[onFocusMonthKey]?.items.find(t => t.id === id);
             
             if (tx && tx.Model) {
-                if (confirm("Vous modifiez une transaction récurrente. Cette action va supprimer l'ancienne série et en créer une nouvelle avec ces paramètres. Continuer ?")) {
+                if (confirm(t('confirm.edit_recurring'))) {
                     // RECURRING UPDATE: delete-old and create-new
                     const newTemplateValues = { 
                         date, label, amount, source, destination, category: Category,
@@ -203,7 +204,7 @@ export const handleSaveTransaction = async (e) => {
                     return; // User cancelled
                 }
             } else {
-                if (confirm("Êtes-vous sûr de vouloir modifier cette transaction ?")) {
+                if (confirm(t('confirm.edit_tx'))) {
                     // SINGLE UPDATE: delete-old and create-new
                     const newTxData = { label, amount, date, Category, source, destination, Model: null };
                     await updateSingleTransactionInFirestore(currentUserId, id, newTxData);
@@ -270,19 +271,16 @@ export const deleteTransaction = async (id) => {
     if (!tx) return;
 
     if (tx.Model) {
-        // RECURRING DELETION: Align with TODO.litcoffee
-        // "deletes the template and linked transactions"
-        if (confirm('Voulez-vous supprimer cette transaction récurrente ET toutes les transactions liées ? (Action irréversible)')) {
+        if (confirm(t('confirm.delete_recurring'))) {
             try {
                 await deleteRecurringSeriesInFirestore(currentUserId, tx.Model);
-                showNotification('Série récurrente supprimée.');
+                showNotification('Série supprimée.');
             } catch (err) {
                 showNotification('Erreur de suppression', 'error');
             }
         }
     } else {
-        // SINGLE DELETION: Align with TODO.litcoffee
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
+        if (confirm(t('confirm.delete_tx'))) {
             try {
                 await deleteTransactionFromFirestore(currentUserId, id);
                 showNotification('Transaction supprimée.');

@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './utils.js';
-import { calculateBalances, calculateMonthlyIncome } from './calculations.js';
+import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate } from './calculations.js';
 import { currentUserId } from './storage.js';
 import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
 import { showNotification } from './ui.js';
@@ -858,7 +858,9 @@ export const clotureMois = async () => {
         return;
     }
 
-    if (confirm(`Êtes-vous sûr de vouloir clôturer le mois de ${new Intl.DateTimeFormat('fr-BE', { month: 'long', year: 'numeric' }).format(state.viewDate)} ? Cette action est irréversible.`)) {
+    const monthLabel = new Intl.DateTimeFormat(i18next.language === 'en' ? 'en-US' : 'fr-BE', { month: 'long', year: 'numeric' }).format(state.viewDate);
+
+    if (confirm(t('confirm.close_month', { month: monthLabel }))) {
         try {
             const balances = calculateBalances(state.viewDate);
             const updates = [];
@@ -893,4 +895,6 @@ export const clotureMois = async () => {
             showNotification('Erreur lors de la clôture', 'error');
         }
     }
+};
+  }
 };

@@ -1,10 +1,11 @@
 import { renderTreasuryHorizon } from '../treasury-horizon.js';
 import { renderTimeline } from '../dashboard.js';
+import { t } from '../i18n.js';
 
 export default {
-    id: 'accounts',
-    label: 'Trésorerie',
-    group: 'PILOTAGE OPÉRATIONNEL',
+    id: 'horizon-soldes',
+    get label() { return t('nav.horizon_soldes'); },
+    get group() { return t('nav.groups.operations'); },
     icon: 'fa-chart-column',
     order: 4,
     showMonthSelection: true,

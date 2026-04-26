@@ -1,10 +1,11 @@
 import { renderHorizon, toggleHorizonCategory } from '../horizon.js';
 import { renderTimeline, populateCategoryFilter, populateAccountFilter } from '../dashboard.js';
+import { t } from '../i18n.js';
 
 export default {
-    id: 'transactions',
-    label: 'Flux & Prévisions',
-    group: 'PILOTAGE OPÉRATIONNEL',
+    id: 'horizon-flux',
+    get label() { return t('nav.horizon_flux'); },
+    get group() { return t('nav.groups.operations'); },
     icon: 'fa-columns',
     order: 3,
     showMonthSelection: true,

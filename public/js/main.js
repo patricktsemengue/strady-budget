@@ -10,12 +10,15 @@ import { router } from './app-router.js';
 
 // Modules
 import dashboardNewModule from './modules/dashboard-new-module.js';
+import transactionsModule from './modules/transactions-module.js';
+import accountsModule from './modules/accounts-module.js';
 import horizonModule from './modules/horizon-module.js';
-import pilotageLegacyModule from './modules/pilotage-legacy-module.js';
 import treasuryHorizonModule from './modules/treasury-horizon-module.js';
+import wealthModule from './modules/wealth-module.js';
+import educationModule from './modules/education-module.js';
 import categoriesModule from './modules/categories-module.js';
 import settingsModule from './modules/settings-module.js';
-import wealthModule from './modules/wealth-module.js';
+import { tourModule } from './modules/tour-module.js';
 
 import { 
     handleAddCategory, 
@@ -83,8 +86,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { firebaseConfig } from './firebase-config.js';
 import { debounce } from './utils.js';
+import { initI18n, t, changeLanguage } from './i18n.js';
 
-const init = () => {
+const init = async () => {
+    // Initialize i18n first
+    await initI18n();
+
     // Register Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -147,13 +154,27 @@ const init = () => {
 
     // Initialize Router
     router.setNavContainers('nav-desktop', 'nav-mobile');
+    
+    // 1. Vision Stratégique
     router.register(dashboardNewModule);
+    router.register(wealthModule);
+    router.register(educationModule);
+
+    // 2. Pilotage Opérationnel
+    router.register(transactionsModule);
+    router.register(accountsModule);
     router.register(horizonModule);
     router.register(treasuryHorizonModule);
-    router.register(wealthModule);
+
+    // 3. Configuration & Archives
     router.register(categoriesModule);
-    router.register(pilotageLegacyModule);
     router.register(settingsModule);
+
+    // Check for pending tour trigger (e.g. after factory reset)
+    if (sessionStorage.getItem('strady_trigger_tour') === 'true') {
+        sessionStorage.removeItem('strady_trigger_tour');
+        setTimeout(() => tourModule.start(), 500);
+    }
 
     setupEventListeners();
     initCategoryEvents();
@@ -250,6 +271,8 @@ const init = () => {
                                 try {
                                     await provisionStarterData(user.uid);
                                     showNotification("Starter Pack installé avec succès !");
+                                    // Start the tour
+                                    tourModule.start();
                                 } catch (err) {
                                     console.error(err);
                                     showNotification("Erreur lors de l'installation du Starter Pack", "error");
@@ -306,12 +329,12 @@ const setViewDate = (date) => {
 const setupEventListeners = () => {
 
     const handleLogout = async () => {
-        if (confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
+        if (confirm(t('confirm.logout'))) {
             try {
                 await logout();
-                showNotification("Vous avez été déconnecté");
+                showNotification(t('common.success_logout'));
             } catch (error) {
-                showNotification("Erreur lors de la déconnexion", "error");
+                showNotification(t('common.error_logout'), "error");
             }
         }
     };
@@ -407,6 +430,9 @@ const setupEventListeners = () => {
 // Expose app to window for HTML event handlers
 window.app = {
     init,
+    changeLanguage,
+    startTour: () => tourModule.start(),
+    openWealthEvolution: () => import('./dashboard-new.js').then(m => m.openWealthEvolution()),
     setView,
     setViewDate,
     editTransaction,

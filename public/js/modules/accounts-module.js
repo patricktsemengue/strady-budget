@@ -1,11 +1,13 @@
 import { renderAccountsList } from '../accounts.js';
 import { renderTimeline } from '../dashboard.js';
+import { t } from '../i18n.js';
 
 export default {
     id: 'accounts',
-    label: 'Trésorerie',
+    get label() { return t('nav.accounts'); },
+    get group() { return t('nav.groups.operations'); },
     icon: 'fa-building-columns',
-    order: 3,
+    order: 2,
     showMonthSelection: true,
     getTemplate: () => `
         <div id="view-accounts" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">

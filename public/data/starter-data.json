@@ -1,7 +1,8 @@
 {
   "categories": [
-    { "id": "cat_salary", "label": "Salaire (Entrées)", "nature": "REVENU", "icon": "fa-money-bill-wave", "color": "#10b981" },
-    { "id": "cat_rent_in", "label": "Revenu Locatif", "nature": "REVENU", "icon": "fa-building-circle-check", "color": "#059669" },
+    { "id": "cat_salary", "label": "Salaire (Entrées)", "nature": "REVENU", "icon": "fa-money-bill-wave", "color": "#10b981", "isPassive": false },
+    { "id": "cat_rent_in", "label": "Revenu Locatif", "nature": "REVENU", "icon": "fa-building-circle-check", "color": "#059669", "isPassive": true },
+    { "id": "cat_dividends", "label": "Dividendes & Intérêts", "nature": "REVENU", "icon": "fa-money-bill-trend-up", "color": "#34d399", "isPassive": true },
     { "id": "cat_savings", "label": "Épargne & Invest.", "nature": "EPARGNE", "icon": "fa-piggy-bank", "color": "#6366f1" },
     { "id": "cat_housing", "label": "Logement & Prêts", "nature": "FIXE", "icon": "fa-house-lock", "color": "#3b82f6" },
     { "id": "cat_energy", "label": "Énergie & Eau", "nature": "FIXE", "icon": "fa-bolt", "color": "#fbbf24" },
@@ -45,6 +46,16 @@
       "category": "cat_rent_in",
       "source": "external",
       "destination": "acc_joint",
+      "periodicity": "M"
+    },
+    {
+      "id": "rec_dividends",
+      "label": "Dividendes Portefeuille",
+      "amount": 125,
+      "day": 15,
+      "category": "cat_dividends",
+      "source": "external",
+      "destination": "acc_invest",
       "periodicity": "M"
     },
     {

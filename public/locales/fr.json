@@ -1,0 +1,124 @@
+{
+  "nav": {
+    "dashboard": "Tableau de Bord",
+    "wealth": "Patrimoine",
+    "education": "Philosophie & Guide",
+    "transactions": "Flux & Prévisions",
+    "accounts": "Ma Trésorerie",
+    "horizon_flux": "Horizon (Flux)",
+    "horizon_soldes": "Horizon (Soldes)",
+    "categories": "Analyses (Postes)",
+    "settings": "Réglages",
+    "groups": {
+      "strategy": "VISION STRATÉGIQUE",
+      "operations": "PILOTAGE OPÉRATIONNEL",
+      "config": "CONFIGURATION"
+    }
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "back": "Retour",
+    "finish": "Terminer",
+    "next": "Suivant",
+    "skip": "Passer",
+    "close": "Fermer",
+    "success_logout": "Vous avez été déconnecté",
+    "error_logout": "Erreur lors de la déconnexion"
+  },
+  "dashboard": {
+    "title": "Pilotage Stratégique",
+    "mode_wealth": "Mode Wealth Manager",
+    "net_worth": "Patrimoine Net Total",
+    "liquidity": "Liquidité Globale",
+    "income": "Revenus",
+    "expenses": "Dépenses",
+    "safe_to_spend": "Restant à Vivre",
+    "runway": "Autonomie (Runway)",
+    "budget_health": "Santé Budgétaire",
+    "cash_drag": "Opportunité CFO : Cash Drag détecté",
+    "months": "mois",
+    "actual": "(Actuel)",
+    "wealth_evolution": "Évolution du Patrimoine Net"
+  },
+  "settings": {
+    "title": "Réglages Système",
+    "language": {
+      "title": "Langue / Language",
+      "subtitle": "Sélectionnez votre langue de préférence."
+    },
+    "horizon": {
+      "title": "Horizon de Pilotage",
+      "subtitle": "Définissez la portée temporelle de votre vision financière.",
+      "preset_cfo": "Vision CFO (Projeté)",
+      "preset_history": "Historique Complet",
+      "preset_year": "Année en cours",
+      "start_date": "Date de début",
+      "end_date": "Date de fin",
+      "save": "Enregistrer l'horizon"
+    },
+    "strategy": {
+      "title": "Paramètres Stratégiques",
+      "subtitle": "Configurez les cibles de votre tableau de bord.",
+      "ef_goal": "Objectif Fond de Sécurité",
+      "ef_help": "Définit le multiplicateur utilisé pour la jauge 'Fond d'urgence' sur votre Pilotage. Généralement, on recommande 3 à 6 mois de dépenses courantes."
+    },
+    "vault": {
+      "title": "Le Coffre-Fort",
+      "subtitle": "Propriété et portabilité de vos données.",
+      "backup": "Sauvegarder",
+      "restore": "Restaurer",
+      "import_dropzone": "Glissez votre fichier ici",
+      "import_help": "Format CSV Strady uniquement. Les doublons seront automatiquement gérés."
+    },
+    "maintenance": {
+      "title": "Maintenance Système",
+      "subtitle": "Actions destructives et déconnexion.",
+      "reset_starter": "Revenir au Starter Pack",
+      "reset_starter_help": "Supprime vos données et réinstalle la configuration famille type (recommandé pour tester).",
+      "reset_wipe": "Tout effacer",
+      "reset_wipe_help": "Supprime DEFINITIVEMENT tout votre espace. Recommencez de zéro.",
+      "reset_button": "Réinitialiser",
+      "wipe_button": "Détruire les données",
+      "logout": "Déconnexion"
+    },
+    "notifications": {
+      "ef_updated": "Objectif fond de sécurité mis à jour : {{multiplier}} mois.",
+      "ef_error": "Erreur lors de la mise à jour de l'objectif.",
+      "horizon_invalid": "La date de début doit être antérieure à la date de fin.",
+      "horizon_boundary": "La date de fin ne peut pas dépasser la limite fonctionnelle ({{boundary}}).",
+      "horizon_saved": "Configuration du sélecteur enregistrée.",
+      "horizon_error": "Erreur lors de l'enregistrement de la configuration."
+    }
+  },
+  "education": {
+    "badge": "Savoir, c'est pouvoir",
+    "tour": {
+      "title": "Nouveau sur Strady ?",
+      "subtitle": "Laissez notre assistant vous faire découvrir les fonctionnalités clés en 1 minute.",
+      "button": "Relancer le Guide Interactif"
+    }
+  },
+  "confirm": {
+    "delete_record": "Supprimer cet enregistrement ?",
+    "delete_wealth": "Voulez-vous supprimer définitivement {{label}} et tout son historique ?",
+    "edit_recurring": "Vous modifiez une transaction récurrente. Cette action va supprimer l'ancienne série et en créer une nouvelle avec ces paramètres. Continuer ?",
+    "edit_tx": "Êtes-vous sûr de vouloir modifier cette transaction ?",
+    "delete_recurring": "Voulez-vous supprimer cette transaction récurrente ET toutes les transactions liées ? (Action irréversible)",
+    "delete_tx": "Êtes-vous sûr de vouloir supprimer cette transaction ?",
+    "logout": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "reset_all": "Êtes-vous sûr de vouloir supprimer TOUS les comptes et TOUTES les transactions ? Cette action est irréversible.",
+    "reset_tx": "Êtes-vous sûr de vouloir supprimer TOUTES les transactions ? Les comptes seront conservés. Cette action est irréversible.",
+    "factory_starter": "ATTENTION : Cette action supprimera TOUTES vos données actuelles pour réinstaller le Starter Pack. Êtes-vous sûr ?",
+    "factory_wipe": "ACTION IRRÉVERSIBLE : Cette action supprimera DEFINITIVEMENT toutes vos données (Comptes, Transactions, Catégories). Vous repartirez d'une page blanche. Êtes-vous sûr ?",
+    "close_month": "Êtes-vous sûr de vouloir clôturer le mois de {{month}} ? Cette action est irréversible.",
+    "delete_cat": "Êtes-vous sûr de vouloir supprimer cette catégorie ?",
+    "delete_acc": "Êtes-vous sûr de vouloir supprimer ce compte et TOUTES ses transactions associées ?"
+  }
+}

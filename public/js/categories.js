@@ -32,12 +32,29 @@ const assignRandomColor = (elementId) => {
 export const initCategoryEvents = () => {
     const catIconSelect = document.getElementById('cat-icon');
     const editCatIconSelect = document.getElementById('edit-cat-icon');
+    const catNatureSelect = document.getElementById('cat-nature');
+    const editCatNatureSelect = document.getElementById('edit-cat-nature');
 
     if (catIconSelect) {
         catIconSelect.addEventListener('change', () => assignRandomColor('cat-color'));
     }
     if (editCatIconSelect) {
         editCatIconSelect.addEventListener('change', () => assignRandomColor('edit-cat-color'));
+    }
+
+    // Toggle Passive wrapper based on Nature
+    const togglePassiveUI = (natureSelect, wrapperId) => {
+        const wrapper = document.getElementById(wrapperId);
+        if (wrapper) {
+            wrapper.classList.toggle('hidden', natureSelect.value !== 'REVENU');
+        }
+    };
+
+    if (catNatureSelect) {
+        catNatureSelect.addEventListener('change', () => togglePassiveUI(catNatureSelect, 'cat-passive-wrapper'));
+    }
+    if (editCatNatureSelect) {
+        editCatNatureSelect.addEventListener('change', () => togglePassiveUI(editCatNatureSelect, 'edit-cat-passive-wrapper'));
     }
 };
 
@@ -341,7 +358,7 @@ export const deleteCategory = async (id) => {
         return;
     }
 
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
+    if (confirm(t('confirm.delete_cat'))) {
         try {
             await deleteCategoryFromFirestore(currentUserId, id);
             showNotification('Catégorie supprimée.');

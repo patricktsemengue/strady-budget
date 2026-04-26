@@ -1,11 +1,12 @@
 import { renderCategoriesList } from '../categories.js';
+import { t } from '../i18n.js';
 
 export default {
     id: 'categories',
-    label: 'Analyses',
-    group: 'CONFIGURATION',
+    get label() { return t('nav.categories'); },
+    get group() { return t('nav.groups.config'); },
     icon: 'fa-tags',
-    order: 5,
+    order: 1,
     showMonthSelection: false,
     getTemplate: () => `
         <div id="view-categories" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">

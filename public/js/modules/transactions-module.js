@@ -1,12 +1,14 @@
 import { renderTransactions, renderTimeline } from '../dashboard.js';
 import { getMonthKey } from '../utils.js';
 import { state } from '../state.js';
+import { t } from '../i18n.js';
 
 export default {
     id: 'transactions',
-    label: 'Flux & Prévisions',
+    get label() { return t('nav.transactions'); },
+    get group() { return t('nav.groups.operations'); },
     icon: 'fa-list-check',
-    order: 2,
+    order: 1,
     showMonthSelection: true,
     showMobileFab: () => {
         const monthKey = getMonthKey(state.viewDate);
@@ -23,6 +25,9 @@ export default {
                     </button>
                     <button id="btn-collapse-all" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Tout réduire">
                         <i class="fa-solid fa-compress"></i>
+                    </button>
+                    <button id="btn-show-sankey" class="p-2 text-slate-500 hover:text-indigo-600 transition-colors" title="Diagramme Sankey">
+                        <i class="fa-solid fa-chart-pie"></i>
                     </button>
                 </div>
             </div>
@@ -134,6 +139,11 @@ export default {
             }
             if (e.target.closest('#btn-collapse-all')) {
                 window.app.toggleAllCategoryGroups(false);
+            }
+            if (e.target.closest('#btn-show-sankey')) {
+                const modal = document.getElementById('sankey-modal');
+                if (modal) modal.classList.remove('hidden');
+                import('../dashboard.js').then(m => m.renderSankeyChart(true));
             }
         });
 

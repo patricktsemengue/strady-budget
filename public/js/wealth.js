@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { currentUserId } from './storage.js';
+import { t } from './i18n.js';
 import { 
     addAssetToFirestore, deleteAssetFromFirestore, addAssetValueToFirestore, deleteAssetValueFromFirestore,
     addLiabilityToFirestore, deleteLiabilityFromFirestore, addLiabilityValueToFirestore, deleteLiabilityValueFromFirestore
@@ -229,7 +230,7 @@ export const handleAddValueSnapshot = async (e) => {
 };
 
 export const deleteWealthValue = async (valId) => {
-    if (!confirm('Supprimer cet enregistrement ?')) return;
+    if (!confirm(t('confirm.delete_record'))) return;
     try {
         if (currentWealthEntityType === 'asset') {
             await deleteAssetValueFromFirestore(currentUserId, valId);
@@ -243,8 +244,11 @@ export const deleteWealthValue = async (valId) => {
 };
 
 export const deleteWealthEntity = async () => {
-    const label = currentWealthEntityType === 'asset' ? 'cet actif' : 'cette dette';
-    if (!confirm(`Voulez-vous supprimer définitivement ${label} et tout son historique ?`)) return;
+    const ast = state.assets.find(a => a.id === currentWealthEntityId);
+    const lia = state.liabilities.find(l => l.id === currentWealthEntityId);
+    const label = ast ? ast.name : (lia ? lia.name : (currentWealthEntityType === 'asset' ? t('common.asset') : t('common.liability')));
+
+    if (!confirm(t('confirm.delete_wealth', { label }))) return;
     
     try {
         if (currentWealthEntityType === 'asset') {

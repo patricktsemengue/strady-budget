@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { generateId, getMonthKey, generateDeterministicUUID, getTxDisplayInfo } from './utils.js';
 import { currentUserId } from './storage.js';
+import { t } from './i18n.js';
 import { 
     addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore,
     addTransactionToFirestore
@@ -142,7 +143,7 @@ export const handleUpdateAccount = async (e) => {
 };
 
 export const deleteAccount = async (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte et TOUTES ses transactions associées ?')) {
+    if (confirm(t('confirm.delete_acc'))) {
         try {
             await deleteAccountFromFirestore(currentUserId, id);
             showNotification('Compte supprimé.');

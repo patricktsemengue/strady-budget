@@ -54,3 +54,35 @@ export const calculateBalances = (targetDate) => {
 
     return balances;
 };
+
+export const calculateActualBurnRate = (date) => {
+    let totalExpense = 0;
+    let monthsCount = 0;
+
+    // Check last 3 months
+    for (let i = 0; i < 3; i++) {
+        const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
+        const monthKey = getMonthKey(d);
+        const monthData = state.records[monthKey];
+        
+        if (monthData && monthData.items.length > 0) {
+            const monthExpense = monthData.items
+                .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+                .reduce((sum, item) => sum + item.amount, 0);
+            
+            totalExpense += monthExpense;
+            monthsCount++;
+        }
+    }
+
+    // Fallback if no data in last 3 months: use current month's projected expense from templates
+    if (monthsCount === 0) {
+        const currentMonthKey = getMonthKey(date);
+        const currentMonthExpense = (state.records[currentMonthKey]?.items || [])
+            .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+            .reduce((sum, item) => sum + item.amount, 0);
+        return currentMonthExpense;
+    }
+
+    return totalExpense / monthsCount;
+};

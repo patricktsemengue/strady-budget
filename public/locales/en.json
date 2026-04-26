@@ -1,0 +1,124 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "wealth": "Wealth",
+    "education": "Philosophy & Guide",
+    "transactions": "Cash-Flow & Forecast",
+    "accounts": "My Treasury",
+    "horizon_flux": "Horizon (Flows)",
+    "horizon_soldes": "Horizon (Balances)",
+    "categories": "Analysis Categories",
+    "settings": "Settings",
+    "groups": {
+      "strategy": "STRATEGIC VISION",
+      "operations": "OPERATIONAL STEERING",
+      "config": "CONFIGURATION"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "finish": "Finish",
+    "next": "Next",
+    "skip": "Skip",
+    "close": "Close",
+    "success_logout": "You have been logged out",
+    "error_logout": "Error during logout"
+  },
+  "dashboard": {
+    "title": "Strategic Steering",
+    "mode_wealth": "Wealth Manager Mode",
+    "net_worth": "Total Net Worth",
+    "liquidity": "Global Liquidity",
+    "income": "Income",
+    "expenses": "Expenses",
+    "safe_to_spend": "Safe to Spend",
+    "runway": "Autonomy (Runway)",
+    "budget_health": "Budget Health",
+    "cash_drag": "CFO Opportunity: Cash Drag detected",
+    "months": "months",
+    "actual": "(Actual)",
+    "wealth_evolution": "Net Worth Evolution"
+  },
+  "settings": {
+    "title": "System Settings",
+    "language": {
+      "title": "Language",
+      "subtitle": "Select your preferred language."
+    },
+    "horizon": {
+      "title": "Steering Horizon",
+      "subtitle": "Define the temporal scope of your financial vision.",
+      "preset_cfo": "CFO Vision (Projected)",
+      "preset_history": "Full History",
+      "preset_year": "Current Year",
+      "start_date": "Start Date",
+      "end_date": "End Date",
+      "save": "Save Horizon"
+    },
+    "strategy": {
+      "title": "Strategic Parameters",
+      "subtitle": "Configure your dashboard targets.",
+      "ef_goal": "Emergency Fund Goal",
+      "ef_help": "Defines the multiplier used for the 'Emergency Fund' gauge on your Steering. Generally, 3 to 6 months of current expenses are recommended."
+    },
+    "vault": {
+      "title": "The Vault",
+      "subtitle": "Ownership and portability of your data.",
+      "backup": "Backup",
+      "restore": "Restore",
+      "import_dropzone": "Drop your file here",
+      "import_help": "Strady CSV format only. Duplicates will be automatically managed."
+    },
+    "maintenance": {
+      "title": "System Maintenance",
+      "subtitle": "Destructive actions and logout.",
+      "reset_starter": "Return to Starter Pack",
+      "reset_starter_help": "Deletes your data and reinstalls the standard family configuration (recommended for testing).",
+      "reset_wipe": "Clear Everything",
+      "reset_wipe_help": "PERMANENTLY deletes your entire workspace. Start from scratch.",
+      "reset_button": "Reset",
+      "wipe_button": "Destroy Data",
+      "logout": "Logout"
+    },
+    "notifications": {
+      "ef_updated": "Emergency fund goal updated: {{multiplier}} months.",
+      "ef_error": "Error updating the goal.",
+      "horizon_invalid": "Start date must be before end date.",
+      "horizon_boundary": "End date cannot exceed the functional limit ({{boundary}}).",
+      "horizon_saved": "Selector configuration saved.",
+      "horizon_error": "Error saving the configuration."
+    }
+  },
+  "education": {
+    "badge": "Knowledge is power",
+    "tour": {
+      "title": "New to Strady?",
+      "subtitle": "Let our assistant show you the key features in 1 minute.",
+      "button": "Restart Interactive Guide"
+    }
+  },
+  "confirm": {
+    "delete_record": "Delete this record?",
+    "delete_wealth": "Do you want to permanently delete {{label}} and all its history?",
+    "edit_recurring": "You are modifying a recurring transaction. This will delete the old series and create a new one with these parameters. Continue?",
+    "edit_tx": "Are you sure you want to modify this transaction?",
+    "delete_recurring": "Do you want to delete this recurring transaction AND all linked transactions? (Irreversible action)",
+    "delete_tx": "Are you sure you want to delete this transaction?",
+    "logout": "Are you sure you want to log out?",
+    "reset_all": "Are you sure you want to delete ALL accounts and ALL transactions? This action is irreversible.",
+    "reset_tx": "Are you sure you want to delete ALL transactions? Accounts will be kept. This action is irreversible.",
+    "factory_starter": "WARNING: This will delete ALL your current data to reinstall the Starter Pack. Are you sure?",
+    "factory_wipe": "IRREVERSIBLE ACTION: This will PERMANENTLY delete all your data (Accounts, Transactions, Categories). You will start from scratch. Are you sure?",
+    "close_month": "Are you sure you want to close the month of {{month}}? This action is irreversible.",
+    "delete_cat": "Are you sure you want to delete this category?",
+    "delete_acc": "Are you sure you want to delete this account and ALL its associated transactions?"
+  }
+}

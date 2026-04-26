@@ -7,12 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <link rel="icon" type="image/jpeg" href="S-fav-icon.jpeg">
+    <link rel="icon" type="image/jpeg" href="S-fav-icon.png">
     <link
         href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Poppins:wght@500&family=The+Girl+Next+Door&family=Inter:wght@400;500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://unpkg.com/i18next/dist/umd/i18next.min.js"></script>
     <style>
         @keyframes fadeIn {
             from {
@@ -539,6 +540,20 @@
                     <label class="block text-sm font-medium text-slate-600 mb-1">Nom de la catégorie</label>
                     <input type="text" id="cat-name" required placeholder="Ex: Vacances" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nature du flux</label>
+                    <select id="cat-nature" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="REVENU">REVENUS (Salaires, Dividendes...)</option>
+                        <option value="FIXE">CHARGES FIXES (Loyer, Assurances...)</option>
+                        <option value="QUOTIDIEN">VIE COURANTE (Courses, Transport...)</option>
+                        <option value="LOISIR">LOISIRS (Voyages, Sorties...)</option>
+                        <option value="EPARGNE">ÉPARGNE & INVEST. (Virements épargne...)</option>
+                    </select>
+                </div>
+                <div id="cat-passive-wrapper" class="hidden flex items-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                    <input type="checkbox" id="cat-is-passive" class="h-5 w-5 text-emerald-600 border-emerald-300 rounded">
+                    <label for="cat-is-passive" class="text-sm font-medium text-emerald-800">C'est un revenu passif (Actifs, Dividendes...)</label>
+                </div>
                 <div class="grid grid-cols-1 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-600 mb-1">Icône</label>
@@ -586,6 +601,22 @@
             </div>
             <div class="flex-1 p-8 overflow-auto bg-white flex items-center justify-center">
                 <div id="sankey-chart-expanded" class="w-full h-full min-h-[500px]"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wealth Evolution Modal -->
+    <div id="wealth-evolution-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[70] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 wealth-evolution-title">Évolution du Patrimoine Net</h2>
+                    <p class="text-sm text-slate-500">Vision historique et trajectoire</p>
+                </div>
+                <button onclick="document.getElementById('wealth-evolution-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-2 transition-colors"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div class="flex-1 p-8 overflow-auto bg-white flex items-center justify-center">
+                <div id="wealth-evolution-chart" class="w-full h-full min-h-[500px]"></div>
             </div>
         </div>
     </div>
@@ -683,6 +714,20 @@
             </div>
         </div>
     </div>
+
+    <footer class="py-12 border-t border-slate-100 bg-white">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-widest">Strady</span>
+                <span class="text-[10px] font-bold text-slate-400">© 2026</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Version 1.0.0</p>
+                <div class="h-4 w-px bg-slate-100"></div>
+                <p class="text-[10px] font-bold text-slate-400 italic">Built for Financial Sovereignty</p>
+            </div>
+        </div>
+    </footer>
 
     <script type="module" src="js/main.js"></script>
 </body>

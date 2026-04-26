@@ -34,7 +34,12 @@ export let state = {
     liabilityValues: [],
     months: {}, // Stores month statuses
     accountBalances: {}, // Stores pre-calculated balances: { "accountId_YYYY-MM-DD": balance }
-    onboarding: null,
+    onboarding: {
+        active: false,
+        completed: false,
+        currentStep: 0,
+        type: null // 'starter' or 'scratch'
+    },
     emergencyFundMultiplier: 3,
     monthSelectorConfig: {
         startDate: `${currentYear}-01-01`,

@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { formatCurrency, getMonthKey, getTxDisplayInfo } from './utils.js';
-import { calculateBalances, calculateMonthlyIncome } from './calculations.js';
+import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate } from './calculations.js';
+import { t } from './i18n.js';
 
 /**
  * Helper to calculate core metrics for a specific month
@@ -24,13 +25,54 @@ const getMonthlyMetrics = (date) => {
         })
         .reduce((sum, item) => sum + item.amount, 0);
 
+    // 70/20/10 Breakdown
+    const needs = monthData.items
+        .filter(item => {
+            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            if (!txInfo.isExpense) return false;
+            const cat = state.categories.find(c => c.id === item.Category);
+            return cat?.nature === 'FIXE' || cat?.nature === 'QUOTIDIEN';
+        })
+        .reduce((sum, item) => sum + item.amount, 0);
+
+    const leisure = monthData.items
+        .filter(item => {
+            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            if (!txInfo.isExpense) return false;
+            const cat = state.categories.find(c => c.id === item.Category);
+            return cat?.nature === 'LOISIR';
+        })
+        .reduce((sum, item) => sum + item.amount, 0);
+
+    const savings = monthData.items
+        .filter(item => {
+            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            const cat = state.categories.find(c => c.id === item.Category);
+            return (cat?.nature === 'EPARGNE' && txInfo.isExpense) || (!txInfo.isIncome && !txInfo.isExpense && !!state.accounts.find(a => a.id === item.destination && a.isSaving));
+        })
+        .reduce((sum, item) => sum + item.amount, 0);
+
     const savingsRate = monthIncome > 0 ? ((monthIncome - monthExpense) / monthIncome) * 100 : 0;
     
+    // Active vs Passive segmentation
+    const passiveIncome = monthData.items
+        .filter(item => {
+            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            if (!txInfo.isIncome) return false;
+            const cat = state.categories.find(c => c.id === item.Category);
+            return !!cat?.isPassive;
+        })
+        .reduce((sum, item) => sum + item.amount, 0);
+    const activeIncome = monthIncome - passiveIncome;
+
     return { 
         income: monthIncome, 
         expense: monthExpense, 
         fixedExpense, 
         savingsRate,
+        passiveIncome,
+        activeIncome,
+        allocation: { needs, leisure, savings },
         label: new Intl.DateTimeFormat('fr-BE', { month: 'short' }).format(date)
     };
 };
@@ -52,10 +94,17 @@ export const renderStrategicDashboard = () => {
     // 2. Global CFO Metrics (Current Month)
     const balances = state.months[getMonthKey(d0)]?.balances || calculateBalances(d0);
     const totalLiquidity = Object.values(balances).reduce((sum, b) => sum + b, 0);
+    const savingsBalance = state.accounts.filter(a => a.isSaving).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
     
     const runwayGoal = state.emergencyFundMultiplier || 3;
-    const standardRunway = m0.expense > 0 ? (totalLiquidity / m0.expense) : 0;
-    const hardRunway = m0.fixedExpense > 0 ? (totalLiquidity / m0.fixedExpense) : 0;
+    const actualBurnRate = calculateActualBurnRate(d0);
+    
+    const standardRunway = actualBurnRate > 0 ? (savingsBalance / actualBurnRate) : 0;
+    const fixedBurnRate = m0.fixedExpense || (actualBurnRate * 0.7);
+    const hardRunway = fixedBurnRate > 0 ? (savingsBalance / fixedBurnRate) : 0;
+
+    // FFI Calculation: (Passive Income / Fixed Expenses) * 100
+    const ffiIndex = m0.fixedExpense > 0 ? (m0.passiveIncome / m0.fixedExpense) * 100 : (m0.passiveIncome > 0 ? 100 : 0);
 
     // 3. Cash Drag Detection
     const operationalBalances = state.accounts
@@ -63,14 +112,15 @@ export const renderStrategicDashboard = () => {
         .reduce((sum, acc) => sum + (balances[acc.id] || 0), 0);
     
     const avgExpense = (m0.expense + m1.expense + m2.expense) / 3 || m0.expense;
-    const liquidityTarget = avgExpense * runwayGoal;
+    const liquidityTarget = avgExpense * 1.5; // Target 1.5 month of average expense on current accounts
     const cashDrag = operationalBalances - liquidityTarget;
 
     // 4. Net Worth (Latest Snapshots)
-    const getLatestSnapshotVal = (entityId, isAsset = true) => {
+    const getLatestSnapshotVal = (entityId, isAsset = true, targetDate = d0) => {
+        const dateStr = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).toISOString().split('T')[0];
         const values = isAsset 
-            ? state.assetValues.filter(v => v.asset_id === entityId)
-            : state.liabilityValues.filter(v => v.liability_id === entityId);
+            ? state.assetValues.filter(v => v.asset_id === entityId && v.date <= dateStr)
+            : state.liabilityValues.filter(v => v.liability_id === entityId && v.date <= dateStr);
         if (values.length === 0) return 0;
         return values.sort((a, b) => new Date(b.date) - new Date(a.date))[0].value;
     };
@@ -91,6 +141,12 @@ export const renderStrategicDashboard = () => {
     const remainingSafeToSpend = safeToSpendTotal - actualVariableExpense;
     const safeToSpendPct = safeToSpendTotal > 0 ? Math.max(0, (remainingSafeToSpend / safeToSpendTotal) * 100) : 0;
 
+    // 70/20/10 Rule Allocation Calculation
+    const totalAlloc = m0.income || 1;
+    const needsPct = (m0.allocation.needs / totalAlloc) * 100;
+    const leisurePct = (m0.allocation.leisure / totalAlloc) * 100;
+    const savingsPct = (m0.allocation.savings / totalAlloc) * 100;
+
     // Render HTML
     container.innerHTML = `
         <div class="space-y-8">
@@ -99,7 +155,7 @@ export const renderStrategicDashboard = () => {
                 ${scorecard.map((m, idx) => `
                     <div class="bg-white p-5 rounded-2xl border ${idx === 2 ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-slate-100 opacity-60'} flex flex-col justify-between transition-all">
                         <div class="flex justify-between items-start mb-2">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${m.label} ${idx === 2 ? '(Actuel)' : ''}</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${m.label} ${idx === 2 ? t('dashboard.actual') : ''}</span>
                             <div class="px-2 py-0.5 rounded-full text-[9px] font-bold ${m.savingsRate >= 20 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}">
                                 SR: ${m.savingsRate.toFixed(0)}%
                             </div>
@@ -112,7 +168,7 @@ export const renderStrategicDashboard = () => {
                                 </h3>
                             </div>
                             <div class="text-right">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase">Revenus</p>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">${t('dashboard.income')}</p>
                                 <p class="text-xs font-bold text-emerald-600">${formatCurrency(m.income)}</p>
                             </div>
                         </div>
@@ -127,10 +183,10 @@ export const renderStrategicDashboard = () => {
                         <i class="fa-solid fa-bolt-lightning"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-amber-900 text-sm italic underline decoration-amber-300">Opportunité CFO : Cash Drag détecté</h4>
+                        <h4 class="font-bold text-amber-900 text-sm italic underline decoration-amber-300">${t('dashboard.cash_drag')}</h4>
                         <p class="text-xs text-amber-800 mt-1 leading-relaxed">
-                            Vous avez <b>${formatCurrency(cashDrag)}</b> d'excédent stagnant sur vos comptes courants (au-delà de votre objectif de ${runwayGoal} mois). 
-                            Ce capital "dort" au lieu de travailler. Envisagez un virement vers vos <b>Portefeuilles d'Investissement</b>.
+                            Vous avez <b>${formatCurrency(cashDrag)}</b> d'excédent stagnant sur vos comptes courants (au-delà de vos besoins de 1.5 mois). 
+                            Ce capital "dort" au lieu de travailler. Envisagez un virement vers vos <b>Comptes d'Épargne</b> ou d'investissement.
                         </p>
                     </div>
                 </div>
@@ -139,48 +195,97 @@ export const renderStrategicDashboard = () => {
             <!-- Strategic KPI Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Net Worth Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50"></div>
+                <div onclick="window.app.openWealthEvolution()" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:border-indigo-300 transition-all hover:shadow-lg group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patrimoine Net Total</p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.net_worth')}</p>
                         <h2 class="text-4xl font-black text-indigo-600">${formatCurrency(netWorth)}</h2>
                     </div>
-                    <div class="mt-4 flex items-center gap-2">
+                    <div class="mt-4 flex items-center justify-between">
                         <span class="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">Bilan de Situation</span>
+                        <i class="fa-solid fa-chart-line text-indigo-300 group-hover:text-indigo-600 transition-colors"></i>
                     </div>
                 </div>
 
-                <!-- Improvement 3: Dynamic Burn Rate / Runways -->
+                <!-- Improvement 3: Smart Runway (Based on Burn Rate) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Autonomie (Runway)</p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.runway')}</p>
                         <div class="flex items-baseline gap-2">
                             <h2 class="text-4xl font-black ${standardRunway >= runwayGoal ? 'text-emerald-600' : 'text-amber-600'}">${standardRunway.toFixed(1)}</h2>
-                            <span class="text-slate-400 font-bold text-xs uppercase">mois</span>
+                            <span class="text-slate-400 font-bold text-xs uppercase">${t('dashboard.months')}</span>
                         </div>
                     </div>
                     <div class="mt-4 space-y-3">
                         <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                            <div class="bg-amber-500 h-full transition-all duration-1000" style="width: ${Math.min(100, (standardRunway / runwayGoal) * 100)}%"></div>
+                            <div class="bg-indigo-600 h-full transition-all duration-1000" style="width: ${Math.min(100, (standardRunway / runwayGoal) * 100)}%"></div>
                         </div>
                         <div class="flex justify-between items-center">
-                            <p class="text-[9px] text-slate-400 font-black uppercase">Mode Survie (Dépenses Fixes)</p>
-                            <span class="text-[10px] font-black text-indigo-600">${hardRunway.toFixed(1)} mois</span>
+                            <p class="text-[9px] text-slate-400 font-black uppercase">Cible: ${runwayGoal} ${t('dashboard.months')} (Sécurité)</p>
+                            <span class="text-[10px] font-black text-slate-400">Burn: ${formatCurrency(actualBurnRate)}/m</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Safe-to-Spend Percentage -->
+                <!-- Santé Budgétaire (70/20/10) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Efficacité Budgétaire</p>
-                        <h2 class="text-4xl font-black text-slate-800">${safeToSpendPct.toFixed(0)}%</h2>
-                    </div>
-                    <div class="mt-4">
-                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div class="bg-indigo-500 h-full transition-all duration-1000" style="width: ${safeToSpendPct}%"></div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.budget_health')} (70/20/10)</p>
+                        <div class="flex h-4 w-full rounded-full overflow-hidden mt-2 bg-slate-100">
+                            <div class="bg-slate-400 h-full" style="width: ${Math.min(100, needsPct)}%" title="Besoins (70% cible)"></div>
+                            <div class="bg-amber-400 h-full" style="width: ${Math.min(100, leisurePct)}%" title="Loisirs (20% cible)"></div>
+                            <div class="bg-emerald-400 h-full" style="width: ${Math.min(100, savingsPct)}%" title="Épargne (10% cible)"></div>
                         </div>
-                        <p class="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-tighter">Discrétionnaire restant</p>
+                    </div>
+                    <div class="mt-4 grid grid-cols-3 gap-2">
+                        <div class="text-center">
+                            <p class="text-[8px] font-black text-slate-400 uppercase">Besoins</p>
+                            <p class="text-[10px] font-bold ${needsPct <= 70 ? 'text-slate-600' : 'text-rose-600'}">${needsPct.toFixed(0)}%</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[8px] font-black text-slate-400 uppercase">Loisirs</p>
+                            <p class="text-[10px] font-bold ${leisurePct <= 20 ? 'text-slate-600' : 'text-rose-600'}">${leisurePct.toFixed(0)}%</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[8px] font-black text-slate-400 uppercase">Épargne</p>
+                            <p class="text-[10px] font-bold ${savingsPct >= 10 ? 'text-emerald-600' : 'text-amber-600'}">${savingsPct.toFixed(0)}%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indice de Souveraineté (FFI) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Souveraineté (FFI)</p>
+                        <div class="flex items-baseline gap-2">
+                            <h2 class="text-4xl font-black ${ffiIndex >= 100 ? 'text-emerald-600' : 'text-indigo-600'}">${ffiIndex.toFixed(0)}%</h2>
+                            <span class="text-slate-400 font-bold text-[10px] uppercase">couverture</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full transition-all duration-1000" style="width: ${Math.min(100, ffiIndex)}%"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <p class="text-[9px] text-slate-400 font-black uppercase">Revenu Passif vs Charges Fixes</p>
+                            <span class="text-[10px] font-black text-emerald-600">${formatCurrency(m0.passiveIncome)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revenue DNA Donut -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">DNA des Revenus</p>
+                    <div id="revenue-dna-chart" class="w-full h-32"></div>
+                    <div class="flex justify-between items-center mt-2 px-2">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                            <span class="text-[9px] font-bold text-slate-500">Actif</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <span class="text-[9px] font-bold text-slate-500">Passif</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -191,7 +296,7 @@ export const renderStrategicDashboard = () => {
                 <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
                     <div class="flex justify-between items-start mb-8">
                         <div>
-                            <h3 class="font-bold text-xl text-slate-800">Restant à Vivre</h3>
+                            <h3 class="font-bold text-xl text-slate-800">${t('dashboard.safe_to_spend')}</h3>
                             <p class="text-sm text-slate-500 italic">Budget disponible après obligations</p>
                         </div>
                         <div class="text-right">
@@ -206,7 +311,7 @@ export const renderStrategicDashboard = () => {
 
                     <div class="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-slate-50">
                         <div class="text-center">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Entrées</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">${t('dashboard.income')}</p>
                             <p class="font-bold text-emerald-600">${formatCurrency(m0.income)}</p>
                         </div>
                         <div class="text-center border-x border-slate-100 px-4">
@@ -247,4 +352,112 @@ export const renderStrategicDashboard = () => {
             </div>
         </div>
     `;
+
+    // After injecting HTML, render charts
+    setTimeout(() => {
+        renderRevenueDNAChart(m0.activeIncome, m0.passiveIncome);
+    }, 100);
+};
+
+export const renderRevenueDNAChart = (active, passive) => {
+    const container = document.getElementById('revenue-dna-chart');
+    if (!container) return;
+
+    if (typeof google === 'undefined' || !google.visualization) {
+        google.charts.load('current', {packages:['corechart']});
+        google.charts.setOnLoadCallback(() => renderRevenueDNAChart(active, passive));
+        return;
+    }
+
+    const data = google.visualization.arrayToDataTable([
+        ['Type', 'Amount'],
+        ['Actif', active],
+        ['Passif', passive]
+    ]);
+
+    const options = {
+        pieHole: 0.7,
+        legend: 'none',
+        pieSliceText: 'none',
+        colors: ['#6366f1', '#10b981'],
+        chartArea: { width: '90%', height: '90%' },
+        backgroundColor: 'transparent',
+        enableInteractivity: true,
+        tooltip: { trigger: 'selection' }
+    };
+
+    const chart = new google.visualization.PieChart(container);
+    chart.draw(data, options);
+};
+
+export const openWealthEvolution = () => {
+    const modal = document.getElementById('wealth-evolution-modal');
+    if (modal) modal.classList.remove('hidden');
+    renderWealthEvolutionChart();
+};
+
+export const renderWealthEvolutionChart = () => {
+    const container = document.getElementById('wealth-evolution-chart');
+    if (!container) return;
+
+    if (typeof google === 'undefined' || !google.visualization) {
+        google.charts.load('current', {packages:['corechart']});
+        google.charts.setOnLoadCallback(renderWealthEvolutionChart);
+        return;
+    }
+
+    const start = new Date(state.monthSelectorConfig.startDate);
+    const end = new Date(state.monthSelectorConfig.endDate);
+    const months = [];
+    let curr = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (curr <= end) {
+        months.push(new Date(curr));
+        curr.setMonth(curr.getMonth() + 1);
+    }
+
+    const dataRows = months.map(date => {
+        const balances = state.months[getMonthKey(date)]?.balances || calculateBalances(date);
+        const liquidity = Object.values(balances).reduce((sum, b) => sum + b, 0);
+
+        const lastDayStr = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+        
+        const assets = state.assets.reduce((sum, a) => {
+            const vals = state.assetValues.filter(v => v.asset_id === a.id && v.date <= lastDayStr);
+            return sum + (vals.length > 0 ? vals.sort((x, y) => new Date(y.date) - new Date(x.date))[0].value : 0);
+        }, 0);
+
+        const liabilities = state.liabilities.reduce((sum, l) => {
+            const vals = state.liabilityValues.filter(v => v.liability_id === l.id && v.date <= lastDayStr);
+            return sum + (vals.length > 0 ? vals.sort((x, y) => new Date(y.date) - new Date(x.date))[0].value : 0);
+        }, 0);
+
+        const net = liquidity + assets - liabilities;
+        const label = new Intl.DateTimeFormat('fr-BE', { month: 'short', year: '2-digit' }).format(date);
+        
+        return [label, net, liquidity, assets, liabilities];
+    });
+
+    const data = new google.visualization.DataTable();
+    data.addColumn('string', 'Mois');
+    data.addColumn('number', 'Patrimoine Net');
+    data.addColumn('number', 'Liquidités');
+    data.addColumn('number', 'Actifs');
+    data.addColumn('number', 'Dettes');
+
+    data.addRows(dataRows);
+
+    const options = {
+        curveType: 'function',
+        legend: { position: 'bottom', textStyle: { fontName: 'Inter', fontSize: 10 } },
+        colors: ['#6366f1', '#10b981', '#3b82f6', '#f43f5e'],
+        chartArea: { width: '85%', height: '70%' },
+        vAxis: { format: 'short', textStyle: { fontName: 'Inter', fontSize: 9 } },
+        hAxis: { textStyle: { fontName: 'Inter', fontSize: 9 } },
+        lineWidth: 3,
+        animation: { startup: true, duration: 1000, easing: 'out' },
+        backgroundColor: 'transparent'
+    };
+
+    const chart = new google.visualization.LineChart(container);
+    chart.draw(data, options);
 };

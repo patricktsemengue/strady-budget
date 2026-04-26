@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { currentUserId } from './storage.js';
+import { t } from './i18n.js';
 import { 
     resetDataInFirestore, 
     importDataToFirestore, 
@@ -77,6 +78,11 @@ export const handleFactoryReset = async (mode = 'starter') => {
             }
 
             showNotification(isStarter ? "Starter Pack restauré avec succès !" : "Espace vidé avec succès !");
+            
+            if (isStarter) {
+                sessionStorage.setItem('strady_trigger_tour', 'true');
+            }
+
             window.location.hash = '#dashboard';
             window.location.reload(); 
             
@@ -91,16 +97,16 @@ export const handleFactoryReset = async (mode = 'starter') => {
 
 export const exportFullBackupCSV = () => {
     // Universal CSV Header
-    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature\n";
+    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive\n";
     
     // 1. Accounts
     state.accounts.forEach(acc => {
-        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},\n`;
+        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},,\n`;
     });
 
     // 2. Categories
     state.categories.forEach(cat => {
-        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}"\n`;
+        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}",${cat.isPassive ? 1 : 0}\n`;
     });
 
     // 3. Recurring Templates
@@ -237,7 +243,8 @@ export const importFullBackupCSV = (event) => {
                         label: label,
                         nature: getValue("Nature") || 'QUOTIDIEN',
                         icon: getValue("Icon") || 'fa-tag',
-                        color: getValue("Color") || '#94a3b8'
+                        color: getValue("Color") || '#94a3b8',
+                        isPassive: getValue("IsPassive") === '1'
                     };
                     results.categories.push(cat);
                     categoryMap[lowerLabel] = deterministicId;

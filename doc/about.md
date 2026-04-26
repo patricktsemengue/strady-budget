@@ -232,3 +232,12 @@ Sum of balances for all accounts marked `isSaving: true`.
 
 ### 3.4 Monthly Spending
 Sum of all `TRANSACTION` documents for the month where `destination` is empty or "external".
+
+### 3.5 Financial Independence Index (FFI)
+Calculation: `(Total Passive Income / Total Fixed Expenses) * 100`.
+- **Passive Income**: Sum of transactions categorized in a `REVENU` category where `isPassive` is true.
+- **Fixed Expenses**: Sum of transactions categorized in a `FIXE` category.
+- **Goal**: 100% (Assets cover all vital needs).
+
+### 3.6 Revenue DNA
+A visualization showing the proportion of **Active Income** (Labor-based) vs. **Passive Income** (Asset-based).

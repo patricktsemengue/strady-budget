@@ -1,39 +1,59 @@
+import { t, getCurrentLanguage } from '../i18n.js';
+
 export default {
     id: 'settings',
-    label: 'Réglages',
-    group: 'CONFIGURATION',
+    get label() { return t('nav.settings'); },
+    get group() { return t('nav.groups.config'); },
     icon: 'fa-cog',
     order: 6,
     showMonthSelection: false,
     getTemplate: () => `
         <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">
-            <h1 class="text-2xl font-bold text-slate-800">Réglages Système</h1>
+            <h1 class="text-2xl font-bold text-slate-800">${t('settings.title')}</h1>
+
+            <!-- Language Section -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-6 border-b border-slate-50 bg-slate-50/50">
+                    <h3 class="font-bold text-lg text-slate-800">${t('settings.language.title')}</h3>
+                    <p class="text-sm text-slate-500">${t('settings.language.subtitle')}</p>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-4 bg-slate-50 p-1 rounded-2xl border border-slate-100 max-w-sm">
+                        <button onclick="window.app.changeLanguage('fr')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${getCurrentLanguage() === 'fr' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}">
+                            <span class="mr-2">🇫🇷</span> Français
+                        </button>
+                        <button onclick="window.app.changeLanguage('en')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${getCurrentLanguage() === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}">
+                            <span class="mr-2">🇬🇧</span> English
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- 1. Horizon de Pilotage -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                    <h3 class="font-bold text-lg text-slate-800">Horizon de Pilotage</h3>
-                    <p class="text-sm text-slate-500">Définissez la portée temporelle de votre vision financière.</p>
+                    <h3 class="font-bold text-lg text-slate-800">${t('settings.horizon.title')}</h3>
+                    <p class="text-sm text-slate-500">${t('settings.horizon.subtitle')}</p>
                 </div>
                 <div class="p-6 space-y-6">
                     <div class="flex flex-wrap gap-3">
-                        <button onclick="window.app.setSettingPreset('cfo')" class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-100">Vision CFO (Projeté)</button>
-                        <button onclick="window.app.setSettingPreset('history')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">Historique Complet</button>
-                        <button onclick="window.app.setSettingPreset('year')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">Année en cours</button>
+                        <button onclick="window.app.setSettingPreset('cfo')" class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-100">${t('settings.horizon.preset_cfo')}</button>
+                        <button onclick="window.app.setSettingPreset('history')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_history')}</button>
+                        <button onclick="window.app.setSettingPreset('year')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_year')}</button>
                     </div>
                     
                     <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-50">
                         <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Date de début</label>
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.start_date')}</label>
                             <input type="date" id="config-month-start" required class="w-full border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                         </div>
                         <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Date de fin</label>
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.end_date')}</label>
                             <input type="date" id="config-month-end" required class="w-full border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                         </div>
                         <div class="md:col-span-2 flex justify-end">
                             <button type="submit" class="bg-slate-800 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-lg active:scale-95">
-                                Enregistrer l'horizon
+                                ${t('settings.horizon.save')}
                             </button>
                         </div>
                     </form>
@@ -43,20 +63,19 @@ export default {
             <!-- 2. Paramètres Stratégiques -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                    <h3 class="font-bold text-lg text-slate-800">Paramètres Stratégiques</h3>
-                    <p class="text-sm text-slate-500">Configurez les cibles de votre tableau de bord.</p>
+                    <h3 class="font-bold text-lg text-slate-800">${t('settings.strategy.title')}</h3>
+                    <p class="text-sm text-slate-500">${t('settings.strategy.subtitle')}</p>
                 </div>
                 <div class="p-6">
                     <div class="max-w-md">
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Objectif Fond de Sécurité</label>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">${t('settings.strategy.ef_goal')}</label>
                         <div class="flex items-center gap-4 bg-slate-50 p-1 rounded-2xl border border-slate-100">
                             <button onclick="window.app.updateEFMultiplier(3)" id="btn-ef-3" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">3 mois</button>
                             <button onclick="window.app.updateEFMultiplier(6)" id="btn-ef-6" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">6 mois</button>
                             <button onclick="window.app.updateEFMultiplier(12)" id="btn-ef-12" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">12 mois</button>
                         </div>
                         <p class="text-[11px] text-slate-400 mt-4 leading-relaxed italic">
-                            Définit le multiplicateur utilisé pour la jauge "Fond d'urgence" sur votre Pilotage. 
-                            Généralement, on recommande 3 à 6 mois de dépenses courantes.
+                            ${t('settings.strategy.ef_help')}
                         </p>
                     </div>
                 </div>
@@ -66,15 +85,15 @@ export default {
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                     <div>
-                        <h3 class="font-bold text-lg text-slate-800">Le Coffre-Fort</h3>
-                        <p class="text-sm text-slate-500">Propriété et portabilité de vos données.</p>
+                        <h3 class="font-bold text-lg text-slate-800">${t('settings.vault.title')}</h3>
+                        <p class="text-sm text-slate-500">${t('settings.vault.subtitle')}</p>
                     </div>
                     <div class="flex gap-2">
                         <button id="btn-export-full-backup" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
-                            <i class="fa-solid fa-download text-indigo-500"></i> Sauvegarder
+                            <i class="fa-solid fa-download text-indigo-500"></i> ${t('settings.vault.backup')}
                         </button>
                         <button onclick="document.getElementById('import-zone-wrapper').classList.toggle('hidden')" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
-                            <i class="fa-solid fa-upload text-blue-500"></i> Restaurer
+                            <i class="fa-solid fa-upload text-blue-500"></i> ${t('settings.vault.restore')}
                         </button>
                     </div>
                 </div>
@@ -86,8 +105,8 @@ export default {
                             <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
                         </div>
                         <div class="space-y-2">
-                            <h4 class="font-bold text-slate-800 text-lg">Glissez votre fichier ici</h4>
-                            <p class="text-sm text-slate-500 max-w-sm mx-auto italic">Format CSV Strady uniquement. Les doublons seront automatiquement gérés.</p>
+                            <h4 class="font-bold text-slate-800 text-lg">${t('settings.vault.import_dropzone')}</h4>
+                            <p class="text-sm text-slate-500 max-w-sm mx-auto italic">${t('settings.vault.import_help')}</p>
                         </div>
                     </div>
                 </div>
@@ -101,8 +120,8 @@ export default {
                             <i class="fa-solid fa-screwdriver-wrench"></i>
                         </div>
                         <div class="text-left">
-                            <h3 class="font-bold text-rose-900">Maintenance Système</h3>
-                            <p class="text-xs text-rose-700 opacity-70">Actions destructives et déconnexion.</p>
+                            <h3 class="font-bold text-rose-900">${t('settings.maintenance.title')}</h3>
+                            <p class="text-xs text-rose-700 opacity-70">${t('settings.maintenance.subtitle')}</p>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-down text-rose-300"></i>
@@ -113,23 +132,23 @@ export default {
                         <div class="bg-white p-5 rounded-2xl border border-rose-50 shadow-sm flex flex-col">
                             <h5 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
                                 <i class="fa-solid fa-arrow-rotate-left text-blue-500"></i>
-                                Revenir au Starter Pack
+                                ${t('settings.maintenance.reset_starter')}
                             </h5>
-                            <p class="text-[11px] text-slate-500 mb-6 flex-grow leading-relaxed">Supprime vos données et réinstalle la configuration famille type (recommandé pour tester).</p>
-                            <button id="btn-factory-reset-starter" class="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all border border-slate-100">Réinitialiser</button>
+                            <p class="text-[11px] text-slate-500 mb-6 flex-grow leading-relaxed">${t('settings.maintenance.reset_starter_help')}</p>
+                            <button id="btn-factory-reset-starter" class="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all border border-slate-100">${t('settings.maintenance.reset_button')}</button>
                         </div>
                         <div class="bg-white p-5 rounded-2xl border border-rose-50 shadow-sm flex flex-col">
                             <h5 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
                                 <i class="fa-solid fa-eraser text-rose-500"></i>
-                                Tout effacer
+                                ${t('settings.maintenance.reset_wipe')}
                             </h5>
-                            <p class="text-[11px] text-slate-500 mb-6 flex-grow leading-relaxed">Supprime DEFINITIVEMENT tout votre espace. Recommencez de zéro.</p>
-                            <button id="btn-factory-reset-wipe" class="w-full py-3 bg-rose-50 text-rose-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all border border-rose-100">Détruire les données</button>
+                            <p class="text-[11px] text-slate-500 mb-6 flex-grow leading-relaxed">${t('settings.maintenance.reset_wipe_help')}</p>
+                            <button id="btn-factory-reset-wipe" class="w-full py-3 bg-rose-50 text-rose-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all border border-rose-100">${t('settings.maintenance.wipe_button')}</button>
                         </div>
                     </div>
                     <div class="pt-6 border-t border-rose-100 flex justify-end">
                         <button id="btn-logout-settings" class="bg-rose-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-rose-700 transition-all shadow-lg active:scale-95 flex items-center gap-2">
-                            <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+                            <i class="fa-solid fa-right-from-bracket"></i> ${t('settings.maintenance.logout')}
                         </button>
                     </div>
                 </div>
@@ -157,7 +176,7 @@ export default {
             }
             if (e.target.id === 'btn-logout-settings') {
                 import('../auth.js').then(m => {
-                    if (confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
+                    if (confirm(t('confirm.logout'))) {
                         m.logout();
                     }
                 });

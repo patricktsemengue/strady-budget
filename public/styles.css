@@ -196,3 +196,27 @@
     }
 }
 
+/* Tour Assistant & Highlights */
+@keyframes tour-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+.tour-highlight {
+    animation: tour-pulse 2s infinite;
+    position: relative !important;
+    z-index: 50 !important;
+    border: 2px solid #4f46e5 !important;
+    background-color: rgba(79, 70, 229, 0.05) !important;
+}
+
+.tour-assistant-bounce {
+    animation: bounce-gentle 3s infinite;
+}
+
+@keyframes bounce-gentle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
