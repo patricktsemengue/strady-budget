@@ -99,10 +99,55 @@
   },
   "education": {
     "badge": "Knowledge is power",
+    "title": "Financial Philosophy",
+    "subtitle": "Become the CFO of your own life.",
     "tour": {
       "title": "New to Strady?",
       "subtitle": "Let our assistant show you the key features in 1 minute.",
       "button": "Restart Interactive Guide"
+    },
+    "concepts": {
+      "pyf": {
+        "title": "Pay Yourself First",
+        "desc": "Don't think of savings as 'what's left at the end of the month'. Savings is your **first bill**.",
+        "app": "Create a **Recurring Template** for a transfer to your savings account scheduled on the **2nd of the month**."
+      },
+      "rule": {
+        "title": "The 70/20/10 Rule",
+        "desc": "A healthy structure for distributing your net income:",
+        "needs": "Needs (Fixed + Daily)",
+        "wants": "Wants (Leisure & Outings)",
+        "savings": "Savings & Investment",
+        "app": "Track the **Budget Health** gauge on your strategic dashboard."
+      },
+      "emergency": {
+        "title": "The Safety Net",
+        "desc": "Before investing, build a reserve of **3 to 6 months of expenses**. This is your 'F*ck You Money' that protects your serenity.",
+        "app": "Strady calculates your **Runway** in real-time based on your real burn rate."
+      },
+      "cash_drag": {
+        "title": "Avoiding Cash Drag",
+        "desc": "Money sitting in a checking account loses value (inflation). Every euro above your safety net should be invested.",
+        "app": "Check the **CFO Opportunity** alert when your operational accounts are too full."
+      },
+      "ffi": {
+        "title": "Sovereignty Index (FFI)",
+        "desc": "The **Financial Independence Index** measures your freedom. It represents the percentage of your **Fixed Expenses** (Rent, Bills) covered by your **Passive Income** (Dividends, Rents received). At 100%, you are sovereign: your assets pay your vital bills, even if you stop working.",
+        "target": "Target: 100%",
+        "help": "Mark your income as 'Passive' in the Categories tab to activate this KPI."
+      }
+    },
+    "guide": {
+      "title": "User Guide",
+      "step1_title": "1. Initial Configuration",
+      "step1_desc": "Start by creating your real <b>Accounts</b>. For each account, specify if it's a savings account (for Runway calculation).",
+      "step2_title": "2. The Forecasting Engine",
+      "step2_desc": "In the <b>Flows</b> tab, create your <b>Templates</b>. Salary, Rent, Internet... Strady will automatically generate these flows for the next 36 months. Your financial future becomes visible immediately.",
+      "step3_title": "3. Weekly Reconciliation",
+      "step3_desc": "Once a week, compare your Strady balance with your banking app. Use the <b>\"Adjust balance\"</b> button in the Accounts tab to correct discrepancies (coffees, surprises).",
+      "step4_title": "4. Month Closure",
+      "step4_desc": "On the last day of the month, click <b>\"Close month\"</b>. Strady will freeze the data and carry over your exact balances as the new starting point for the following month.",
+      "cta": "Ready to pilot my budget!"
     }
   },
   "confirm": {

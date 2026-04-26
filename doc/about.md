@@ -241,3 +241,16 @@ Calculation: `(Total Passive Income / Total Fixed Expenses) * 100`.
 
 ### 3.6 Revenue DNA
 A visualization showing the proportion of **Active Income** (Labor-based) vs. **Passive Income** (Asset-based).
+
+## 4. Mobile Performance Optimization
+
+To ensure a smooth experience on light-memory mobile devices, Strady Budget implements the following strategies:
+
+### 4.1 Data Pruning (View Windowing)
+The application manages memory by limiting the number of full transaction objects held in the JavaScript state.
+- **Active Buffer**: Only the currently viewed month and the **immediate next month** are fully populated with transaction items.
+- **Aggregated Totals**: For all other months in the 36-month horizon, only the **Total In** and **Total Out** aggregates are stored.
+- **On-Demand Hydration**: When the user navigates to a pruned month, the system re-calculates/hydrates that month's details instantly.
+
+### 4.2 Error Resilience
+The initialization process is wrapped in a global `try-catch` block. If critical services like `i18n` fail due to network issues, the app uses safe fallbacks instead of crashing, ensuring the core budget features remain accessible.

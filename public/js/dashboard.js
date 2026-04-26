@@ -896,5 +896,3 @@ export const clotureMois = async () => {
         }
     }
 };
-  }
-};

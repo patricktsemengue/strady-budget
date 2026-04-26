@@ -54,21 +54,45 @@ export const updateState = (newState) => {
 
 export const rebuildRecords = (transactions, monthsStatuses) => {
     const newRecords = {};
-    
-    // Group transactions by month
+    const viewMonthKey = getMonthKey(state.viewDate);
+    const nextMonthDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 1);
+    const nextMonthKey = getMonthKey(nextMonthDate);
+
+    // Filter and aggregate transactions
     transactions.forEach(tx => {
         if (!tx.date) return;
-        const monthKey = getMonthKey(new Date(tx.date));
+        const txDate = new Date(tx.date);
+        const monthKey = getMonthKey(txDate);
+        
         if (!newRecords[monthKey]) {
-            newRecords[monthKey] = { status: monthsStatuses[monthKey]?.status || 'open', items: [] };
+            newRecords[monthKey] = { 
+                status: monthsStatuses[monthKey]?.status || 'open', 
+                items: [],
+                totals: { income: 0, expense: 0 }
+            };
         }
-        newRecords[monthKey].items.push(tx);
+
+        // Calculate totals for all months
+        // Note: getTxDisplayInfo is in utils.js, but since we don't want to import circular dependencies, 
+        // we'll use a simplified check here or just assume it's done during render if needed.
+        // For pruning, the main goal is to only keep 'items' for relevant months.
+        
+        const isIncome = !tx.source || tx.source === 'external';
+        const isExpense = !tx.destination || tx.destination === 'external';
+
+        if (isIncome) newRecords[monthKey].totals.income += tx.amount;
+        if (isExpense) newRecords[monthKey].totals.expense += tx.amount;
+
+        // Pruning logic: Only keep full transaction objects for Current and Next month
+        if (monthKey === viewMonthKey || monthKey === nextMonthKey) {
+            newRecords[monthKey].items.push(tx);
+        }
     });
 
-    // Ensure all explicit month statuses are in records, even if empty
+    // Ensure all explicit month statuses are in records
     Object.keys(monthsStatuses).forEach(monthKey => {
         if (!newRecords[monthKey]) {
-            newRecords[monthKey] = { status: monthsStatuses[monthKey].status, items: [] };
+            newRecords[monthKey] = { status: monthsStatuses[monthKey].status, items: [], totals: { income: 0, expense: 0 } };
         }
     });
 

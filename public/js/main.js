@@ -89,235 +89,255 @@ import { debounce } from './utils.js';
 import { initI18n, t, changeLanguage } from './i18n.js';
 
 const init = async () => {
-    // Initialize i18n first
-    await initI18n();
+    try {
+        console.log('[Main] Initialization started...');
+        
+        // Initialize i18n
+        try {
+            await initI18n();
+        } catch (i18nErr) {
+            console.warn('[Main] i18n initialization failed, using fallbacks:', i18nErr);
+        }
 
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js', { type: 'module' })
-                .then(reg => {
-                    console.log('Service Worker registered');
-                    // If user is already logged in, init SW
-                    if (auth.currentUser) {
-                        reg.active?.postMessage({
-                            type: 'INIT_FIREBASE',
-                            payload: { config: firebaseConfig }
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { type: 'module' })
+                    .then(reg => {
+                        console.log('Service Worker registered');
+                        // If user is already logged in, init SW
+                        if (auth.currentUser) {
+                            reg.active?.postMessage({
+                                type: 'INIT_FIREBASE',
+                                payload: { config: firebaseConfig }
+                            });
+                        }
+                    })
+                    .catch(err => console.error('SW registration failed:', err));
+            });
+
+            navigator.serviceWorker.addEventListener('message', async (event) => {
+                if (event.data.type === 'REFRESH_COMPLETE') {
+                    const { accountIds } = event.data.payload;
+                    console.log('[Main] Balance refresh complete for accounts:', accountIds);
+                    // Locally clear the dirty flags to stop the spinners immediately
+                    const newAccounts = state.accounts.map(acc => 
+                        accountIds.includes(acc.id) ? { ...acc, balanceDirty: false } : acc
+                    );
+                    updateState({ accounts: newAccounts });
+                    router.render();
+                } else if (event.data.type === 'REFRESH_FAILED') {
+                    const { userId, action, data, error } = event.data.payload;
+                    console.warn(`[Main] SW refresh failed (${action}):`, error, " - Falling back to main thread.");
+                    
+                    // Trigger the fallback immediately in the main thread
+                    try {
+                        if (action === 'DELTA') {
+                            await calculateBalanceDelta(
+                                db, userId, data.accountId, data.amount, data.date,
+                                getDocs, updateDoc, setDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
+                            );
+                        } else if (action === 'SWEEP') {
+                            await sweepAccountBalances(
+                                db, userId, data.accountIds,
+                                getDocs, setDoc, updateDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
+                            );
+                        }
+                        
+                        // Clear the dirty flag manually after fallback
+                        const batch = writeBatch(db);
+                        const targets = action === 'DELTA' ? [data.accountId] : data.accountIds;
+                        targets.forEach(id => {
+                            const accRef = doc(db, `users/${userId}/accounts`, id);
+                            batch.update(accRef, { balanceDirty: false, updated_at: serverTimestamp() });
                         });
-                    }                })
-                .catch(err => console.error('SW registration failed:', err));
-        });
+                        await batch.commit();
+                        console.log(`[Main] Fallback ${action} complete.`);
+                    } catch (fallbackError) {
+                        console.error("[Main] Fallback refresh failed:", fallbackError);
+                    }
+                }
+            });
+        }
 
-        navigator.serviceWorker.addEventListener('message', async (event) => {
-            if (event.data.type === 'REFRESH_COMPLETE') {
-                const { accountIds } = event.data.payload;
-                console.log('[Main] Balance refresh complete for accounts:', accountIds);
-                // Locally clear the dirty flags to stop the spinners immediately
-                const newAccounts = state.accounts.map(acc => 
-                    accountIds.includes(acc.id) ? { ...acc, balanceDirty: false } : acc
-                );
-                updateState({ accounts: newAccounts });
-                router.render();
-            } else if (event.data.type === 'REFRESH_FAILED') {
-                const { userId, action, data, error } = event.data.payload;
-                console.warn(`[Main] SW refresh failed (${action}):`, error, " - Falling back to main thread.");
+        // Initialize Router
+        router.setNavContainers('nav-desktop', 'nav-mobile');
+        
+        // 1. Vision Stratégique
+        router.register(dashboardNewModule);
+        router.register(wealthModule);
+        router.register(educationModule);
+
+        // 2. Pilotage Opérationnel
+        router.register(transactionsModule);
+        router.register(accountsModule);
+        router.register(horizonModule);
+        router.register(treasuryHorizonModule);
+
+        // 3. Configuration & Archives
+        router.register(categoriesModule);
+        router.register(settingsModule);
+
+        // Check for pending tour trigger (e.g. after factory reset)
+        if (sessionStorage.getItem('strady_trigger_tour') === 'true') {
+            sessionStorage.removeItem('strady_trigger_tour');
+            setTimeout(() => tourModule.start(), 500);
+        }
+
+        setupEventListeners();
+        initCategoryEvents();
+
+        // Optimization: Debounce render to group rapid Firestore updates
+        const debouncedUpdateAndRender = debounce((newData) => {
+            updateState({
+                accounts: newData.accounts || [],
+                transactions: newData.transactions || [],
+                categories: newData.categories || defaultCategories,
+                recurringTemplates: newData.recurringTemplates || [],
+                assets: newData.assets || [],
+                assetValues: newData.assetValues || [],
+                liabilities: newData.liabilities || [],
+                liabilityValues: newData.liabilityValues || [],
+                months: newData.months || {},
+                accountBalances: newData.accountBalances || {},
+                onboarding: newData.onboarding || null,
+                emergencyFundMultiplier: newData.emergencyFundMultiplier || 3,
+                monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
+            });
+            
+            if (newData.categories && newData.categories.length === 0) {
+                updateState({ categories: defaultCategories });
+            }
+
+            rebuildRecords(newData.transactions || [], newData.months || {});
+            router.render();
+        }, 50);
+
+        // Firebase Auth listener
+        onUserChanged(async (user) => {
+            const userInfo = document.getElementById('user-info');
+            const userName = document.getElementById('user-name');
+            const userPhoto = document.getElementById('user-photo');
+            
+            const userInfoMobile = document.getElementById('user-info-mobile');
+            const userNameMobile = document.getElementById('user-name-mobile');
+            const userEmailMobile = document.getElementById('user-email-mobile');
+            const userPhotoMobile = document.getElementById('user-photo-mobile');
+
+            const mainContent = document.querySelector('main');
+
+            if (user) {
+                setStorageUser(user.uid);
                 
-                // Trigger the fallback immediately in the main thread
-                try {
-                    if (action === 'DELTA') {
-                        await calculateBalanceDelta(
-                            db, userId, data.accountId, data.amount, data.date,
-                            getDocs, updateDoc, setDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
-                        );
-                    } else if (action === 'SWEEP') {
-                        await sweepAccountBalances(
-                            db, userId, data.accountIds,
-                            getDocs, setDoc, updateDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
-                        );
+                // Init Service Worker with Firebase config once user is authenticated
+                const syncSWAuth = async (u) => {
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.ready.then(reg => {
+                            reg.active?.postMessage({ 
+                                type: 'INIT_FIREBASE', 
+                                payload: { config: firebaseConfig } 
+                            });
+                        });
+                    }
+                };
+
+                syncSWAuth(user);
+                // Also sync on token refresh
+                auth.onIdTokenChanged(async (u) => {
+                    if (u) syncSWAuth(u);
+                });
+
+                if (userInfo) userInfo.classList.remove('hidden');
+                if (userName) userName.textContent = user.displayName;
+                if (userPhoto) userPhoto.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+
+                if (userInfoMobile) userInfoMobile.classList.remove('hidden');
+                if (userNameMobile) userNameMobile.textContent = user.displayName;
+                if (userEmailMobile) userEmailMobile.textContent = user.email;
+                if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+
+                // 1. Subscribe to Firestore for live data and updates
+                let isFirstFirestoreUpdate = true;
+                subscribeToAppData(user.uid, (newData) => {
+                    if (isFirstFirestoreUpdate) {
+                        // Trigger balance refresh on login if any accounts are dirty OR if no balances exist yet
+                        const hasDirtyAccounts = (newData.accounts || []).some(acc => acc.balanceDirty !== false);
+                        const hasNoBalances = Object.keys(newData.accountBalances || {}).length === 0;
+                        
+                        if (hasDirtyAccounts || (hasNoBalances && (newData.accounts || []).length > 0)) {
+                            markAccountsBalanceDirty(user.uid);
+                        }
+
+                        // Onboarding Detection
+                        const isNewUserSession = sessionStorage.getItem('strady_is_new_user_session') === 'true';
+                        const noAccounts = (newData.accounts || []).length === 0;
+                        const noOnboarding = !newData.onboarding;
+
+                        if (noAccounts && (isNewUserSession || noOnboarding)) {
+                            showOnboardingModal(async (choice) => {
+                                if (choice === 'starter') {
+                                    try {
+                                        await provisionStarterData(user.uid);
+                                        showNotification("Starter Pack installé avec succès !");
+                                        // Start the tour
+                                        tourModule.start();
+                                    } catch (err) {
+                                        console.error(err);
+                                        showNotification("Erreur lors de l'installation du Starter Pack", "error");
+                                    }
+                                } else {
+                                    // Start from scratch
+                                    try {
+                                        await updateSettingsInFirestore(user.uid, 'onboarding', { 
+                                            starterPackApplied: false, 
+                                            onboardingComplete: true,
+                                            updated_at: serverTimestamp() 
+                                        });
+                                        showNotification("C'est parti ! Vous commencez de zéro.");
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }
+                                sessionStorage.removeItem('strady_is_new_user_session');
+                            });
+                        }
+                        
+                        isFirstFirestoreUpdate = false;
                     }
                     
-                    // Clear the dirty flag manually after fallback
-                    const batch = writeBatch(db);
-                    const targets = action === 'DELTA' ? [data.accountId] : data.accountIds;
-                    targets.forEach(id => {
-                        const accRef = doc(db, `users/${userId}/accounts`, id);
-                        batch.update(accRef, { balanceDirty: false, updated_at: serverTimestamp() });
-                    });
-                    await batch.commit();
-                    console.log(`[Main] Fallback ${action} complete.`);
-                } catch (fallbackError) {
-                    console.error("[Main] Fallback refresh failed:", fallbackError);
-                }
+                    debouncedUpdateAndRender(newData);
+                });
+
+                const initialView = window.location.hash.substring(1) || 'education';
+                router.setView(initialView);
+                
+                // Show content
+                if (mainContent) mainContent.classList.remove('hidden');
+            } else {
+                // User is signed out, redirect to login page
+                setStorageUser(null);
+                if (mainContent) mainContent.classList.add('hidden');
+                window.location.href = 'login.html';
             }
         });
-    }
 
-    // Initialize Router
-    router.setNavContainers('nav-desktop', 'nav-mobile');
-    
-    // 1. Vision Stratégique
-    router.register(dashboardNewModule);
-    router.register(wealthModule);
-    router.register(educationModule);
-
-    // 2. Pilotage Opérationnel
-    router.register(transactionsModule);
-    router.register(accountsModule);
-    router.register(horizonModule);
-    router.register(treasuryHorizonModule);
-
-    // 3. Configuration & Archives
-    router.register(categoriesModule);
-    router.register(settingsModule);
-
-    // Check for pending tour trigger (e.g. after factory reset)
-    if (sessionStorage.getItem('strady_trigger_tour') === 'true') {
-        sessionStorage.removeItem('strady_trigger_tour');
-        setTimeout(() => tourModule.start(), 500);
-    }
-
-    setupEventListeners();
-    initCategoryEvents();
-
-    // Optimization: Debounce render to group rapid Firestore updates
-    const debouncedUpdateAndRender = debounce((newData) => {
-        updateState({
-            accounts: newData.accounts || [],
-            transactions: newData.transactions || [],
-            categories: newData.categories || defaultCategories,
-            recurringTemplates: newData.recurringTemplates || [],
-            assets: newData.assets || [],
-            assetValues: newData.assetValues || [],
-            liabilities: newData.liabilities || [],
-            liabilityValues: newData.liabilityValues || [],
-            months: newData.months || {},
-            accountBalances: newData.accountBalances || {},
-            onboarding: newData.onboarding || null,
-            emergencyFundMultiplier: newData.emergencyFundMultiplier || 3,
-            monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
+        // Handle hash navigation
+        window.addEventListener('hashchange', () => {
+            const view = window.location.hash.substring(1) || 'education';
+            router.setView(view);
         });
-        
-        if (newData.categories && newData.categories.length === 0) {
-            updateState({ categories: defaultCategories });
-        }
 
-        rebuildRecords(newData.transactions || [], newData.months || {});
-        router.render();
-    }, 50);
 
-    // Firebase Auth listener
-    onUserChanged(async (user) => {
-        const userInfo = document.getElementById('user-info');
-        const userName = document.getElementById('user-name');
-        const userPhoto = document.getElementById('user-photo');
-        
-        const userInfoMobile = document.getElementById('user-info-mobile');
-        const userNameMobile = document.getElementById('user-name-mobile');
-        const userEmailMobile = document.getElementById('user-email-mobile');
-        const userPhotoMobile = document.getElementById('user-photo-mobile');
-
+    } catch (err) {
+        console.error('[Main] Initialization failed:', err);
         const mainContent = document.querySelector('main');
-
-        if (user) {
-            setStorageUser(user.uid);
-            
-            // Init Service Worker with Firebase config once user is authenticated
-            const syncSWAuth = async (u) => {
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.ready.then(reg => {
-                        reg.active?.postMessage({ 
-                            type: 'INIT_FIREBASE', 
-                            payload: { config: firebaseConfig } 
-                        });
-                    });
-                }
-            };
-
-            syncSWAuth(user);
-            // Also sync on token refresh
-            auth.onIdTokenChanged(async (u) => {
-                if (u) syncSWAuth(u);
-            });
-
-            if (userInfo) userInfo.classList.remove('hidden');
-            if (userName) userName.textContent = user.displayName;
-            if (userPhoto) userPhoto.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-
-            if (userInfoMobile) userInfoMobile.classList.remove('hidden');
-            if (userNameMobile) userNameMobile.textContent = user.displayName;
-            if (userEmailMobile) userEmailMobile.textContent = user.email;
-            if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-
-            // 1. Subscribe to Firestore for live data and updates
-            let isFirstFirestoreUpdate = true;
-            subscribeToAppData(user.uid, (newData) => {
-                if (isFirstFirestoreUpdate) {
-                    // Trigger balance refresh on login if any accounts are dirty OR if no balances exist yet
-                    const hasDirtyAccounts = (newData.accounts || []).some(acc => acc.balanceDirty !== false);
-                    const hasNoBalances = Object.keys(newData.accountBalances || {}).length === 0;
-                    
-                    if (hasDirtyAccounts || (hasNoBalances && (newData.accounts || []).length > 0)) {
-                        markAccountsBalanceDirty(user.uid);
-                    }
-
-                    // Onboarding Detection
-                    const isNewUserSession = sessionStorage.getItem('strady_is_new_user_session') === 'true';
-                    const noAccounts = (newData.accounts || []).length === 0;
-                    const noOnboarding = !newData.onboarding;
-
-                    if (noAccounts && (isNewUserSession || noOnboarding)) {
-                        showOnboardingModal(async (choice) => {
-                            if (choice === 'starter') {
-                                try {
-                                    await provisionStarterData(user.uid);
-                                    showNotification("Starter Pack installé avec succès !");
-                                    // Start the tour
-                                    tourModule.start();
-                                } catch (err) {
-                                    console.error(err);
-                                    showNotification("Erreur lors de l'installation du Starter Pack", "error");
-                                }
-                            } else {
-                                // Start from scratch
-                                try {
-                                    await updateSettingsInFirestore(user.uid, 'onboarding', { 
-                                        starterPackApplied: false, 
-                                        onboardingComplete: true,
-                                        updated_at: serverTimestamp() 
-                                    });
-                                    showNotification("C'est parti ! Vous commencez de zéro.");
-                                } catch (err) {
-                                    console.error(err);
-                                }
-                            }
-                            sessionStorage.removeItem('strady_is_new_user_session');
-                        });
-                    }
-                    
-                    isFirstFirestoreUpdate = false;
-                }
-                
-                debouncedUpdateAndRender(newData);
-            });
-
-            const initialView = window.location.hash.substring(1) || 'dashboard';
-            router.setView(initialView);
-            
-            // Show content
-            if (mainContent) mainContent.classList.remove('hidden');
+        if (mainContent) {
+            mainContent.innerHTML = `<div class="p-10 text-center text-red-600 font-bold">Erreur de chargement: ${err.message}. Veuillez rafraîchir la page.</div>`;
+            mainContent.classList.remove('hidden');
         } else {
-            // User is signed out, redirect to login page
-            setStorageUser(null);
-            if (mainContent) mainContent.classList.add('hidden');
-            window.location.href = 'login.html';
+            alert(`Strady Error: ${err.message}`);
         }
-    });
-
-    // Handle hash navigation
-    window.addEventListener('hashchange', () => {
-        const view = window.location.hash.substring(1) || 'dashboard';
-        router.setView(view);
-    });
+    }
 };
 
 const setViewDate = (date) => {

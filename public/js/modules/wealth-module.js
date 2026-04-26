@@ -7,7 +7,7 @@ export default {
     get label() { return t('nav.wealth'); },
     get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gem',
-    order: 2,
+    order: 3,
     showMonthSelection: true,
     showMobileFab: () => true,
     getTemplate: () => `

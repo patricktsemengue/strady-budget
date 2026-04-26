@@ -99,10 +99,55 @@
   },
   "education": {
     "badge": "Savoir, c'est pouvoir",
+    "title": "Philosophie Financière",
+    "subtitle": "Devenir le CFO de sa propre vie.",
     "tour": {
       "title": "Nouveau sur Strady ?",
       "subtitle": "Laissez notre assistant vous faire découvrir les fonctionnalités clés en 1 minute.",
       "button": "Relancer le Guide Interactif"
+    },
+    "concepts": {
+      "pyf": {
+        "title": "Pay Yourself First",
+        "desc": "Ne considérez pas l'épargne comme 'ce qu'il reste à la fin du mois'. L'épargne est votre **première facture**.",
+        "app": "Créez un **Modèle Récurrent** de virement vers votre compte épargne programmé le **2 du mois**."
+      },
+      "rule": {
+        "title": "La Règle 70/20/10",
+        "desc": "Une structure saine pour répartir vos revenus nets :",
+        "needs": "Besoins (Fixes + Quotidien)",
+        "wants": "Envies (Loisirs & Sorties)",
+        "savings": "Épargne & Investissement",
+        "app": "Suivez la jauge de **Santé Budgétaire** sur votre tableau de bord stratégique."
+      },
+      "emergency": {
+        "title": "Le Filet de Sécurité",
+        "desc": "Avant d'investir, construisez une réserve de **3 à 6 mois de dépenses**. C'est votre 'F*ck You Money' qui protège votre sérénité.",
+        "app": "Strady calcule votre **Runway** en temps réel basé sur votre rythme de vie réel (Burn Rate)."
+      },
+      "cash_drag": {
+        "title": "Éviter le Cash Drag",
+        "desc": "L'argent qui dort sur un compte courant perd de la valeur (inflation). Tout euro au-dessus de votre filet de sécurité doit être investi.",
+        "app": "Consultez l'alerte **Opportunité CFO** quand vos comptes opérationnels sont trop pleins."
+      },
+      "ffi": {
+        "title": "L'Indice de Souveraineté (FFI)",
+        "desc": "Le **Financial Independence Index** mesure votre liberté. Il représente le pourcentage de vos **Charges Fixes** (Loyer, Factures) couvert par vos **Revenus Passifs** (Dividendes, Loyers perçus). À 100%, vous êtes souverain : vos actifs paient vos factures vitales, même si vous cessez de travailler.",
+        "target": "Cible : 100%",
+        "help": "Identifiez vos revenus comme 'Passifs' dans l'onglet Catégories pour activer ce KPI."
+      }
+    },
+    "guide": {
+      "title": "Guide de l'Utilisateur",
+      "step1_title": "1. Configuration Initiale",
+      "step1_desc": "Commencez par créer vos <b>Comptes</b> réels. Pour chaque compte, spécifiez s'il s'agit d'un compte d'épargne (pour le calcul du Runway).",
+      "step2_title": "2. Le Moteur de Prévision",
+      "step2_desc": "Dans l'onglet <b>Flux</b>, créez vos <b>Modèles</b>. Salaire, Loyer, Internet... Strady générera automatiquement ces flux pour les 36 prochains mois. Votre futur financier devient visible immédiatement.",
+      "step3_title": "3. Réconciliation Hebdomadaire",
+      "step3_desc": "Une fois par semaine, comparez votre solde Strady avec votre application bancaire. Utilisez le bouton <b>\"Ajuster le solde\"</b> dans l'onglet Comptes pour corriger les écarts (cafés, imprévus).",
+      "step4_title": "4. Clôture de Mois",
+      "step4_desc": "Le dernier jour du mois, cliquez sur <b>\"Clôturer le mois\"</b>. Strady figera les données et reportera vos soldes exacts comme nouveau point de départ pour le mois suivant.",
+      "cta": "Prêt à piloter mon budget !"
     }
   },
   "confirm": {

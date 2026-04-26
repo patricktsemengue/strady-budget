@@ -7,7 +7,7 @@ export default {
     get label() { return t('nav.dashboard'); },
     get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gauge-high',
-    order: 1,
+    order: 2,
     showMonthSelection: true,
     getTemplate: () => `
         <div id="view-dashboard" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">
