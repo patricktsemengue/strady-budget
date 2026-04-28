@@ -82,44 +82,44 @@ export const openKPIInfo = (kpiKey) => {
         net_worth: {
             title: t('dashboard.net_worth'),
             icon: 'fa-chart-line',
-            definition: t('help_cards.kpi.net_worth.definition'),
-            usage: t('help_cards.kpi.net_worth.usage')
+            definition: t('dashboard.kpi.net_worth.definition'),
+            usage: t('dashboard.kpi.net_worth.usage')
         },
         runway: {
             title: t('dashboard.runway'),
             icon: 'fa-shield-heart',
-            definition: t('help_cards.kpi.runway.definition'),
-            usage: t('help_cards.kpi.runway.usage')
+            definition: t('dashboard.kpi.runway.definition'),
+            usage: t('dashboard.kpi.runway.usage')
         },
         budget_health: {
             title: t('dashboard.budget_health'),
             icon: 'fa-gauge-high',
-            definition: t('help_cards.kpi.budget_health.definition'),
-            usage: t('help_cards.kpi.budget_health.usage')
+            definition: t('dashboard.kpi.budget_health.definition'),
+            usage: t('dashboard.kpi.budget_health.usage')
         },
         ffi: {
-            title: t('help_cards.kpi.ffi.title'),
+            title: t('dashboard.kpi.ffi.title'),
             icon: 'fa-crown',
-            definition: t('help_cards.kpi.ffi.definition'),
-            usage: t('help_cards.kpi.ffi.usage')
+            definition: t('dashboard.kpi.ffi.definition'),
+            usage: t('dashboard.kpi.ffi.usage')
         },
         dna: {
-            title: t('help_cards.kpi.dna.title'),
+            title: t('dashboard.kpi.dna.title'),
             icon: 'fa-dna',
-            definition: t('help_cards.kpi.dna.definition'),
-            usage: t('help_cards.kpi.dna.usage')
+            definition: t('dashboard.kpi.dna.definition'),
+            usage: t('dashboard.kpi.dna.usage')
         },
         safe_to_spend: {
             title: t('dashboard.safe_to_spend'),
             icon: 'fa-wallet',
-            definition: t('help_cards.kpi.safe_to_spend.definition'),
-            usage: t('help_cards.kpi.safe_to_spend.usage')
+            definition: t('dashboard.kpi.safe_to_spend.definition'),
+            usage: t('dashboard.kpi.safe_to_spend.usage')
         },
         balance_sheet: {
             title: t('dashboard.balance_sheet'),
             icon: 'fa-scale-balanced',
-            definition: t('help_cards.kpi.balance_sheet.definition'),
-            usage: t('help_cards.kpi.balance_sheet.usage')
+            definition: t('dashboard.kpi.balance_sheet.definition'),
+            usage: t('dashboard.kpi.balance_sheet.usage')
         }
     };
 

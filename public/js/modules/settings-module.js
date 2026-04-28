@@ -1,4 +1,7 @@
 import { t, getCurrentLanguage } from '../i18n.js';
+import { state, updateState } from '../state.js';
+import { currencyMap } from '../currencies.js';
+import { formatCurrency } from '../utils.js';
 
 export default {
     id: 'settings',
@@ -18,140 +21,329 @@ export default {
         ]
     }),
     getFabConfig: () => null,
-    getTemplate: () => `
-        <div id="view-settings" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">
-            <h1 class="text-2xl font-bold text-slate-800">${t('settings.title')}</h1>
+    getTemplate: () => {
+        const displayOptions = Object.entries(currencyMap).map(([code, info]) => 
+            `<option value="${code}" ${state.displayCurrency === code ? 'selected' : ''}>${info.symbol} ${info.label} (${code})</option>`
+        ).join('');
 
-            <!-- 1. Horizon de Pilotage -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                    <h3 class="font-bold text-lg text-slate-800">${t('settings.horizon.title')}</h3>
-                    <p class="text-sm text-slate-500">${t('settings.horizon.subtitle')}</p>
-                </div>
-                <div class="p-6 space-y-6">
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="window.app.setSettingPreset('cfo')" class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-100">${t('settings.horizon.preset_cfo')}</button>
-                        <button onclick="window.app.setSettingPreset('history')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_history')}</button>
-                        <button onclick="window.app.setSettingPreset('year')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_year')}</button>
-                    </div>
-                    
-                    <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-50">
-                        <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.start_date')}</label>
-                            <input type="date" id="config-month-start" required class="w-full border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+        const ratesRows = Object.entries(state.exchangeRates || {}).map(([code, rate]) => {
+            const info = currencyMap[code] || { symbol: '', label: code };
+            return `
+                <tr class="border-b border-slate-50 dark:border-slate-800 group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors text-xs">
+                    <td class="py-3 px-4">
+                        <span class="font-bold text-slate-700 dark:text-slate-300">${state.displayCurrency}</span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-indigo-600 dark:text-indigo-400">${info.symbol}</span>
+                            <span class="font-bold text-slate-700 dark:text-slate-300">${code}</span>
                         </div>
-                        <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.end_date')}</label>
-                            <input type="date" id="config-month-end" required class="w-full border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter whitespace-nowrap">1 ${code} =</span>
+                            <input type="number" step="0.0001" value="${rate}" 
+                                onchange="window.app.updateExchangeRate('${code}', this.value)"
+                                class="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 font-black text-indigo-600 dark:text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">${state.displayCurrency}</span>
                         </div>
-                        <div class="md:col-span-2 flex justify-end">
-                            <button type="submit" class="bg-slate-800 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-lg active:scale-95">
-                                ${t('settings.horizon.save')}
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <a href="https://www.google.com/finance/quote/${code}-${state.displayCurrency}" target="_blank" class="text-[9px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-widest flex items-center gap-1.5 transition-colors">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                ${t('settings.currency.verify')}
+                            </a>
+                            <button onclick="window.app.deleteExchangeRate('${code}')" class="p-2 text-slate-300 hover:text-rose-500 transition-all">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
-                    </form>
-                </div>
-            </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
-            <!-- 2. Paramètres Stratégiques -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                    <h3 class="font-bold text-lg text-slate-800">${t('settings.strategy.title')}</h3>
-                    <p class="text-sm text-slate-500">${t('settings.strategy.subtitle')}</p>
-                </div>
-                <div class="p-6">
-                    <div class="max-w-md">
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">${t('settings.strategy.ef_goal')}</label>
-                        <div class="flex items-center gap-4 bg-slate-50 p-1 rounded-2xl border border-slate-100">
-                            <button onclick="window.app.updateEFMultiplier(3)" id="btn-ef-3" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">3 mois</button>
-                            <button onclick="window.app.updateEFMultiplier(6)" id="btn-ef-6" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">6 mois</button>
-                            <button onclick="window.app.updateEFMultiplier(12)" id="btn-ef-12" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">12 mois</button>
-                        </div>
-                        <p class="text-[11px] text-slate-400 mt-4 leading-relaxed italic">
-                            ${t('settings.strategy.ef_help')}
-                        </p>
+        const renderCardHeader = (title, subtitle, why, impact, icon, iconColor) => `
+            <div class="p-6 flex items-start justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center shadow-sm">
+                        <i class="fa-solid ${icon} text-lg"></i>
                     </div>
-                </div>
-            </div>
-
-            <!-- 3. Le Coffre-Fort (Sauvegarde) -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                     <div>
-                        <h3 class="font-bold text-lg text-slate-800">${t('settings.vault.title')}</h3>
-                        <p class="text-sm text-slate-500">${t('settings.vault.subtitle')}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="btn-export-full-backup" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
-                            <i class="fa-solid fa-download text-indigo-500"></i> ${t('settings.vault.backup')}
-                        </button>
-                        <button onclick="document.getElementById('import-zone-wrapper').classList.toggle('hidden')" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
-                            <i class="fa-solid fa-upload text-blue-500"></i> ${t('settings.vault.restore')}
-                        </button>
+                        <div class="flex items-center gap-3">
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base">${title}</h3>
+                            <span class="impact-badge impact-${impact}">${t(`settings.impact.${impact}`)}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${subtitle}</p>
                     </div>
                 </div>
                 
-                <div id="import-zone-wrapper" class="p-8 hidden border-t border-slate-50 bg-blue-50/20">
-                    <div id="import-dropzone" class="relative group cursor-pointer border-2 border-dashed border-blue-200 rounded-3xl p-12 transition-all hover:border-blue-400 hover:bg-white flex flex-col items-center justify-center text-center shadow-inner">
-                        <input type="file" id="full-backup-import-input" class="absolute inset-0 opacity-0 cursor-pointer" accept=".csv">
-                        <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-sm">
-                            <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                <!-- Tooltip: Info & Impact -->
+                <div class="relative group/why">
+                    <button class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 transition-all shadow-sm">
+                        <i class="fa-solid fa-info text-xs"></i>
+                    </button>
+                    <div class="absolute top-0 right-full mr-3 w-72 p-4 bg-slate-800 text-white text-xs rounded-2xl opacity-0 invisible group-hover/why:opacity-100 group-hover/why:visible transition-all z-50 shadow-2xl border border-slate-700 leading-relaxed pointer-events-none">
+                        <div class="flex items-center gap-2 mb-2 text-indigo-400 font-black uppercase tracking-widest text-[10px]">
+                            <i class="fa-solid fa-lightbulb"></i>
+                            <span>Objectif & Conséquences</span>
                         </div>
-                        <div class="space-y-2">
-                            <h4 class="font-bold text-slate-800 text-lg">${t('settings.vault.import_dropzone')}</h4>
-                            <p class="text-sm text-slate-500 max-w-sm mx-auto italic">${t('settings.vault.import_help')}</p>
-                        </div>
+                        ${why}
                     </div>
                 </div>
             </div>
+        `;
 
-            <!-- 4. Maintenance & Danger Zone -->
-            <div class="rounded-2xl border border-rose-100 bg-rose-50/30 overflow-hidden">
-                <button onclick="document.getElementById('danger-zone-content').classList.toggle('hidden')" class="w-full p-6 flex items-center justify-between hover:bg-rose-50/50 transition-colors">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center">
-                            <i class="fa-solid fa-screwdriver-wrench"></i>
-                        </div>
-                        <div class="text-left">
-                            <h3 class="font-bold text-rose-900">${t('settings.maintenance.title')}</h3>
-                            <p class="text-xs text-rose-700 opacity-70">${t('settings.maintenance.subtitle')}</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-down text-rose-300"></i>
-                </button>
+        const sidebarItems = [
+            { id: 'group-display', label: t('settings.groups_settings.display'), icon: 'fa-desktop' },
+            { id: 'group-strategy', label: t('settings.groups_settings.strategy'), icon: 'fa-bullseye' },
+            { id: 'group-connectivity', label: t('settings.groups_settings.connectivity'), icon: 'fa-link' },
+            { id: 'group-security', label: t('settings.groups_settings.security'), icon: 'fa-shield-halved' }
+        ];
 
-                <div id="danger-zone-content" class="hidden p-6 pt-0 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white p-5 rounded-2xl border border-rose-50 shadow-sm flex flex-col">
-                            <h5 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-arrow-rotate-left text-blue-500"></i>
-                                ${t('settings.maintenance.reset_starter')}
-                            </h5>
-                            <p class="text-[11px] text-slate-500 mb-6 flex-grow leading-relaxed">${t('settings.maintenance.reset_starter_help')}</p>
-                            <button id="btn-factory-reset-starter" class="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all border border-slate-100">${t('settings.maintenance.reset_button')}</button>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-rose-50 shadow-sm flex flex-col">
-                            <h5 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-eraser text-rose-500"></i>
-                                ${t('settings.maintenance.reset_wipe')}
-                            </h5>
-                            <p class="text-[11px] text-slate-500 mb-6 flex-grow leading-relaxed">${t('settings.maintenance.reset_wipe_help')}</p>
-                            <button id="btn-factory-reset-wipe" class="w-full py-3 bg-rose-50 text-rose-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all border border-rose-100">${t('settings.maintenance.wipe_button')}</button>
-                        </div>
-                    </div>
-                    <div class="pt-6 border-t border-rose-100 flex justify-end">
-                        <button id="btn-logout-settings" class="bg-rose-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-rose-700 transition-all shadow-lg active:scale-95 flex items-center gap-2">
-                            <i class="fa-solid fa-right-from-bracket"></i> ${t('settings.maintenance.logout')}
+        return `
+        <div id="view-settings" class="max-w-6xl mx-auto px-4 pb-20">
+            <div class="flex flex-col md:flex-row gap-8 items-start">
+                
+                <!-- Sidebar (Desktop) -->
+                <div class="hidden md:flex flex-col w-64 sticky top-24 gap-1">
+                    <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">${t('settings.title')}</h2>
+                    ${sidebarItems.map(item => `
+                        <button onclick="window.app.scrollToSettingsGroup('${item.id}')" class="settings-sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                            <i class="fa-solid ${item.icon} w-5 text-center"></i>
+                            ${item.label}
                         </button>
+                    `).join('')}
+                </div>
+
+                <div class="flex-1 w-full space-y-12">
+                    <h2 class="md:hidden text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">${t('settings.title')}</h2>
+
+                    <!-- 1. GROUP: DISPLAY -->
+                    <div id="group-display" class="space-y-4">
+                        <div class="flex items-center gap-2 mb-2 ml-1">
+                            <div class="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.display')}</h4>
+                        </div>
+
+                        <!-- Card: Language -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.language.title'), t('settings.language.subtitle'), t('settings.language.why'), 'ui', 'fa-language', 'bg-blue-50 dark:bg-blue-900/20 text-blue-600')}
+                            <div class="px-6 pb-6 pt-2">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <button onclick="window.app.changeLanguage('fr')" class="p-4 rounded-xl border ${getCurrentLanguage() === 'fr' ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-800'} text-center font-bold transition-all">Français</button>
+                                    <button onclick="window.app.changeLanguage('en')" class="p-4 rounded-xl border ${getCurrentLanguage() === 'en' ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-800'} text-center font-bold transition-all">English</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Master Currency -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.currency.title_master'), t('settings.currency.subtitle_master'), t('settings.currency.why_master'), 'data', 'fa-coins', 'bg-amber-50 dark:bg-amber-900/20 text-amber-600')}
+                            <div class="px-6 pb-6 pt-2">
+                                <div class="flex flex-col md:flex-row gap-6 items-center">
+                                    <div class="flex-1 w-full">
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.currency.label_app')}</label>
+                                        <select onchange="window.app.updateCurrencySettings({ displayCurrency: this.value })" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200">
+                                            ${displayOptions}
+                                        </select>
+                                    </div>
+                                    <div class="w-full md:w-auto p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 text-center">
+                                        <p class="text-[10px] font-black text-indigo-400 uppercase mb-1">Aperçu</p>
+                                        <p class="text-xl font-black text-indigo-600 dark:text-indigo-400">${formatCurrency(1250.50)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- 2. GROUP: STRATEGY -->
+                    <div id="group-strategy" class="space-y-4 pt-4">
+                        <div class="flex items-center gap-2 mb-2 ml-1">
+                            <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.strategy')}</h4>
+                        </div>
+
+                        <!-- Card: Horizon -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.horizon.title'), t('settings.horizon.subtitle'), t('settings.horizon.why'), 'calc', 'fa-calendar-days', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
+                            <div class="px-6 pb-6 pt-2 space-y-6">
+                                <div class="flex flex-wrap gap-3">
+                                    <button onclick="window.app.setSettingPreset('cfo')" class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800">${t('settings.horizon.preset_cfo')}</button>
+                                    <button onclick="window.app.setSettingPreset('history')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_history')}</button>
+                                    <button onclick="window.app.setSettingPreset('year')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_year')}</button>
+                                </div>
+                                <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.start_date')}</label>
+                                        <input type="date" id="config-month-start" required class="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl p-3 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.end_date')}</label>
+                                        <input type="date" id="config-month-end" required class="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl p-3 text-sm">
+                                    </div>
+                                    <div class="md:col-span-2 flex justify-end">
+                                        <button type="submit" class="bg-slate-800 dark:bg-indigo-600 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-95 transition-all">
+                                            ${t('settings.horizon.save')}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Card: EF Multiplier -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.strategy.title'), t('settings.strategy.subtitle'), t('settings.strategy.why'), 'calc', 'fa-bullseye', 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600')}
+                            <div class="px-6 pb-6 pt-2">
+                                <div class="max-w-md">
+                                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">${t('settings.strategy.ef_goal')}</label>
+                                    <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <button onclick="window.app.updateEFMultiplier(3)" id="btn-ef-3" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.emergencyFundMultiplier === 3 ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">3 mois</button>
+                                        <button onclick="window.app.updateEFMultiplier(6)" id="btn-ef-6" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.emergencyFundMultiplier === 6 ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">6 mois</button>
+                                        <button onclick="window.app.updateEFMultiplier(12)" id="btn-ef-12" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.emergencyFundMultiplier === 12 ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">12 mois</button>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-4 leading-relaxed italic">
+                                        ${t('settings.strategy.ef_help')}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. GROUP: CONNECTIVITY -->
+                    <div id="group-connectivity" class="space-y-4 pt-4">
+                        <div class="flex items-center gap-2 mb-2 ml-1">
+                            <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.connectivity')}</h4>
+                        </div>
+
+                        <!-- Card: Currency Rates -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.currency.title_rates'), t('settings.currency.subtitle_rates'), t('settings.currency.why_rates'), 'calc', 'fa-chart-line', 'bg-violet-50 dark:bg-violet-900/20 text-violet-600')}
+                            <div class="px-0 pb-6">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-slate-50/50 dark:bg-slate-800/30">
+                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_master')}</th>
+                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_target')}</th>
+                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_value')}</th>
+                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_verify')}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${ratesRows || `<tr><td colspan="4" class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</td></tr>`}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="p-6">
+                                    <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                        <select id="new-rate-code" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
+                                            ${Object.entries(currencyMap).filter(([c]) => c !== state.displayCurrency && !(state.exchangeRates || {})[c]).map(([c, i]) => `<option value="${c}">${i.symbol} ${c}</option>`).join('')}
+                                        </select>
+                                        <button onclick="window.app.addExchangeRate(document.getElementById('new-rate-code').value)" class="bg-slate-800 dark:bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md active:scale-95">
+                                            <i class="fa-solid fa-plus mr-2"></i> ${t('settings.currency.add_rate')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. GROUP: SECURITY -->
+                    <div id="group-security" class="space-y-4 pt-4">
+                        <div class="flex items-center gap-2 mb-2 ml-1">
+                            <div class="w-1 h-4 bg-rose-500 rounded-full"></div>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.security')}</h4>
+                        </div>
+
+                        <!-- Card: Vault -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.vault.title'), t('settings.vault.subtitle'), t('settings.vault.why'), 'data', 'fa-vault', 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300')}
+                            <div class="px-6 pb-6 pt-2 space-y-6">
+                                <div class="flex gap-4">
+                                    <button id="btn-export-full-backup" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl text-center hover:bg-slate-50 transition-all group/btn">
+                                        <i class="fa-solid fa-download text-indigo-500 text-2xl mb-2 group-hover/btn:scale-110 transition-transform"></i>
+                                        <p class="text-xs font-black uppercase text-slate-700 dark:text-slate-300">${t('settings.vault.backup')}</p>
+                                    </button>
+                                    <button onclick="document.getElementById('import-zone-wrapper').classList.toggle('hidden')" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl text-center hover:bg-slate-50 transition-all group/btn">
+                                        <i class="fa-solid fa-upload text-blue-500 text-2xl mb-2 group-hover/btn:scale-110 transition-transform"></i>
+                                        <p class="text-xs font-black uppercase text-slate-700 dark:text-slate-300">${t('settings.vault.restore')}</p>
+                                    </button>
+                                </div>
+                                <div id="import-zone-wrapper" class="hidden border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 bg-slate-50 dark:bg-slate-800/30 text-center">
+                                     <input type="file" id="full-backup-import-input" class="hidden" accept=".csv">
+                                     <div onclick="document.getElementById('full-backup-import-input').click()" class="cursor-pointer flex flex-col items-center">
+                                         <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-300 mb-4"></i>
+                                         <p class="text-sm font-bold text-slate-600 dark:text-slate-400">${t('settings.vault.import_dropzone')}</p>
+                                         <p class="text-xs text-slate-400 mt-1">${t('settings.vault.import_help')}</p>
+                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Maintenance -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden border-l-4 border-l-rose-500">
+                            ${renderCardHeader(t('settings.maintenance.title'), t('settings.maintenance.subtitle'), t('settings.maintenance.why'), 'data', 'fa-screwdriver-wrench', 'bg-rose-50 dark:bg-rose-900/20 text-rose-600')}
+                            <div class="px-6 pb-6 pt-2 space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <h5 class="text-sm font-black text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-tighter">${t('settings.maintenance.reset_starter')}</h5>
+                                        <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">${t('settings.maintenance.reset_starter_help')}</p>
+                                        <button id="btn-factory-reset-starter" class="w-full py-2 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">Réinitialiser</button>
+                                    </div>
+                                    <div class="p-4 bg-rose-50 dark:bg-rose-900/10 rounded-xl border border-rose-100 dark:border-rose-900/20">
+                                        <h5 class="text-sm font-black text-rose-700 dark:text-rose-400 mb-2 uppercase tracking-tighter">${t('settings.maintenance.reset_wipe')}</h5>
+                                        <p class="text-[10px] text-rose-400 mb-4 leading-relaxed">${t('settings.maintenance.reset_wipe_help')}</p>
+                                        <button id="btn-factory-reset-wipe" class="w-full py-2 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-md">Détruire</button>
+                                    </div>
+                                </div>
+                                <div class="pt-6 border-t border-slate-50 dark:border-slate-800 flex justify-end">
+                                    <button id="btn-logout-settings" class="px-8 py-3 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-black transition-all">
+                                        <i class="fa-solid fa-right-from-bracket"></i> ${t('settings.maintenance.logout')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
-    `,
+        `;
+    },
     render: () => {
         import('../settings.js').then(m => m.renderSettings());
     },
     init: () => {
+        window.app.scrollToSettingsGroup = (groupId) => {
+            const el = document.getElementById(groupId);
+            if (el) {
+                const navHeight = 120;
+                const offset = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
+                window.scrollTo({ top: offset, behavior: 'smooth' });
+            }
+        };
+
+        // Sidebar active state on scroll
+        const groups = ['group-display', 'group-strategy', 'group-connectivity', 'group-security'];
+        const updateActiveLink = () => {
+            let current = '';
+            for (const id of groups) {
+                const el = document.getElementById(id);
+                if (el && el.getBoundingClientRect().top < 200) {
+                    current = id;
+                }
+            }
+            document.querySelectorAll('.settings-sidebar-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('onclick')?.includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        };
+        window.addEventListener('scroll', updateActiveLink);
+
         document.addEventListener('submit', (e) => {
             if (e.target.id === 'month-selector-config-form') {
                 import('../settings.js').then(m => m.handleSaveMonthSelectorConfig(e));
@@ -181,44 +373,5 @@ export default {
                 import('../data.js').then(m => m.importFullBackupCSV(e));
             }
         });
-
-        // Dropzone drag & drop logic
-        const initDropzone = () => {
-            const dropzone = document.getElementById('import-dropzone');
-            if (dropzone) {
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropzone.addEventListener(eventName, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }, false);
-                });
-
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropzone.addEventListener(eventName, () => dropzone.classList.add('border-blue-400', 'bg-white'), false);
-                });
-
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropzone.addEventListener(eventName, () => dropzone.classList.remove('border-blue-400', 'bg-white'), false);
-                });
-
-                dropzone.addEventListener('drop', (e) => {
-                    const dt = e.dataTransfer;
-                    const files = dt.files;
-                    if (files.length > 0) {
-                        const input = document.getElementById('full-backup-import-input');
-                        input.files = files;
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                }, false);
-            }
-        };
-
-        // Mutation observer to handle dynamic rendering of dropzone if hidden
-        const observer = new MutationObserver((mutations) => {
-            if (document.getElementById('import-dropzone')) {
-                initDropzone();
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
     }
 };

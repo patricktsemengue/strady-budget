@@ -47,7 +47,7 @@
     "recurring_edit_msg": "Souhaitez-vous appliquer cette modification à toutes les occurrences de ce flux récurrent ou seulement à celle-ci ?",
     "apply_all": "Toute la série",
     "apply_single": "Seulement ce flux",
-    "success_logout": "Vous avez été déconnecté",
+    "success_logout": "Vous avez été deconnecté",
     "error_logout": "Erreur lors de la déconnexion",
     "source": "Source",
     "destination": "Destination",
@@ -110,13 +110,43 @@
   },
   "settings": {
     "title": "Réglages Système",
+    "impact": {
+      "ui": "Affichage Only",
+      "data": "Impact Données",
+      "calc": "Impact Calculs"
+    },
+    "groups_settings": {
+      "display": "Affichage & Visibilité",
+      "strategy": "Objectifs de Sécurité",
+      "connectivity": "Valorisation & Taux",
+      "security": "Sécurité & Maintenance"
+    },
     "language": {
       "title": "Langue / Language",
-      "subtitle": "Sélectionnez votre langue de préférence."
+      "subtitle": "Sélectionnez votre langue de préférence.",
+      "why": "Bascule l'ensemble de l'interface entre le Français et l'Anglais."
+    },
+    "currency": {
+      "title_master": "Devise de l'Application",
+      "subtitle_master": "Toutes les transactions et comptes sont gérés dans cette unité.",
+      "why_master": "Avoir une devise unique permet d'agréger vos revenus et dépenses de façon cohérente sans distorsion de taux.",
+      "title_rates": "Taux de Change",
+      "subtitle_rates": "Définissez la valeur de vos devises par rapport à votre devise maître.",
+      "why_rates": "Permet de convertir vos actifs étrangers (Actions, Crypto) en valeur réelle dans votre devise principale.",
+      "col_master": "Devise Maître",
+      "col_target": "Devise Cible",
+      "col_value": "Valeur",
+      "col_verify": "Vérifier",
+      "label_app": "Devise Maître",
+      "add_rate": "Ajouter un taux",
+      "rate_help": "1 {{code}} vaut...",
+      "verify": "Vérifier",
+      "confirm_delete": "Supprimer ce taux ?"
     },
     "horizon": {
       "title": "Horizon de Pilotage",
       "subtitle": "Définissez la portée temporelle de votre vision financière.",
+      "why": "Détermine jusqu'où Strady projette vos flux récurrents pour calculer votre futur solde.",
       "preset_cfo": "Vision CFO (Projeté)",
       "preset_history": "Historique Complet",
       "preset_year": "Année en cours",
@@ -127,12 +157,14 @@
     "strategy": {
       "title": "Paramètres Stratégiques",
       "subtitle": "Configurez les cibles de votre tableau de bord.",
+      "why": "Ces réglages ajustent les indicateurs de santé (jauges) pour correspondre à votre profil de risque.",
       "ef_goal": "Objectif Fond de Sécurité",
       "ef_help": "Définit le multiplicateur utilisé pour la jauge 'Fond d'urgence' sur votre Pilotage. Généralement, on recommande 3 à 6 mois de dépenses courantes."
     },
     "vault": {
       "title": "Le Coffre-Fort",
       "subtitle": "Propriété et portabilité de vos données.",
+      "why": "Vous permet de garder une copie locale de vos données ou de les migrer vers un autre compte.",
       "backup": "Sauvegarder",
       "restore": "Restaurer",
       "import_dropzone": "Glissez votre fichier ici",
@@ -141,6 +173,7 @@
     "maintenance": {
       "title": "Maintenance Système",
       "subtitle": "Actions destructives et déconnexion.",
+      "why": "Outils de nettoyage profond si vous souhaitez repartir de zéro ou tester une nouvelle configuration.",
       "reset_starter": "Revenir au Starter Pack",
       "reset_starter_help": "Supprime vos données et réinstalle la configuration famille type (recommandé pour tester).",
       "reset_wipe": "Tout effacer",
@@ -155,8 +188,49 @@
       "horizon_invalid": "La date de début doit être antérieure à la date de fin.",
       "horizon_boundary": "La date de fin ne peut pas dépasser la limite fonctionnelle ({{boundary}}).",
       "horizon_saved": "Configuration du sélecteur enregistrée.",
-      "horizon_error": "Erreur lors de l'enregistrement de la configuration."
+      "horizon_error": "Erreur lors de l'enregistrement de la configuration.",
+      "currency_updated": "Paramètres monétaires mis à jour."
     }
+  },
+  "transactions": {
+    "title": "Flux & Prévisions",
+    "monthly_flows": "Flux du mois",
+    "new_flow": "Nouveau flux",
+    "search": "Rechercher...",
+    "sort_default": "Défaut",
+    "sort_date_desc": "Date (récent)",
+    "sort_account": "Compte",
+    "sort_type": "Type",
+    "sort_amount_desc": "Montant ↓",
+    "col_date": "Date",
+    "col_type": "Type",
+    "col_amount": "Montant",
+    "col_label_accounts": "Libellé / Comptes",
+    "col_actions": "Actions",
+    "col_var": "Var. (M-1)",
+    "col_m0": "Mois M",
+    "col_m1": "Mois M+1",
+    "col_m2": "Mois M+2",
+    "inflows": "Entrées",
+    "outflows": "Sorties",
+    "monthly_net": "Net du Mois",
+    "modal_add_title": "Ajouter une transaction",
+    "modal_edit_title": "Éditer la transaction",
+    "external_income": "Externe (Revenu)",
+    "external_expense": "Externe (Dépense)",
+    "error_empty_fields": "Veuillez remplir tous les champs obligatoires.",
+    "error_both_external": "La source et la destination ne peuvent pas être vides simultanément.",
+    "error_before_creation": "La transaction ne peut pas être créée avant la date de création du compte.",
+    "error_duplicate_recurring": "Cette série récurrente existe déjà.",
+    "error_duplicate_tx": "Cette transaction existe déjà.",
+    "success_recurring_updated": "Série récurrente mise à jour.",
+    "success_tx_updated": "Transaction mise à jour.",
+    "success_recurring_created": "Transaction récurrente créée !",
+    "success_tx_created": "Transaction ajoutée !",
+    "success_recurring_deleted": "Série supprimée.",
+    "success_tx_deleted": "Transaction supprimée.",
+    "error_delete": "Erreur de suppression",
+    "error_save": "Erreur de sauvegarde"
   },
   "education": {
     "badge": "Savoir, c'est pouvoir",
@@ -193,7 +267,7 @@
       },
       "ffi": {
         "title": "L'Indice de Souveraineté (FFI)",
-        "desc": "Le **Financial Independence Index** mesure votre liberté. Il représente le pourcentage de vos **Charges Fixes** (Loyer, Factures) couvert par vos **Revenus Passifs** (Dividendes, Loyers perçus). À 100%, vous êtes souverain : vos actifs paient vos factures vitales, même si vous cessez de travailler.",
+        "desc": "Le **Financial Independence Index** mesure votre liberté. Il représente le pourcentage de vos **Charges Fixes** (Loyer, Factures) couvert par vos **Revenus Passifs** (Loyers, Dividendes). À 100%, vous êtes souverain : vos actifs paient vos factures vitales, même si vous cessez de travailler.",
         "target": "Cible : 100%",
         "help": "Identifiez vos revenus comme 'Passifs' dans l'onglet Catégories pour activer ce KPI."
       }
@@ -347,6 +421,7 @@
     }
   },
   "nature": {
+    "ALL": "TOUT",
     "REVENU": "REVENUS",
     "FIXE": "CHARGES FIXES",
     "QUOTIDIEN": "VIE COURANTE",
@@ -368,5 +443,20 @@
     "close_month": "Êtes-vous sûr de vouloir clôturer le mois de {{month}} ? Cette action est irréversible.",
     "delete_cat": "Êtes-vous sûr de vouloir supprimer cette catégorie ?",
     "delete_acc": "Êtes-vous sûr de vouloir supprimer ce compte et TOUTES ses transactions associées ?"
+  },
+  "treasury": {
+    "title": "Ma Trésorerie",
+    "operational_liquidity": "Liquidité Opérationnelle",
+    "total_savings": "Total Épargne",
+    "total_investments": "Total Investissements",
+    "internal_transfer": "Virement interne",
+    "new_account": "Nouveau compte",
+    "adjust": "Ajuster",
+    "group_daily": "FLUX COURANTS",
+    "group_savings": "ÉPARGNE DE PRÉCAUTION",
+    "group_invest": "PORTEFEUILLES D'INVEST.",
+    "type_checking": "Compte Courant",
+    "type_savings": "Épargne",
+    "type_investment": "Investissement"
   }
 }

@@ -6,7 +6,7 @@ import {
     addLiabilityToFirestore, deleteLiabilityFromFirestore, addLiabilityValueToFirestore, deleteLiabilityValueFromFirestore
 } from './firestore-service.js';
 import { showNotification } from './ui.js';
-import { formatCurrency, generateDeterministicUUID } from './utils.js';
+import { formatCurrency, formatSpecificCurrency, convertToAppCurrency, generateDeterministicUUID } from './utils.js';
 
 export const renderWealthList = () => {
     const assetList = document.getElementById('wealth-assets-list');
@@ -38,7 +38,9 @@ export const renderWealthList = () => {
     // Render Assets
     assetList.innerHTML = state.assets.map(asset => {
         const latest = getLatestValue(asset.id, true);
-        totalAssets += latest.value;
+        const convertedValue = convertToAppCurrency(latest.value, asset.currency);
+        totalAssets += convertedValue;
+        
         return `
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:border-indigo-200 transition-all cursor-pointer group relative overflow-hidden" onclick="window.app.openWealthDetails('${asset.id}', 'asset')">
                 <div class="flex justify-between items-start">
@@ -48,12 +50,16 @@ export const renderWealthList = () => {
                         </div>
                         <div>
                             <h4 class="font-bold text-slate-800 leading-tight">${asset.name}</h4>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${t('wealth.asset_type_help')}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                ${asset.currency && asset.currency !== state.displayCurrency ? `${asset.currency} • ` : ''}${t('wealth.asset_type_help')}
+                            </p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-lg font-black text-slate-900 leading-none">${formatCurrency(latest.value)}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">${t('wealth.estimation_at', { date: latest.date })}</p>
+                        <p class="text-lg font-black text-slate-900 leading-none">${formatCurrency(convertedValue)}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">
+                            ${asset.currency && asset.currency !== state.displayCurrency ? `${formatSpecificCurrency(latest.value, asset.currency)} • ` : ''}${t('wealth.estimation_at', { date: latest.date })}
+                        </p>
                     </div>
                 </div>
                 <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -66,7 +72,9 @@ export const renderWealthList = () => {
     // Render Liabilities
     liabilityList.innerHTML = state.liabilities.map(liability => {
         const latest = getLatestValue(liability.id, false);
-        totalLiabilities += latest.value;
+        const convertedValue = convertToAppCurrency(latest.value, liability.currency);
+        totalLiabilities += convertedValue;
+
         return `
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:border-rose-200 transition-all cursor-pointer group relative overflow-hidden" onclick="window.app.openWealthDetails('${liability.id}', 'liability')">
                 <div class="flex justify-between items-start">
@@ -76,12 +84,16 @@ export const renderWealthList = () => {
                         </div>
                         <div>
                             <h4 class="font-bold text-slate-800 leading-tight">${liability.name}</h4>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${t('wealth.liability_type_help')}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                ${liability.currency && liability.currency !== state.displayCurrency ? `${liability.currency} • ` : ''}${t('wealth.liability_type_help')}
+                            </p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-lg font-black text-rose-600 leading-none">${formatCurrency(latest.value)}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">${t('wealth.balance_at', { date: latest.date })}</p>
+                        <p class="text-lg font-black text-rose-600 leading-none">${formatCurrency(convertedValue)}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">
+                            ${liability.currency && liability.currency !== state.displayCurrency ? `${formatSpecificCurrency(latest.value, liability.currency)} • ` : ''}${t('wealth.balance_at', { date: latest.date })}
+                        </p>
                     </div>
                 </div>
                 <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -124,6 +136,7 @@ export const handleAddWealthEntity = async (e) => {
     const value = parseFloat(document.getElementById('wealth-entity-value').value);
     const date = document.getElementById('wealth-entity-date').value;
     const quantity = parseFloat(document.getElementById('wealth-entity-quantity').value || 1);
+    const currency = document.getElementById('wealth-entity-currency').value;
 
     if (!name || isNaN(value) || !date) {
         showNotification(t('wealth.fill_required'), 'error');
@@ -133,10 +146,10 @@ export const handleAddWealthEntity = async (e) => {
     try {
         const id = await generateDeterministicUUID(name);
         if (type === 'asset') {
-            await addAssetToFirestore(currentUserId, { id, name });
+            await addAssetToFirestore(currentUserId, { id, name, currency });
             await addAssetValueToFirestore(currentUserId, { asset_id: id, value, date, quantity });
         } else {
-            await addLiabilityToFirestore(currentUserId, { id, name });
+            await addLiabilityToFirestore(currentUserId, { id, name, currency });
             await addLiabilityValueToFirestore(currentUserId, { liability_id: id, value, date, quantity });
         }
         
@@ -189,7 +202,7 @@ export const openWealthDetails = (id, type) => {
     historyList.innerHTML = values.map(v => `
         <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
             <div>
-                <p class="font-bold text-slate-700">${formatCurrency(v.value)}</p>
+                <p class="font-bold text-slate-700">${formatSpecificCurrency(v.value, entity.currency)}</p>
                 <p class="text-[10px] text-slate-400 font-bold">${v.date} ${type === 'asset' ? `• Qté: ${v.quantity}` : ''}</p>
             </div>
             <button onclick="window.app.deleteWealthValue('${v.id}')" class="p-2 text-slate-300 hover:text-rose-500 transition-colors">
@@ -223,7 +236,7 @@ export const handleAddValueSnapshot = async (e) => {
         }
         document.getElementById('wealth-snapshot-form').reset();
         document.getElementById('new-snapshot-date').value = new Date().toISOString().split('T')[0];
-        // Re-render modal list (handled by state change listener in main.js usually, but we call it manually for immediate feedback if needed)
+        // Re-render modal list
         openWealthDetails(currentWealthEntityId, currentWealthEntityType);
     } catch (err) {
         console.error(err);

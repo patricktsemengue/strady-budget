@@ -51,9 +51,13 @@
     "error_logout": "Error during logout",
     "source": "Source",
     "destination": "Destination",
-    "icon": "Icon"
+    "icon": "Icon",
+    "what_is_it": "What is it?",
+    "how_to_use": "How to use it?",
+    "understood": "Understood!"
   },
   "nature": {
+    "ALL": "ALL",
     "REVENU": "INCOME",
     "FIXE": "FIXED CHARGES",
     "QUOTIDIEN": "DAILY LIFE",
@@ -114,13 +118,43 @@
   },
   "settings": {
     "title": "System Settings",
+    "impact": {
+      "ui": "UI Only",
+      "data": "Data Impact",
+      "calc": "Calculation"
+    },
+    "groups_settings": {
+      "display": "Display & Visibility",
+      "strategy": "Security Goals",
+      "connectivity": "Valuation & Rates",
+      "security": "Security & Maintenance"
+    },
     "language": {
       "title": "Language",
-      "subtitle": "Select your preferred language."
+      "subtitle": "Select your preferred language.",
+      "why": "Switches the entire interface between French and English."
+    },
+    "currency": {
+      "title_master": "Application Currency",
+      "subtitle_master": "All transactions and accounts are managed in this unit.",
+      "why_master": "Having a single currency allows aggregating your income and expenses consistently without rate distortion.",
+      "title_rates": "Currency Rates",
+      "subtitle_rates": "Define the value of your currencies relative to your master currency.",
+      "why_rates": "Allows converting your foreign assets (Stocks, Crypto) into real value in your primary currency.",
+      "col_master": "Master Currency",
+      "col_target": "Target Currency",
+      "col_value": "Value",
+      "col_verify": "Verify",
+      "label_app": "Master Currency",
+      "add_rate": "Add Rate",
+      "rate_help": "1 {{code}} is worth...",
+      "verify": "Verify",
+      "confirm_delete": "Delete this rate?"
     },
     "horizon": {
       "title": "Steering Horizon",
       "subtitle": "Define the temporal scope of your financial vision.",
+      "why": "Determines how far Strady projects your recurring flows to calculate your future balance.",
       "preset_cfo": "CFO Vision (Projected)",
       "preset_history": "Full History",
       "preset_year": "Current Year",
@@ -131,12 +165,14 @@
     "strategy": {
       "title": "Strategic Parameters",
       "subtitle": "Configure your dashboard targets.",
+      "why": "These settings adjust the health indicators (gauges) to match your risk profile.",
       "ef_goal": "Emergency Fund Goal",
       "ef_help": "Defines the multiplier used for the 'Emergency Fund' gauge on your Steering. Generally, 3 to 6 months of current expenses are recommended."
     },
     "vault": {
       "title": "The Vault",
       "subtitle": "Ownership and portability of your data.",
+      "why": "Allows you to keep a local copy of your data or migrate them to another account.",
       "backup": "Backup",
       "restore": "Restore",
       "import_dropzone": "Drop your file here",
@@ -145,6 +181,7 @@
     "maintenance": {
       "title": "System Maintenance",
       "subtitle": "Destructive actions and logout.",
+      "why": "Deep cleaning tools if you want to start from scratch or test a new configuration.",
       "reset_starter": "Return to Starter Pack",
       "reset_starter_help": "Deletes your data and reinstalls the standard family configuration (recommended for testing).",
       "reset_wipe": "Clear Everything",
@@ -159,8 +196,49 @@
       "horizon_invalid": "Start date must be before end date.",
       "horizon_boundary": "End date cannot exceed the functional limit ({{boundary}}).",
       "horizon_saved": "Selector configuration saved.",
-      "horizon_error": "Error saving the configuration."
+      "horizon_error": "Error saving the configuration.",
+      "currency_updated": "Currency settings updated."
     }
+  },
+  "transactions": {
+    "title": "Cash-Flow & Forecast",
+    "monthly_flows": "Monthly Flows",
+    "new_flow": "New Flow",
+    "search": "Search...",
+    "sort_default": "Default",
+    "sort_date_desc": "Date (recent)",
+    "sort_account": "Account",
+    "sort_type": "Type",
+    "sort_amount_desc": "Amount ↓",
+    "col_date": "Date",
+    "col_type": "Type",
+    "col_amount": "Amount",
+    "col_label_accounts": "Label / Accounts",
+    "col_actions": "Actions",
+    "col_var": "Var. (M-1)",
+    "col_m0": "Month M",
+    "col_m1": "Month M+1",
+    "col_m2": "Month M+2",
+    "inflows": "Inflows",
+    "outflows": "Outflows",
+    "monthly_net": "Monthly Net",
+    "modal_add_title": "Add a transaction",
+    "modal_edit_title": "Edit the transaction",
+    "external_income": "External (Income)",
+    "external_expense": "External (Expense)",
+    "error_empty_fields": "Please fill in all required fields.",
+    "error_both_external": "Source and destination cannot both be empty.",
+    "error_before_creation": "Transaction cannot be created before account creation date.",
+    "error_duplicate_recurring": "This recurring series already exists.",
+    "error_duplicate_tx": "This transaction already exists.",
+    "success_recurring_updated": "Recurring series updated.",
+    "success_tx_updated": "Transaction updated.",
+    "success_recurring_created": "Recurring transaction created!",
+    "success_tx_created": "Transaction added!",
+    "success_recurring_deleted": "Series deleted.",
+    "success_tx_deleted": "Transaction deleted.",
+    "error_delete": "Error during deletion",
+    "error_save": "Error during save"
   },
   "education": {
     "badge": "Knowledge is power",
@@ -365,5 +443,20 @@
     "close_month": "Are you sure you want to close the month of {{month}}? This action is irreversible.",
     "delete_cat": "Are you sure you want to delete this category?",
     "delete_acc": "Are you sure you want to delete this account and ALL its associated transactions?"
+  },
+  "treasury": {
+    "title": "My Treasury",
+    "operational_liquidity": "Operational Liquidity",
+    "total_savings": "Total Savings",
+    "total_investments": "Total Investments",
+    "internal_transfer": "Internal Transfer",
+    "new_account": "New Account",
+    "adjust": "Adjust",
+    "group_daily": "DAILY FLOWS",
+    "group_savings": "EMERGENCY SAVINGS",
+    "group_invest": "INVESTMENT PORTFOLIOS",
+    "type_checking": "Checking Account",
+    "type_savings": "Savings",
+    "type_investment": "Investment"
   }
 }

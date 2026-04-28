@@ -41,6 +41,11 @@ export let state = {
         type: null // 'starter' or 'scratch'
     },
     emergencyFundMultiplier: 3,
+    displayCurrency: 'EUR',
+    exchangeRates: {
+        'USD': 1.0,
+        'BTC': 60000.0
+    },
     monthSelectorConfig: {
         startDate: `${currentYear}-01-01`,
         endDate: getFunctionalBoundaryDate(),

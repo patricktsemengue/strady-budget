@@ -5,6 +5,7 @@ import { currentUserId } from './storage.js';
 import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
 import { showNotification } from './ui.js';
 import { router } from './app-router.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 export const renderTransactions = () => {
     const container = document.getElementById('transactions-container');
@@ -12,47 +13,57 @@ export const renderTransactions = () => {
     
     if (!container && !tableBody) return;
 
-    // 1. Filtering Logic
+    // 1. Filtering & Context Setup
     const natureFilter = localStorage.getItem('strady_nature_filter') || 'ALL';
     const searchFilter = (document.getElementById('search-transactions')?.value || '').toLowerCase();
     const sortOrder = document.getElementById('sort-order')?.value || document.getElementById('sort-order-mobile')?.value || 'default';
 
-    const monthKey = getMonthKey(state.viewDate);
-    const monthData = state.records[monthKey] || { items: [], status: 'open' };
-    
-    // Previous Month Data for Variance
-    const prevDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() - 1, 1);
-    const prevMonthKey = getMonthKey(prevDate);
-    const prevMonthItems = state.records[prevMonthKey]?.items || [];
-    const prevTotals = {};
-    prevMonthItems.forEach(item => {
-        const txInfo = getTxDisplayInfo(item.source, item.destination);
-        const amount = txInfo.isIncome ? item.amount : (txInfo.isExpense ? -item.amount : 0);
-        prevTotals[item.Category] = (prevTotals[item.Category] || 0) + amount;
-    });
+    const m0Date = state.viewDate;
+    const m1Date = new Date(m0Date.getFullYear(), m0Date.getMonth() + 1, 1);
+    const m2Date = new Date(m0Date.getFullYear(), m0Date.getMonth() + 2, 1);
+    const prevDate = new Date(m0Date.getFullYear(), m0Date.getMonth() - 1, 1);
 
-    let filteredItems = [...monthData.items];
+    const keys = {
+        prev: getMonthKey(prevDate),
+        m0: getMonthKey(m0Date),
+        m1: getMonthKey(m1Date),
+        m2: getMonthKey(m2Date)
+    };
 
-    // Nature Filter
+    const data = {
+        prev: state.records[keys.prev]?.items || [],
+        m0: state.records[keys.m0]?.items || [],
+        m1: state.records[keys.m1]?.items || [],
+        m2: state.records[keys.m2]?.items || []
+    };
+
+    // Helper to get total for a category in a specific month
+    const getCatTotal = (items, catId) => {
+        return items
+            .filter(item => item.Category === catId)
+            .reduce((sum, item) => {
+                const txInfo = getTxDisplayInfo(item.source, item.destination);
+                return sum + (txInfo.isIncome ? item.amount : (txInfo.isExpense ? -item.amount : 0));
+            }, 0);
+    };
+
+    // Filter M0 items for the main display
+    let filteredItems = [...data.m0];
     if (natureFilter !== 'ALL') {
         filteredItems = filteredItems.filter(item => {
             const cat = state.categories.find(c => c.id === item.Category);
             return cat && cat.nature === natureFilter;
         });
     }
-
-    // Search Filter
     if (searchFilter) {
         filteredItems = filteredItems.filter(item => {
             const category = state.categories.find(c => c.id === item.Category);
-            const categoryLabel = category ? category.label.toLowerCase() : '';
-            return item.label.toLowerCase().includes(searchFilter) || categoryLabel.includes(searchFilter);
+            return item.label.toLowerCase().includes(searchFilter) || (category?.label.toLowerCase().includes(searchFilter));
         });
     }
 
-    // 2. Net Cash Flow Calculation (Real-time for filtered view)
-    let totalIn = 0;
-    let totalOut = 0;
+    // 2. Net Cash Flow (M0 only for the sticky bar)
+    let totalIn = 0, totalOut = 0;
     filteredItems.forEach(item => {
         const txInfo = getTxDisplayInfo(item.source, item.destination);
         if (txInfo.isIncome) totalIn += item.amount;
@@ -70,191 +81,181 @@ export const renderTransactions = () => {
         netBarTotal.className = `text-lg font-black italic ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
     }
 
-    // Update Nature Filter Pills active state
+    // Update Pills
     document.querySelectorAll('.nature-pill').forEach(pill => {
         const onclick = pill.getAttribute('onclick');
-        if (onclick && onclick.includes(`'${natureFilter}'`)) {
-            pill.classList.add('active', 'bg-slate-800', 'text-white');
-            pill.classList.remove('bg-white', 'text-slate-500', 'border');
-        } else {
-            pill.classList.remove('active', 'bg-slate-800', 'text-white');
-            pill.classList.add('bg-white', 'text-slate-500', 'border');
-        }
+        if (onclick?.includes(`'${natureFilter}'`)) pill.classList.add('active', 'bg-slate-800', 'text-white');
+        else pill.classList.remove('active', 'bg-slate-800', 'text-white');
     });
 
-    // 3. Grouping & Today Logic
+    // 3. Grouping
     const groups = {};
     filteredItems.forEach(item => {
         const catId = item.Category || 'uncategorized';
-        if (!groups[catId]) groups[catId] = { items: [], total: 0 };
+        if (!groups[catId]) groups[catId] = { items: [] };
         groups[catId].items.push(item);
-        
-        const txInfo = getTxDisplayInfo(item.source, item.destination);
-        const amount = txInfo.isIncome ? item.amount : (txInfo.isExpense ? -item.amount : 0);
-        groups[catId].total += amount;
     });
 
     const expandedStates = JSON.parse(localStorage.getItem('strady_expanded_categories') || '{}');
     const sortedGroupIds = Object.keys(groups).sort((a, b) => {
-        const catA = state.categories.find(c => c.id === a);
-        const catB = state.categories.find(c => c.id === b);
-        const orderA = catA ? (catA['index-order'] ?? 999) : 999;
-        const orderB = catB ? (catB['index-order'] ?? 999) : 999;
+        const orderA = state.categories.find(c => c.id === a)?.['index-order'] ?? 999;
+        const orderB = state.categories.find(c => c.id === b)?.['index-order'] ?? 999;
         return orderA - orderB;
     });
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const isCurrentMonth = state.viewDate.getMonth() === new Date().getMonth() && state.viewDate.getFullYear() === new Date().getFullYear();
+    const isCurrentMonth = m0Date.getMonth() === new Date().getMonth() && m0Date.getFullYear() === new Date().getFullYear();
 
-    const sortSubItems = (items) => {
-        return items.sort((a, b) => {
-            if (sortOrder === 'default' || sortOrder === 'date-desc') {
-                return new Date(b.date) - new Date(a.date);
-            }
-            switch (sortOrder) {
-                case 'account': return (a.source || '').localeCompare(b.source || '');
-                case 'amount-desc': return b.amount - a.amount;
-                default: return new Date(b.date) - new Date(a.date);
-            }
-        });
+    // Render Variance Logic
+    const renderVarianceUI = (catId, m0Total) => {
+        const prevTotal = getCatTotal(data.prev, catId);
+        const diff = m0Total - prevTotal;
+        if (Math.abs(diff) < 0.01) return `<span class="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">STABLE</span>`;
+        const color = diff > 0 ? 'text-emerald-600' : 'text-rose-600';
+        const icon = diff > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
+        return `<span class="${color} font-black text-[10px] flex items-center gap-1"><i class="fa-solid ${icon}"></i> ${formatCurrency(Math.abs(diff))}</span>`;
     };
 
-    const renderVariance = (catId, currentTotal) => {
-        const prevTotal = prevTotals[catId] || 0;
-        if (prevTotal === 0 && currentTotal === 0) return '';
-        const diff = currentTotal - prevTotal;
-        const colorClass = diff > 0 ? 'text-green-600' : (diff < 0 ? 'text-rose-600' : 'text-slate-400');
-        const icon = diff > 0 ? 'fa-arrow-trend-up' : (diff < 0 ? 'fa-arrow-trend-down' : 'fa-minus');
-        return `<span class="text-[10px] font-bold ${colorClass} flex items-center gap-1 ml-2"><i class="fa-solid ${icon}"></i> ${formatCurrency(Math.abs(diff))}</span>`;
-    };
+    // TABLE HEADER UPDATE (for multi-column)
+    const tableHeader = document.querySelector('#transactions-table thead');
+    if (tableHeader) {
+        const getMonthName = (date) => {
+            return new Intl.DateTimeFormat(getCurrentLanguage() === 'en' ? 'en-US' : 'fr-BE', { month: 'short' }).format(date).replace('.', '');
+        };
 
-    // Render Logic
-    if (container) {
-        let html = '';
-        sortedGroupIds.forEach(catId => {
-            const group = groups[catId];
-            const category = state.categories.find(c => c.id === catId);
-            const isExpanded = !!expandedStates[catId];
-            
-            const subItems = sortSubItems(group.items);
-            let itemsHtml = '';
-            let todayInserted = false;
-
-            subItems.forEach((item, idx) => {
-                // Insert TODAY line for mobile
-                if (isCurrentMonth && !todayInserted && item.date <= todayStr) {
-                    if (item.date < todayStr || (idx === 0 && item.date === todayStr)) {
-                        itemsHtml += `<li class="today-marker-mobile bg-indigo-600 text-white text-[9px] font-black uppercase py-1 text-center tracking-tighter">AUJOURD'HUI</li>`;
-                        todayInserted = true;
-                    }
-                }
-
-                const txInfo = getTxDisplayInfo(item.source, item.destination);
-                const isFuture = item.date > todayStr;
-
-                itemsHtml += `
-                    <li onclick="window.app.openMobileActions('${item.id}')" class="p-4 flex items-center justify-between gap-4 group transition-all active:bg-slate-100 cursor-pointer ${isFuture ? 'opacity-60 grayscale-[0.5]' : ''}">
-                        <div class="flex items-center gap-4 flex-grow truncate pl-4">
-                            <div class="flex-1 truncate">
-                                <p class="font-semibold text-slate-800 truncate">${item.label}</p>
-                                <p class="text-[10px] text-slate-400 font-medium truncate uppercase">${txInfo.src.name} → ${txInfo.dst.name}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="text-right">
-                                <p class="font-bold ${txInfo.ui.color}">${formatCurrency(item.amount)}</p>
-                                <p class="text-[9px] text-slate-400 font-bold uppercase">${formatDateStr(item.date)}</p>
-                            </div>
-                            <div class="text-slate-300">
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                            </div>
-                        </div>
-                    </li>`;
-            });
-
-            html += `
-                <div class="category-group">
-                    <div class="category-group-header flex items-center justify-between p-3 bg-slate-50 border-y border-slate-100 cursor-pointer" onclick="window.app.toggleCategoryGroup('${catId}')">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform chevron ${isExpanded ? 'rotate-180' : ''}"></i>
-                            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px]" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-tag'}"></i></div>
-                            <span class="text-sm font-bold text-slate-700">${category?.label || 'Sans catégorie'}</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span class="text-sm font-black text-slate-700">${formatCurrency(group.total)}</span>
-                            ${renderVariance(catId, group.total)}
-                        </div>
-                    </div>
-                    <ul class="divide-y divide-slate-50 ${isExpanded ? '' : 'hidden'}">${itemsHtml}</ul>
-                </div>`;
-        });
-        container.innerHTML = html || '<div class="p-20 text-center text-slate-400 italic">Aucun flux trouvé</div>';
+        tableHeader.innerHTML = `
+            <tr class="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                <th class="px-6 py-4">${t('transactions.col_date')}</th>
+                <th class="px-6 py-4">${t('transactions.col_type')}</th>
+                <th class="px-6 py-4">${t('transactions.col_label_accounts')}</th>
+                <th class="px-4 py-4 text-right bg-slate-100/50">${t('transactions.col_var')}</th>
+                <th class="px-6 py-4 text-right text-slate-900 bg-white shadow-sm ring-1 ring-slate-100">${getMonthName(m0Date)}</th>
+                <th class="px-4 py-4 text-right opacity-60">${getMonthName(m1Date)}</th>
+                <th class="px-4 py-4 text-right opacity-40">${getMonthName(m2Date)}</th>
+                <th class="px-6 py-4 text-center w-24">${t('transactions.col_actions')}</th>
+            </tr>
+        `;
     }
 
+    // 4. Render Table
     if (tableBody) {
         let html = '';
         sortedGroupIds.forEach(catId => {
-            const group = groups[catId];
             const category = state.categories.find(c => c.id === catId);
             const isExpanded = !!expandedStates[catId];
-            const subItems = sortSubItems(group.items);
+            const m0Total = getCatTotal(data.m0, catId);
+            const m1Total = getCatTotal(data.m1, catId);
+            const m2Total = getCatTotal(data.m2, catId);
 
-            let todayInserted = false;
-            let groupHtml = `
+            html += `
                 <tr class="bg-slate-50/80 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.toggleCategoryGroup('${catId}')">
-                    <td colspan="5" class="px-6 py-3 border-y border-slate-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform chevron ${isExpanded ? '' : 'rotate-[-90deg]'}"></i>
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-tag'}"></i></div>
-                                <span class="font-bold text-slate-800">${category?.label || 'Sans catégorie'}</span>
-                            </div>
-                            <div class="flex items-center gap-6">
-                                ${renderVariance(catId, group.total)}
-                                <span class="text-lg font-black text-slate-700">${formatCurrency(group.total)}</span>
-                            </div>
+                    <td colspan="3" class="px-6 py-3 border-y border-slate-100">
+                        <div class="flex items-center gap-4">
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform chevron ${isExpanded ? '' : 'rotate-[-90deg]'}"></i>
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm" style="background-color: ${category?.color || '#94a3b8'}"><i class="fa-solid ${category?.icon || 'fa-tag'}"></i></div>
+                            <span class="font-bold text-slate-800">${category?.label || 'Sans catégorie'}</span>
                         </div>
                     </td>
+                    <td class="px-4 py-3 border-y border-slate-100 text-right bg-slate-100/30">${renderVarianceUI(catId, m0Total)}</td>
+                    <td class="px-6 py-3 border-y border-slate-100 text-right bg-white"><span class="text-base font-black text-slate-900">${formatCurrency(m0Total)}</span></td>
+                    <td class="px-4 py-3 border-y border-slate-100 text-right opacity-60"><span class="text-sm font-bold text-slate-600">${formatCurrency(m1Total)}</span></td>
+                    <td class="px-4 py-3 border-y border-slate-100 text-right opacity-40"><span class="text-xs font-bold text-slate-500">${formatCurrency(m2Total)}</span></td>
+                    <td class="px-6 py-3 border-y border-slate-100"></td>
                 </tr>
             `;
 
-            subItems.forEach((item, idx) => {
-                // TODAY marker for Desktop
-                if (isCurrentMonth && !todayInserted && item.date <= todayStr) {
-                    if (item.date < todayStr || (idx === 0 && item.date === todayStr)) {
-                        groupHtml += `<tr class="${isExpanded ? '' : 'hidden'} today-row-desktop"><td colspan="5" class="bg-indigo-600 text-[10px] font-black text-white py-1 px-6 tracking-widest text-center">AUJOURD'HUI</td></tr>`;
+            if (isExpanded) {
+                const subItems = groups[catId].items.sort((a, b) => new Date(b.date) - new Date(a.date));
+                let todayInserted = false;
+                subItems.forEach((item, idx) => {
+                    if (isCurrentMonth && !todayInserted && item.date <= todayStr) {
+                        html += `<tr class="today-row-desktop"><td colspan="8" class="bg-indigo-600 text-[10px] font-black text-white py-1 px-6 tracking-widest text-center">AUJOURD'HUI</td></tr>`;
                         todayInserted = true;
                     }
-                }
 
-                const txInfo = getTxDisplayInfo(item.source, item.destination);
-                const isFuture = item.date > todayStr;
+                    const txInfo = getTxDisplayInfo(item.source, item.destination);
+                    const isFuture = item.date > todayStr;
+                    
+                    // Horizon check for the item (only show recurring pattern if exists in future)
+                    const getFutureAmount = (items, modelId, label) => {
+                        const match = modelId 
+                            ? items.find(i => i.Model === modelId)
+                            : items.find(i => i.label === label);
+                        return match ? formatCurrency(match.amount) : '—';
+                    };
 
-                groupHtml += `
-                    <tr class="group hover:bg-slate-50/50 transition-colors ${isExpanded ? '' : 'hidden'} ${isFuture ? 'opacity-60' : ''} border-l-4" style="border-left-color: ${category?.color || '#cbd5e1'}">
-                        <td class="px-6 py-4 text-xs font-bold text-slate-400 whitespace-nowrap">${formatDateStr(item.date)}</td>
-                        <td class="px-6 py-4">
-                            <span class="text-[10px] font-black px-2 py-1 rounded-full ${txInfo.ui.color} bg-white border border-current">${txInfo.isIncome ? 'REVENU' : 'DÉPENSE'}</span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <span class="font-black ${txInfo.ui.color}">${formatCurrency(item.amount)}</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="font-bold text-slate-800 text-sm">${item.label}</div>
-                            <div class="text-[10px] text-slate-400 font-medium uppercase">${txInfo.src.name} → ${txInfo.dst.name}</div>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
-                                <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-            });
-
-            html += groupHtml;
+                    html += `
+                        <tr class="group hover:bg-slate-50/30 transition-colors ${isFuture ? 'opacity-60' : ''} border-l-4" style="border-left-color: ${category?.color || '#cbd5e1'}">
+                            <td class="px-6 py-4 text-xs font-bold text-slate-400 whitespace-nowrap">${formatDateStr(item.date)}</td>
+                            <td class="px-6 py-4">
+                                <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${txInfo.ui.color} bg-white border border-current uppercase">${txInfo.isIncome ? 'REVENU' : 'DÉPENSE'}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-slate-800 text-sm">${item.label}</div>
+                                <div class="text-[9px] text-slate-400 font-bold uppercase">${txInfo.src.name} → ${txInfo.dst.name}</div>
+                            </td>
+                            <td class="px-4 py-4 text-right bg-slate-50/20">—</td>
+                            <td class="px-6 py-4 text-right bg-white shadow-sm ring-1 ring-slate-50"><span class="font-black ${txInfo.ui.color}">${formatCurrency(item.amount)}</span></td>
+                            <td class="px-4 py-4 text-right opacity-60 text-xs font-bold text-slate-500">${getFutureAmount(data.m1, item.Model, item.label)}</td>
+                            <td class="px-4 py-4 text-right opacity-30 text-xs font-bold text-slate-400">${getFutureAmount(data.m2, item.Model, item.label)}</td>
+                            <td class="px-6 py-4 text-center">
+                                <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                                    <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+            }
         });
-        tableBody.innerHTML = html || '<tr><td colspan="5" class="p-20 text-center text-slate-400 italic">Aucun flux trouvé</td></tr>';
+        tableBody.innerHTML = html || '<tr><td colspan="8" class="p-20 text-center text-slate-400 italic">Aucun flux trouvé</td></tr>';
+    }
+
+    // 5. Render Mobile View (Keep it simple, hide horizon columns)
+    if (container) {
+        let mobileHtml = '';
+        sortedGroupIds.forEach(catId => {
+            const category = state.categories.find(c => c.id === catId);
+            const isExpanded = !!expandedStates[catId];
+            const m0Total = getCatTotal(data.m0, catId);
+
+            let itemsHtml = '';
+            if (isExpanded) {
+                const subItems = groups[catId].items.sort((a, b) => new Date(b.date) - new Date(a.date));
+                let todayInserted = false;
+                subItems.forEach((item, idx) => {
+                    if (isCurrentMonth && !todayInserted && item.date <= todayStr) {
+                        itemsHtml += `<li class="bg-indigo-600 text-white text-[9px] font-black uppercase py-1 text-center tracking-tighter">AUJOURD'HUI</li>`;
+                        todayInserted = true;
+                    }
+                    const txInfo = getTxDisplayInfo(item.source, item.destination);
+                    itemsHtml += `
+                        <li onclick="window.app.openMobileActions('${item.id}')" class="p-4 flex items-center justify-between border-b border-slate-50 last:border-0">
+                            <div class="truncate pr-4">
+                                <p class="font-bold text-slate-800 truncate text-sm">${item.label}</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${formatDateStr(item.date)} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
+                            </div>
+                            <span class="font-black ${txInfo.ui.color}">${formatCurrency(item.amount)}</span>
+                        </li>`;
+                });
+            }
+
+            mobileHtml += `
+                <div class="border-b border-slate-100 last:border-0">
+                    <div class="flex items-center justify-between p-4 bg-slate-50/50" onclick="window.app.toggleCategoryGroup('${catId}')">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}"></i>
+                            <span class="text-sm font-bold text-slate-700">${category?.label || 'Sans catégorie'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-900">${formatCurrency(m0Total)}</span>
+                            ${renderVarianceUI(catId, m0Total)}
+                        </div>
+                    </div>
+                    <ul class="${isExpanded ? '' : 'hidden'}">${itemsHtml}</ul>
+                </div>`;
+        });
+        container.innerHTML = mobileHtml || '<div class="p-12 text-center text-slate-400 italic">Aucun flux trouvé</div>';
     }
 };
 

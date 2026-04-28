@@ -1,13 +1,14 @@
 import { state } from './state.js';
 import { generateId, getMonthKey, generateDeterministicUUID, getTxDisplayInfo } from './utils.js';
 import { currentUserId } from './storage.js';
-import { t } from './i18n.js';
+import { t, getCurrentLanguage } from './i18n.js';
 import { 
     addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore,
     addTransactionToFirestore
 } from './firestore-service.js';
 import { showNotification } from './ui.js';
 import { calculateBalances } from './calculations.js';
+import { formatCurrency } from './utils.js';
 
 export const openAddAccountDrawer = () => {
     document.getElementById('add-account-form').reset();
@@ -17,7 +18,7 @@ export const openAddAccountDrawer = () => {
 
 export const closeAddAccountDrawer = () => {
     document.getElementById('drawer-overlay').classList.remove('active');
-    document.getElementById('account-add-drawer').classList.remove('active');
+    document.getElementById('account-add-drawer').classList.add('active');
 };
 
 export const handleAddAccount = async (e) => {
@@ -189,8 +190,6 @@ export const closeAccountActions = () => {
     }, 300);
 };
 
-export const formatCurrency = (amount) => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(amount);
-
 /**
  * Renders the grouped list of accounts in the Trésorerie view.
  */
@@ -199,50 +198,93 @@ export const renderAccountsList = () => {
     const summary = document.getElementById('treasury-summary');
     if (!list || !state.accounts) return;
 
-    const balances = calculateBalances(state.viewDate);
+    // 1. Context setup for 3-month horizon
+    const m0Date = state.viewDate;
+    const m1Date = new Date(m0Date.getFullYear(), m0Date.getMonth() + 1, 1);
+    const m2Date = new Date(m0Date.getFullYear(), m0Date.getMonth() + 2, 1);
+    const prevDate = new Date(m0Date.getFullYear(), m0Date.getMonth() - 1, 1);
+
+    const getMonthName = (date) => {
+        return new Intl.DateTimeFormat(getCurrentLanguage() === 'en' ? 'en-US' : 'fr-BE', { month: 'short' }).format(date).replace('.', '');
+    };
+
+    // Update dynamic headers in DOM if present
+    const headerContainer = document.querySelector('#view-accounts .hidden.md\\:grid');
+    if (headerContainer) {
+        headerContainer.innerHTML = `
+            <div class="col-span-4">${t('common.label')}</div>
+            <div class="col-span-2 text-right">${t('transactions.col_var')}</div>
+            <div class="col-span-2 text-right text-slate-900 font-black">${getMonthName(m0Date)}</div>
+            <div class="col-span-2 text-right opacity-60">${getMonthName(m1Date)}</div>
+            <div class="col-span-2 text-right opacity-40">${getMonthName(m2Date)}</div>
+        `;
+    }
+
+    const balM0 = calculateBalances(m0Date);
+    const balM1 = calculateBalances(m1Date);
+    const balM2 = calculateBalances(m2Date);
+    const balPrev = calculateBalances(prevDate);
 
     // Grouping Logic
     const groups = {
-        'FLUX COURANTS': [],
-        'ÉPARGNE DE PRÉCAUTION': [],
-        'PORTEFEUILLES D\'INVEST.': []
+        'daily': [],
+        'savings': [],
+        'invest': []
     };
 
-    let totalLiquid = 0;
-    let totalSavings = 0;
-    let totalInvest = 0;
+    let totalLiquid = 0, totalSavings = 0, totalInvest = 0;
 
     state.accounts.forEach(acc => {
-        const bal = balances[acc.id] || 0;
+        const b0 = balM0[acc.id] || 0;
+        const b1 = balM1[acc.id] || 0;
+        const b2 = balM2[acc.id] || 0;
+        const bp = balPrev[acc.id] || 0;
+
+        const accData = { ...acc, b0, b1, b2, bp };
+
         if (acc.isInvestmentAccount) {
-            groups['PORTEFEUILLES D\'INVEST.'].push({ ...acc, balance: bal });
-            totalInvest += bal;
+            groups['invest'].push(accData);
+            totalInvest += b0;
         } else if (acc.isSaving) {
-            groups['ÉPARGNE DE PRÉCAUTION'].push({ ...acc, balance: bal });
-            totalSavings += bal;
+            groups['savings'].push(accData);
+            totalSavings += b0;
         } else {
-            groups['FLUX COURANTS'].push({ ...acc, balance: bal });
-            totalLiquid += bal;
+            groups['daily'].push(accData);
+            totalLiquid += b0;
         }
     });
 
-    // Render Summary
+    // Render Summary (M0 only)
     if (summary) {
         summary.innerHTML = `
             <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Liquidité Opérationnelle</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">${t('treasury.operational_liquidity')}</p>
                 <p class="text-xl font-black text-slate-800">${formatCurrency(totalLiquid)}</p>
             </div>
             <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Épargne</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">${t('treasury.total_savings')}</p>
                 <p class="text-xl font-black text-blue-600">${formatCurrency(totalSavings)}</p>
             </div>
             <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Investissements</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1">${t('treasury.total_investments')}</p>
                 <p class="text-xl font-black text-indigo-600">${formatCurrency(totalInvest)}</p>
             </div>
         `;
     }
+
+    const groupLabels = {
+        'daily': t('treasury.group_daily'),
+        'savings': t('treasury.group_savings'),
+        'invest': t('treasury.group_invest')
+    };
+
+    const renderVariance = (current, previous) => {
+        const diff = current - previous;
+        if (Math.abs(diff) < 0.01) return `<span class="text-[9px] font-bold text-slate-300 uppercase">STABLE</span>`;
+        const color = diff > 0 ? 'text-emerald-600' : 'text-rose-600';
+        const icon = diff > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
+        return `<span class="${color} font-black text-[10px] flex items-center justify-end gap-1"><i class="fa-solid ${icon}"></i> ${formatCurrency(Math.abs(diff))}</span>`;
+    };
 
     // Render Groups
     const renderGroup = (label, accounts) => {
@@ -250,9 +292,12 @@ export const renderAccountsList = () => {
         
         const itemsHtml = accounts.map(acc => {
             const isDirty = acc.balanceDirty !== false;
+            const typeLabel = acc.isSaving ? t('treasury.type_savings') : (acc.isInvestmentAccount ? t('treasury.type_investment') : t('treasury.type_checking'));
+            
             return `
-                <div class="bg-white rounded-xl border border-slate-100 p-4 hover:border-indigo-200 transition-all flex items-center justify-between group shadow-sm">
-                    <div class="flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
+                <!-- Desktop Table Row -->
+                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-white rounded-xl border border-slate-100 hover:border-indigo-200 transition-all items-center group shadow-sm">
+                    <div class="col-span-4 flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
                         <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                             <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : (acc.isInvestmentAccount ? 'fa-money-bill-trend-up' : 'fa-wallet')}"></i>
                         </div>
@@ -261,17 +306,37 @@ export const renderAccountsList = () => {
                                 ${acc.name}
                                 ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs"></i>' : ''}
                             </div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase">${acc.isSaving ? 'Épargne' : (acc.isInvestmentAccount ? 'Investissement' : 'Compte Courant')}</div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase">${typeLabel}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-6">
-                        <div class="text-right">
-                            <div class="text-lg font-black ${acc.balance >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.balance)}</div>
-                            <div class="text-[10px] text-slate-400 font-medium">Solde calculé</div>
+                    <div class="col-span-2 text-right bg-slate-50/30 py-2 rounded-lg pr-2">
+                        ${renderVariance(acc.b0, acc.bp)}
+                    </div>
+                    <div class="col-span-2 text-right bg-white shadow-sm ring-1 ring-slate-100 py-2 rounded-lg pr-2">
+                        <span class="text-base font-black ${acc.b0 >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.b0)}</span>
+                    </div>
+                    <div class="col-span-2 text-right opacity-60">
+                        <span class="text-sm font-bold text-slate-600">${formatCurrency(acc.b1)}</span>
+                    </div>
+                    <div class="col-span-2 text-right opacity-40">
+                        <span class="text-xs font-bold text-slate-500">${formatCurrency(acc.b2)}</span>
+                    </div>
+                </div>
+
+                <!-- Mobile Card (Keep it simple) -->
+                <div class="md:hidden bg-white rounded-xl border border-slate-100 p-4 flex items-center justify-between group shadow-sm">
+                    <div class="flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
+                        <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center">
+                            <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : (acc.isInvestmentAccount ? 'fa-money-bill-trend-up' : 'fa-wallet')}"></i>
                         </div>
-                        <button onclick="window.app.openAdjustmentModal('${acc.id}')" class="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                            Ajuster
-                        </button>
+                        <div>
+                            <div class="font-bold text-slate-800">${acc.name}</div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">${typeLabel}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-black ${acc.b0 >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.b0)}</div>
+                        ${renderVariance(acc.b0, acc.bp)}
                     </div>
                 </div>
             `;
@@ -280,12 +345,12 @@ export const renderAccountsList = () => {
         return `
             <div class="space-y-3">
                 <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">${label}</h3>
-                <div class="grid grid-cols-1 gap-3">${itemsHtml}</div>
+                <div class="flex flex-col gap-3">${itemsHtml}</div>
             </div>
         `;
     };
 
-    list.innerHTML = Object.entries(groups).map(([label, accounts]) => renderGroup(label, accounts)).join('');
+    list.innerHTML = Object.entries(groups).map(([id, accounts]) => renderGroup(groupLabels[id], accounts)).join('');
 };
 
 // --- Adjustment Logic ---
@@ -338,7 +403,7 @@ export const handleAdjustmentSubmit = async (e) => {
     const amount = Math.abs(diff);
 
     const txData = {
-        label: "Ajustement de trésorerie",
+        label: t('treasury.adjust'),
         amount: amount,
         date: date,
         Category: catId,
@@ -375,7 +440,7 @@ export const openTransferModal = () => {
 
     document.getElementById('transfer-amount').value = '';
     document.getElementById('transfer-date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('transfer-label').value = "Virement interne";
+    document.getElementById('transfer-label').value = t('treasury.internal_transfer');
 
     document.getElementById('transfer-modal').classList.remove('hidden');
 };
@@ -390,7 +455,7 @@ export const handleTransferSubmit = async (e) => {
     const dstId = document.getElementById('transfer-destination').value;
     const amount = parseFloat(document.getElementById('transfer-amount').value);
     const date = document.getElementById('transfer-date').value;
-    const label = document.getElementById('transfer-label').value || "Virement interne";
+    const label = document.getElementById('transfer-label').value || t('treasury.internal_transfer');
 
     if (srcId === dstId) {
         showNotification("Les comptes source et destination doivent être différents.", "error");

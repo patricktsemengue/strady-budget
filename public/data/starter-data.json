@@ -13,7 +13,7 @@
     { "id": "cat_leisure", "label": "Loisirs & Sorties", "nature": "LOISIR", "icon": "fa-gamepad", "color": "#8b5cf6" }
   ],
   "accounts": [
-    { "id": "acc_joint", "name": "Compte Joint (Ménage)", "initialBalance": 2500, "isSaving": false, "day": 1 },
+    { "id": "acc_joint", "name": "Compte Principal (Ménage)", "initialBalance": 2500, "isSaving": false, "day": 1 },
     { "id": "acc_savings", "name": "Épargne de Sécurité", "initialBalance": 8500, "isSaving": true, "day": 1 },
     { "id": "acc_invest", "name": "Portefeuille Actions", "initialBalance": 2500, "isInvestmentAccount": true, "day": 1 }
   ],

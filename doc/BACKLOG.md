@@ -64,3 +64,16 @@ This document outlines the strategic roadmap to evolve **Strady Budget** from a 
 | FAM-01 | **Contributor Reports** | Filter dashboard views by `member_id` to compare individual contributions to the family pot. | TO-DO |
 | FAM-02 | **Budget vs. Actual by Member** | Compare planned spending against actuals on a per-person basis. | TO-DO |
 | FAM-03 | **Inheritance/Succession View** | Specialized report showing asset distribution and beneficiary designations (Meta-data only). | TO-DO |
+
+## 7. Zero-Friction & "Ready-to-drive" Experience
+*Anticipating user intent and automating "mechanical" steps.*
+
+| ID | Requirement | Description | Status |
+|:---|:---|:---|:---|
+| RTD-01 | **Inline Dependency Upsert** | Create missing Categories or Accounts directly within the Transaction modal (dropdown "+ Create") without leaving the workflow. | TO-DO |
+| RTD-02 | **Magic Input (NLP)** | Single smart text field to parse "Amount + Label + Date" (e.g., "50 Restaurant yesterday") and auto-create/assign entities. | TO-DO |
+| RTD-03 | **Workflow Chaining** | After creating an Account, suggest immediate "Initialize Balance" or "New Transaction" with context pre-locked. | TO-DO |
+| RTD-04 | **Smart Account Discovery** | Suggest account creation if a user types an unknown target in a Transfer/Source field. | TO-DO |
+| RTD-05 | **Heuristic Auto-Categorization** | Record and apply label-to-category mappings (e.g., "Shell" always = "Fuel") to pre-fill 90% of manual entries. | TO-DO |
+| RTD-06 | **Predictive Intent Mapping** | Detect keywords like "To" or "From" in labels to automatically toggle between Expense and Transfer modes. | TO-DO |
+| RTD-07 | **"One-Click" Action Feed** | Dashboard cards for "Due Today" recurring items allowing confirmation with zero navigation. | TO-DO |

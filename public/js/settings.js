@@ -1,15 +1,56 @@
 import { renderCategoriesList } from './categories.js';
 import { renderAccountsList } from './accounts.js';
-import { state, getFunctionalBoundaryDate } from './state.js';
+import { state, getFunctionalBoundaryDate, updateState } from './state.js';
 import { updateSettingsInFirestore } from './firestore-service.js';
 import { currentUserId } from './storage.js';
 import { showNotification } from './ui.js';
 import { t } from './i18n.js';
+import { router } from './app-router.js';
 
 export const renderSettings = () => {
     console.log("Rendering Strategic Settings View");
     renderMonthSelectorConfig();
     updateEFMultiplierUI();
+};
+
+export const updateCurrencySettings = async (updates) => {
+    try {
+        // Update local state first
+        updateState(updates);
+        
+        // Persist to Firestore
+        const currencyData = {
+            displayCurrency: state.displayCurrency,
+            exchangeRates: state.exchangeRates || {}
+        };
+        
+        await updateSettingsInFirestore(currentUserId, 'currency', currencyData);
+        showNotification(t('settings.notifications.currency_updated'));
+        router.render();
+    } catch (err) {
+        console.error(err);
+        showNotification(t('common.error'), 'error');
+    }
+};
+
+export const addExchangeRate = async (code) => {
+    if (!code) return;
+    const rates = { ...(state.exchangeRates || {}) };
+    rates[code] = 1.0;
+    await updateCurrencySettings({ exchangeRates: rates });
+};
+
+export const updateExchangeRate = async (code, value) => {
+    const rates = { ...(state.exchangeRates || {}) };
+    rates[code] = parseFloat(value) || 0;
+    await updateCurrencySettings({ exchangeRates: rates });
+};
+
+export const deleteExchangeRate = async (code) => {
+    if (!confirm(t('settings.currency.confirm_delete'))) return;
+    const rates = { ...(state.exchangeRates || {}) };
+    delete rates[code];
+    await updateCurrencySettings({ exchangeRates: rates });
 };
 
 export const renderMonthSelectorConfig = () => {

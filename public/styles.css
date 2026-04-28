@@ -1,10 +1,24 @@
 /* Add any custom styles here */
+body {
+    background-color: #f8fafc;
+    color: #0f172a; /* Darker slate for primary text */
+}
+
 .text-success {
-    color: #10b981;
+    color: #059669; /* emerald-600 */
 }
 
 .text-danger {
-    color: #ef4444;
+    color: #dc2626; /* rose-600 equivalent */
+}
+
+/* Secondary text legibility */
+.text-slate-400 {
+    color: #64748b !important; /* slate-500 for better contrast */
+}
+
+.text-slate-500 {
+    color: #475569 !important; /* slate-600 */
 }
 
 .logo {
@@ -14,7 +28,7 @@
     cursor: pointer;
     user-select: none;
     transition: transform 0.2s ease-in-out;
-    color: #003722;
+    color: #0f172a;
 }
 
 .logo:hover {
@@ -254,4 +268,141 @@
     color: #4f46e5;
     background-color: rgba(255, 255, 255, 0.5);
 }
+
+/* Dark Mode Overrides */
+.dark {
+    color-scheme: dark;
+}
+
+.dark body {
+    background-color: #000000;
+}
+
+.dark .logo {
+    color: #f8fafc;
+}
+
+/* Subtle border for navigation */
+.dark nav {
+    background-color: #020617; /* Deep slate instead of pure black for subtle separation */
+    border-bottom: 1px solid rgba(30, 41, 59, 0.7);
+}
+
+.dark .bottom-drawer {
+    background-color: #020617;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.dark .drawer-handle {
+    background-color: #1e293b;
+}
+
+.dark .category-group-header:hover {
+    background-color: #0f172a;
+}
+
+.dark .help-card {
+    background: linear-gradient(135deg, #020617 0%, #000000 100%);
+    border-color: rgba(51, 65, 85, 0.5);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+.dark .help-badge {
+    background: rgba(30, 27, 75, 0.8);
+    color: #a5b4fc;
+    border: 1px solid rgba(67, 56, 202, 0.3);
+}
+
+.dark .horizon-wrapper::-webkit-scrollbar-thumb {
+    background-color: #1e293b;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #1e293b;
+}
+
+.dark #lang-fr:not(.bg-white):hover, .dark #lang-en:not(.bg-white):hover,
+.dark #lang-fr-mobile:not(.bg-white):hover, .dark #lang-en-mobile:not(.bg-white):hover {
+    background-color: rgba(30, 41, 59, 0.5);
+}
+
+/* Modal and Input dark mode refinements */
+.dark input, .dark select, .dark textarea {
+    background-color: #020617 !important;
+    border-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+.dark input:focus, .dark select:focus {
+    border-color: #4f46e5 !important;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.dark .bg-white {
+    background-color: #020617;
+}
+
+.dark .bg-slate-50 {
+    background-color: #000000;
+}
+
+.dark .text-slate-600 {
+    color: #94a3b8;
+}
+
+.dark .text-slate-800 {
+    color: #f1f5f9;
+}
+
+.dark .border-slate-200 {
+    border-color: rgba(30, 41, 59, 0.7);
+}
+
+.dark .border-slate-100 {
+    border-color: rgba(30, 41, 59, 0.4);
+}
+
+/* Settings Enhanced UI Styles */
+.settings-sidebar-link.active {
+    background-color: #4f46e5;
+    color: white !important;
+}
+
+.dark .settings-sidebar-link.active {
+    background-color: #6366f1;
+}
+
+.impact-badge {
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 8px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.impact-ui { background: #f1f5f9; color: #475569; }
+.dark .impact-ui { background: #1e293b; color: #94a3b8; }
+
+.impact-data { background: #fff7ed; color: #c2410c; }
+.dark .impact-data { background: #431407; color: #fb923c; }
+
+.impact-calc { background: #ecfdf5; color: #047857; }
+.dark .impact-calc { background: #064e3b; color: #34d399; }
+
+.settings-card {
+    transition: all 0.2s ease;
+    height: auto !important; /* Fit content */
+}
+
+.settings-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dark .settings-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
 

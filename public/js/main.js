@@ -102,24 +102,36 @@ const init = async () => {
             await initI18n();
             // Translate static parts of index.html
             translatePage();
-            
+
             // Set active language button
             const currentLng = getCurrentLanguage();
-            const btnFr = document.getElementById('lang-fr');
-            const btnEn = document.getElementById('lang-en');
-            if (btnFr && btnEn) {
-                if (currentLng === 'fr') {
-                    btnFr.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
-                    btnEn.classList.add('text-slate-400');
-                } else {
-                    btnEn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
-                    btnFr.classList.add('text-slate-400');
+            ['', '-mobile'].forEach(suffix => {
+                const btnFr = document.getElementById(`lang-fr${suffix}`);
+                const btnEn = document.getElementById(`lang-en${suffix}`);
+                if (btnFr && btnEn) {
+                    if (currentLng === 'fr') {
+                        btnFr.classList.add('bg-white', 'shadow-sm', 'text-indigo-600', 'dark:bg-slate-800', 'dark:text-indigo-400');
+                        btnEn.classList.add('text-slate-400', 'dark:text-slate-500');
+                    } else {
+                        btnEn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600', 'dark:bg-slate-800', 'dark:text-indigo-400');
+                        btnFr.classList.add('text-slate-400', 'dark:text-slate-500');
+                    }
                 }
-            }
+            });
         } catch (i18nErr) {
             console.warn('[Main] i18n initialization failed, using fallbacks:', i18nErr);
         }
 
+        // Initialize Theme
+        const savedTheme = localStorage.getItem('strady_theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        updateThemeToggleIcons(isDark);
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -200,7 +212,9 @@ const init = async () => {
                 accountBalances: newData.accountBalances || {},
                 onboarding: newData.onboarding || null,
                 emergencyFundMultiplier: newData.emergencyFundMultiplier || 3,
-                monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig
+                monthSelectorConfig: newData.monthSelectorConfig || state.monthSelectorConfig,
+                displayCurrency: newData.displayCurrency || 'EUR',
+                exchangeRates: newData.exchangeRates || {}
             });
             if (newData.categories && newData.categories.length === 0) updateState({ categories: defaultCategories });
             rebuildRecords(newData.transactions || [], newData.months || {});
@@ -296,6 +310,19 @@ const setViewDate = (date) => {
     router.render();
 };
 
+const updateThemeToggleIcons = (isDark) => {
+    const icons = document.querySelectorAll('#theme-toggle i, .theme-toggle-mobile i');
+    icons.forEach(icon => {
+        icon.className = isDark ? 'fa-solid fa-sun text-xs' : 'fa-solid fa-moon text-xs';
+    });
+};
+
+const toggleTheme = () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('strady_theme', isDark ? 'dark' : 'light');
+    updateThemeToggleIcons(isDark);
+};
+
 const setupEventListeners = () => {
     const handleLogout = async () => {
         if (confirm(t('confirm.logout'))) {
@@ -357,7 +384,11 @@ const setupEventListeners = () => {
 };
 
 window.app = {
-    init, changeLanguage, startTour: () => tourModule.start(),
+    init, changeLanguage, toggleTheme, startTour: () => tourModule.start(),
+    updateCurrencySettings: (updates) => import('./settings.js').then(m => m.updateCurrencySettings(updates)),
+    addExchangeRate: (code) => import('./settings.js').then(m => m.addExchangeRate(code)),
+    updateExchangeRate: (code, val) => import('./settings.js').then(m => m.updateExchangeRate(code, val)),
+    deleteExchangeRate: (code) => import('./settings.js').then(m => m.deleteExchangeRate(code)),
     openWealthEvolution: () => import('./dashboard-new.js').then(m => m.openWealthEvolution()),
     setView, setViewDate, editTransaction, deleteTransaction, openTransactionModal,
     openMobileActions, closeMobileActions, closeCategoryActions, closeAccountActions,

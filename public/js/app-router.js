@@ -40,6 +40,10 @@ class AppRouter {
         const buildDesktopNav = () => {
             let html = '';
             Object.entries(modulesByGroup).forEach(([groupName, items], groupIdx) => {
+                // Filter out settings from the main list if we want to handle it separately
+                const displayItems = items.filter(m => m.id !== 'settings');
+                if (displayItems.length === 0) return;
+
                 // Group Container
                 html += `<div class="flex items-center group/nav-section">`;
                 
@@ -51,10 +55,10 @@ class AppRouter {
                     </div>
                 `;
 
-                items.forEach(m => {
+                displayItems.forEach(m => {
                     const id = `nav-${m.id}`;
-                    html += `<button id="${id}" class="px-4 h-12 border-b-2 border-transparent flex items-center text-[10px] font-black uppercase tracking-widest transition-all hover:text-indigo-600">
-                        <i class="fa-solid ${m.icon} mr-2 text-slate-400"></i>${m.label}
+                    html += `<button id="${id}" class="px-4 h-12 border-b-2 border-transparent flex items-center text-[10px] font-black uppercase tracking-widest transition-all hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400">
+                        <i class="fa-solid ${m.icon} mr-2 text-slate-400 dark:text-slate-500"></i>${m.label}
                     </button>`;
                 });
 
@@ -137,7 +141,19 @@ class AppRouter {
 
         // Update Nav Active State
         Object.values(this.modules).forEach(m => {
-            const btns = [document.getElementById(`nav-${m.id}`), document.getElementById(`nav-${m.id}-mobile`)];
+            const btns = [
+                document.getElementById(`nav-${m.id}`), 
+                document.getElementById(`nav-${m.id}-mobile`)
+            ];
+            
+            // Handle explicit settings buttons if they are not in the main lists
+            if (m.id === 'settings') {
+                const explicitBtn = document.getElementById('nav-settings');
+                if (explicitBtn) btns.push(explicitBtn);
+                const explicitMobileBtn = document.getElementById('nav-settings-mobile');
+                if (explicitMobileBtn) btns.push(explicitMobileBtn);
+            }
+
             const accent = m.accentColor || 'indigo';
             
             btns.forEach(btn => {
@@ -147,11 +163,11 @@ class AppRouter {
                 // Reset common colors
                 const colors = ['indigo', 'emerald', 'rose', 'amber', 'slate', 'violet', 'blue'];
                 colors.forEach(c => {
-                    btn.classList.remove(`text-${c}-600`, `border-${c}-600`, `bg-${c}-50/50`);
+                    btn.classList.remove(`text-${c}-600`, `border-${c}-600`, `bg-${c}-50/50`, `dark:text-${c}-400`, `dark:border-${c}-400`, `dark:bg-${c}-400/10`);
                 });
 
                 if (isActive) {
-                    btn.classList.add(`text-${accent}-600`, `border-${accent}-600`, `bg-${accent}-50/50`);
+                    btn.classList.add(`text-${accent}-600`, `border-${accent}-600`, `bg-${accent}-50/50`, `dark:text-${accent}-400`, `dark:border-${accent}-400`, `dark:bg-${accent}-400/10`);
                     btn.classList.remove('border-transparent');
                 } else {
                     btn.classList.add('border-transparent');

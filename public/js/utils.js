@@ -1,6 +1,39 @@
 import { state } from './state.js';
 
-export const formatCurrency = (amount) => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(amount);
+/**
+ * Formats a numeric amount into the master application currency.
+ * @param {number} amount - The numeric value.
+ */
+export const formatCurrency = (amount) => {
+    const currencyCode = state.displayCurrency || 'EUR';
+    return new Intl.NumberFormat(navigator.language || 'fr-BE', { 
+        style: 'currency', 
+        currency: currencyCode,
+    }).format(amount);
+};
+
+/**
+ * Formats a numeric amount into a specific currency code.
+ */
+export const formatSpecificCurrency = (amount, currencyCode) => {
+    try {
+        return new Intl.NumberFormat(navigator.language || 'fr-BE', { 
+            style: 'currency', 
+            currency: currencyCode || 'EUR',
+        }).format(amount);
+    } catch (err) {
+        return `${amount.toFixed(2)} ${currencyCode}`;
+    }
+};
+
+/**
+ * Converts an amount from a source currency to the application's master currency.
+ */
+export const convertToAppCurrency = (amount, sourceCurrency) => {
+    if (!sourceCurrency || sourceCurrency === state.displayCurrency) return amount;
+    const rate = state.exchangeRates[sourceCurrency] || 1.0;
+    return amount * rate;
+};
 
 export const formatDateStr = (dateStr) => {
     if (!dateStr) return '';

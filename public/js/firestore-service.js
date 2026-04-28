@@ -32,7 +32,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     unsubscribeFromData();
     if (!userId) return;
 
-    let initialLoadsPending = 12; // Increased for onboarding + wealth entities
+    let initialLoadsPending = 13; // Increased for onboarding + wealth + currency
     const onInitialLoadComplete = () => {
         initialLoadsPending--;
         if (initialLoadsPending === 0) {
@@ -52,6 +52,8 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         accountBalances: {},
         recurringTemplates: [],
         onboarding: null,
+        displayCurrency: 'EUR',
+        exchangeRates: {},
         monthSelectorConfig: {
             startDate: `${new Date().getFullYear()}-01-01`,
             endDate: getFunctionalBoundaryDate(),
@@ -62,6 +64,15 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     const triggerUpdate = () => {
         onDataUpdate({ ...localState });
     };
+
+    const currencyUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'currency'), (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            localState.displayCurrency = data.displayCurrency || 'EUR';
+            localState.exchangeRates = data.exchangeRates || {};
+        }
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
 
     const settingsUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'monthSelector'), (docSnap) => {
         if (docSnap.exists()) {

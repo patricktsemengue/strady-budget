@@ -25,8 +25,8 @@ export const openTransactionModal = (id = null) => {
     const destSelect = document.getElementById('transaction-destination');
     // Align with TODO.litcoffee: Default value = "" to indicates external account
     const accountOptions = state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-    sourceSelect.innerHTML = `<option value="">Externe (Revenu)</option>${accountOptions}`;
-    destSelect.innerHTML = `<option value="">Externe (Dépense)</option>${accountOptions}`;
+    sourceSelect.innerHTML = `<option value="">${t('transactions.external_income')}</option>${accountOptions}`;
+    destSelect.innerHTML = `<option value="">${t('transactions.external_expense')}</option>${accountOptions}`;
     
     // Default visibility
     const recurringFields = document.getElementById('recurring-fields');
@@ -38,12 +38,12 @@ export const openTransactionModal = (id = null) => {
 
     if (id) { // EDIT MODE
         const modalTitle = document.getElementById('transaction-modal-title');
-        if (modalTitle) modalTitle.textContent = 'Éditer la transaction';
+        if (modalTitle) modalTitle.textContent = t('transactions.modal_edit_title');
         const editIdInput = document.getElementById('transaction-edit-id');
         if (editIdInput) editIdInput.value = id;
     } else { // NEW MODE
         const modalTitle = document.getElementById('transaction-modal-title');
-        if (modalTitle) modalTitle.textContent = 'Ajouter une transaction';
+        if (modalTitle) modalTitle.textContent = t('transactions.modal_add_title');
         const editIdInput = document.getElementById('transaction-edit-id');
         if (editIdInput) editIdInput.value = '';
     }
@@ -84,7 +84,7 @@ export const openTransactionModal = (id = null) => {
         }
     } else {
         const modalTitle = document.getElementById('transaction-modal-title');
-        if (modalTitle) modalTitle.textContent = 'Ajouter une transaction';
+        if (modalTitle) modalTitle.textContent = t('transactions.modal_add_title');
         const editIdInput = document.getElementById('transaction-edit-id');
         if (editIdInput) editIdInput.value = '';
         // Defaults from TODO.litcoffee
@@ -162,12 +162,12 @@ export const handleSaveTransaction = async (e) => {
 
     // Validation from TODO.litcoffee
     if (!label || isNaN(amount) || !date || !Category) {
-        showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
+        showNotification(t('transactions.error_empty_fields'), 'error');
         return;
     }
 
     if (source === "" && destination === "") {
-        showNotification('La source et la destination ne peuvent pas être vides simultanément.', 'error');
+        showNotification(t('transactions.error_both_external'), 'error');
         return;
     }
 
@@ -176,11 +176,11 @@ export const handleSaveTransaction = async (e) => {
     const destAcc = state.accounts.find(a => a.id === destination);
 
     if (sourceAcc && date < (sourceAcc.createDate || sourceAcc.initialBalanceDate)) {
-        showNotification(`La transaction ne peut pas être créée avant la date de création du compte source (${sourceAcc.createDate || sourceAcc.initialBalanceDate}).`, 'error');
+        showNotification(`${t('transactions.error_before_creation')} (${sourceAcc.createDate || sourceAcc.initialBalanceDate}).`, 'error');
         return;
     }
     if (destAcc && date < (destAcc.createDate || destAcc.initialBalanceDate)) {
-        showNotification(`La transaction ne peut pas être créée avant la date de création du compte destination (${destAcc.createDate || destAcc.initialBalanceDate}).`, 'error');
+        showNotification(`${t('transactions.error_before_creation')} (${destAcc.createDate || destAcc.initialBalanceDate}).`, 'error');
         return;
     }
 
@@ -199,7 +199,7 @@ export const handleSaveTransaction = async (e) => {
                         recurring: true, endDate, periodicity
                     };
                     await updateRecurringSeriesInFirestore(currentUserId, tx.Model, newTemplateValues);
-                    showNotification('Série récurrente mise à jour.');
+                    showNotification(t('transactions.success_recurring_updated'));
                 } else {
                     return; // User cancelled
                 }
@@ -208,7 +208,7 @@ export const handleSaveTransaction = async (e) => {
                     // SINGLE UPDATE: delete-old and create-new
                     const newTxData = { label, amount, date, Category, source, destination, Model: null };
                     await updateSingleTransactionInFirestore(currentUserId, id, newTxData);
-                    showNotification('Transaction mise à jour.');
+                    showNotification(t('transactions.success_tx_updated'));
                 } else {
                     return; // User cancelled
                 }
@@ -226,7 +226,7 @@ export const handleSaveTransaction = async (e) => {
                 // Check if template already exists
                 const existingTemplate = state.recurringTemplates.find(tpl => tpl.id === templateId);
                 if (existingTemplate) {
-                    showNotification('Cette série récurrente existe déjà.', 'error');
+                    showNotification(t('transactions.error_duplicate_recurring'), 'error');
                     return;
                 }
 
@@ -234,7 +234,7 @@ export const handleSaveTransaction = async (e) => {
                     id: templateId,
                     ...templateData
                 });
-                showNotification('Transaction récurrente créée !');
+                showNotification(t('transactions.success_recurring_created'));
             } else {
                 // SINGLE CREATION: Align with TODO.litcoffee
                 const newTxData = { label, amount, date, Category, source, destination, Model: null };
@@ -243,20 +243,20 @@ export const handleSaveTransaction = async (e) => {
                 // Check if transaction already exists
                 const existingTx = Object.values(state.records).flatMap(r => r.items).find(t => t.id === newId);
                 if (existingTx) {
-                    showNotification('Cette transaction existe déjà.', 'error');
+                    showNotification(t('transactions.error_duplicate_tx'), 'error');
                     return;
                 }
 
                 await addTransactionToFirestore(currentUserId, {
                     id: newId, ...newTxData
                 });
-                showNotification('Transaction ajoutée !');
+                showNotification(t('transactions.success_tx_created'));
             }
         }
         closeTransactionModal();
     } catch (err) {
         console.error(err);
-        showNotification('Erreur de sauvegarde', 'error');
+        showNotification(t('transactions.error_save'), 'error');
     }
 };
 
@@ -274,18 +274,18 @@ export const deleteTransaction = async (id) => {
         if (confirm(t('confirm.delete_recurring'))) {
             try {
                 await deleteRecurringSeriesInFirestore(currentUserId, tx.Model);
-                showNotification('Série supprimée.');
+                showNotification(t('transactions.success_recurring_deleted'));
             } catch (err) {
-                showNotification('Erreur de suppression', 'error');
+                showNotification(t('transactions.error_delete'), 'error');
             }
         }
     } else {
         if (confirm(t('confirm.delete_tx'))) {
             try {
                 await deleteTransactionFromFirestore(currentUserId, id);
-                showNotification('Transaction supprimée.');
+                showNotification(t('transactions.success_tx_deleted'));
             } catch (err) {
-                showNotification('Erreur de suppression', 'error');
+                showNotification(t('transactions.error_delete'), 'error');
             }
         }
     }
@@ -305,7 +305,7 @@ export const openMobileActions = (id) => {
 
     const txInfo = getTxDisplayInfo(tx.source, tx.destination);
     const category = state.categories.find(c => c.id === tx.Category);
-    const formattedAmount = new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(tx.amount);
+    const formattedAmount = formatCurrency(tx.amount);
 
     title.innerHTML = `
         <div class="flex items-center gap-4 text-left">
