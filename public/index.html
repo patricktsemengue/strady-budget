@@ -42,9 +42,14 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased dark:bg-black dark:text-slate-200 transition-colors duration-300">
 
-    <nav class="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 transition-colors">
-        <!-- Top Bar: Logo & Mobile Toggle -->
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+    <!-- Desktop Sidebar -->
+    <aside id="sidebar" class="hidden md:flex flex-col relative group/sidebar">
+        <!-- Sidebar Toggle -->
+        <button onclick="window.app.toggleSidebar()" class="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-sm z-[60] transition-all opacity-0 group-hover/sidebar:opacity-100">
+            <i id="sidebar-toggle-icon" class="fa-solid fa-chevron-left text-[10px]"></i>
+        </button>
+
+        <div class="p-6 border-b border-slate-100 dark:border-slate-800">
             <a href="#" class="flex items-center">
                 <div class="logo dark:text-white">
                     <i>
@@ -57,104 +62,93 @@
                     </i>
                 </div>
             </a>
-            
-            <!-- Right Side: Mobile Toggle -->
-            <div class="flex items-center gap-2">
-                <!-- Mobile Menu Button (Only visible on small screens) -->
-                <div class="md:hidden">
-                    <button class="mobile-menu-button p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
-                </div>
-            </div>
+        </div>
+        
+        <div id="nav-desktop" class="flex-1 overflow-y-auto py-4 custom-scrollbar">
+            <!-- Navigation items injected here -->
         </div>
 
-        <!-- Bottom Bar: Navigation & User Info (Hidden on mobile, flex on desktop) -->
-        <div class="hidden md:block bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 transition-colors">
-            <div class="max-w-6xl mx-auto px-4">
-                <div class="flex justify-between items-center h-12">
-                    <!-- Primary Navigation (Dynamic) -->
-                    <div id="nav-desktop" class="flex space-x-1 h-full">
-                    </div>
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            <!-- Theme & Language Switcher (Desktop) -->
+            <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center">
+                    <button onclick="window.app.changeLanguage('fr')" id="lang-fr" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">FR</button>
+                    <button onclick="window.app.changeLanguage('en')" id="lang-en" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">EN</button>
+                </div>
+                <button onclick="window.app.toggleTheme()" id="theme-toggle" class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-all">
+                    <i class="fa-solid fa-moon text-xs"></i>
+                </button>
+            </div>
 
-                    <!-- Toggles & Authenticated User Info -->
-                    <div class="flex items-center">
-                        <!-- Settings Button -->
-                        <button id="nav-settings" onclick="window.app.setView('settings')" class="px-4 h-12 border-b-2 border-transparent flex items-center text-[10px] font-black uppercase tracking-widest transition-all hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400">
-                            <i class="fa-solid fa-cog mr-2 text-slate-400 dark:text-slate-500"></i><span data-i18n="nav.settings">Configuration</span>
+            <!-- User Info (Desktop) -->
+            <div id="user-info" class="hidden flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div class="flex items-center space-x-2">
+                    <img id="user-photo" class="h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700" src="" alt="Profile">
+                    <div class="flex flex-col user-details">
+                        <span id="user-name" class="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase truncate max-w-[100px]"></span>
+                    </div>
+                </div>
+                <button id="btn-logout" class="p-2 text-slate-400 hover:text-red-600 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div id="main-wrapper" class="flex flex-col">
+        <!-- Mobile Header (Only visible on small screens) -->
+        <nav class="md:hidden bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 transition-colors">
+            <div class="px-4 py-4 flex justify-between items-center">
+                <a href="#" class="flex items-center">
+                    <div class="logo dark:text-white">
+                        <i>
+                            <span class="logo-s">S</span>
+                            <span class="logo-trady">trady</span>
+                            <span class="logo-dot">.</span>
+                        </i>
+                    </div>
+                </a>
+                
+                <button class="mobile-menu-button p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div class="mobile-menu hidden bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 py-2">
+                <div class="px-4 py-2 flex justify-between items-center border-b border-slate-50 dark:border-slate-800 mb-2">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Préférences</span>
+                    <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <div class="flex border-r border-slate-200 dark:border-slate-700 mr-1 pr-1">
+                            <button onclick="window.app.changeLanguage('fr')" id="lang-fr-mobile" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">FR</button>
+                            <button onclick="window.app.changeLanguage('en')" id="lang-en-mobile" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">EN</button>
+                        </div>
+                        <button onclick="window.app.toggleTheme()" class="theme-toggle-mobile p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">
+                            <i class="fa-solid fa-moon text-xs"></i>
                         </button>
-
-                        <div class="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
-
-                        <!-- Theme & Language Switcher -->
-                        <div class="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 mx-2">
-                            <div class="flex border-r border-slate-200 dark:border-slate-800 mr-1 pr-1">
-                                <button onclick="window.app.changeLanguage('fr')" id="lang-fr" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">FR</button>
-                                <button onclick="window.app.changeLanguage('en')" id="lang-en" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">EN</button>
-                            </div>
-                            <button onclick="window.app.toggleTheme()" id="theme-toggle" class="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all" title="Toggle Theme">
-                                <i class="fa-solid fa-moon text-xs"></i>
-                            </button>
-                        </div>
-
-                        <div class="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
-
-                        <!-- Authenticated User Info -->
-                        <div id="user-info" class="hidden flex items-center ml-2">
-                            <div class="flex items-center space-x-2 h-6">
-                                <img id="user-photo" class="h-6 w-6 rounded-full border border-slate-200 dark:border-slate-700" src="" alt="Profile">
-                                <span id="user-name" class="text-xs font-bold text-slate-600 dark:text-slate-300"></span>
-                            </div>
-                            <button id="btn-logout" class="ml-4 text-slate-400 hover:text-red-600 transition-colors" title="Déconnexion">
-                                <i class="fa-solid fa-right-from-bracket"></i>
-                            </button>
-                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- mobile menu (Dynamic) -->
-        <div class="mobile-menu hidden md:hidden bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 py-2">
-            <!-- Mobile Toggles -->
-            <div class="px-4 py-2 flex justify-between items-center border-b border-slate-50 dark:border-slate-800 mb-2">
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Préférences</span>
-                <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <div class="flex border-r border-slate-200 dark:border-slate-700 mr-1 pr-1">
-                        <button onclick="window.app.changeLanguage('fr')" id="lang-fr-mobile" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">FR</button>
-                        <button onclick="window.app.changeLanguage('en')" id="lang-en-mobile" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">EN</button>
+                <div id="user-info-mobile" class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-2 flex items-center space-x-3">
+                    <img id="user-photo-mobile" class="h-10 w-10 rounded-full border border-slate-200" src="" alt="Profile">
+                    <div class="flex-1">
+                        <p id="user-name-mobile" class="text-sm font-bold text-slate-800"></p>
+                        <p id="user-email-mobile" class="text-xs text-slate-500"></p>
                     </div>
-                    <button onclick="window.app.toggleTheme()" class="theme-toggle-mobile p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">
-                        <i class="fa-solid fa-moon text-xs"></i>
-                    </button>
+                </div>
+                <div id="nav-mobile"></div>
+                <div class="border-t border-slate-100 mt-2 pt-2">
+                    <button id="btn-logout-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-red-50 flex items-center text-red-600 font-medium"><i class="fa-solid fa-right-from-bracket mr-3"></i>Déconnexion</button>
                 </div>
             </div>
-            <div id="user-info-mobile" class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-2 flex items-center space-x-3">
-                <img id="user-photo-mobile" class="h-10 w-10 rounded-full border border-slate-200" src="" alt="Profile">
-                <div class="flex-1">
-                    <p id="user-name-mobile" class="text-sm font-bold text-slate-800"></p>
-                    <p id="user-email-mobile" class="text-xs text-slate-500"></p>
-                </div>
-            </div>
-            <div id="nav-mobile"></div>
-            
-            <!-- Mobile Configuration -->
-            <div class="px-4 pt-4 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Configuration</div>
-            <button id="nav-settings-mobile" onclick="window.app.setView('settings'); document.querySelector('.mobile-menu').classList.add('hidden');" class="w-full text-left py-3.5 px-4 text-sm hover:bg-slate-100 flex items-center text-slate-700 font-bold transition-colors">
-                <i class="fa-solid fa-cog mr-4 text-slate-400 w-5 text-center"></i><span data-i18n="nav.settings">Configuration</span>
-            </button>
+        </nav>
 
-            <div class="border-t border-slate-100 mt-2 pt-2">
-                <button id="btn-logout-mobile" class="w-full text-left py-3 px-4 text-sm hover:bg-red-50 flex items-center text-red-600 font-medium"><i class="fa-solid fa-right-from-bracket mr-3"></i>Déconnexion</button>
-            </div>
-        </div>
-    </nav>
 
-    <div id="data-status-indicator" class="hidden fixed top-[68px] md:top-[100px] left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300">
+    <div id="data-status-indicator" class="hidden fixed top-[68px] md:top-4 left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300">
     </div>
 
     <!-- Shared Month Selection -->
-    <div id="shared-month-selection" class="max-w-6xl mx-auto px-4 mt-6 hidden sticky top-[68px] z-40">
+    <div id="shared-month-selection" class="max-w-6xl mx-auto px-4 mt-6 hidden sticky top-[68px] md:top-6 z-40">
         <div class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-800 transition-all">
             <div class="flex items-center gap-1">
                 <button id="prev-month" class="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors">
@@ -636,6 +630,10 @@
                         <input type="date" id="transfer-date" required class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm">
                     </div>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1" data-i18n="common.label">Libellé</label>
+                    <input type="text" id="transfer-label" class="w-full border-slate-300 rounded-lg shadow-sm border p-3 text-sm" placeholder="Virement Interne">
+                </div>
                 <div class="flex justify-end gap-3 mt-6">
                     <button type="button" onclick="window.app.closeTransferModal()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-medium" data-i18n="common.cancel">Annuler</button>
                     <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-medium shadow-lg hover:bg-slate-900 transition-colors" data-i18n="common.save">Exécuter</button>
@@ -692,7 +690,7 @@
                 <span class="text-[10px] font-bold text-slate-400">© 2026</span>
             </div>
             <div class="flex items-center gap-6">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Version 1.1.0</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Version 1.2.0</p>
                 <div class="h-4 w-px bg-slate-100 dark:bg-slate-800"></div>
                 <p class="text-[10px] font-bold text-slate-400 italic">Built for Financial Sovereignty</p>
             </div>

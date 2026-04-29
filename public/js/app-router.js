@@ -39,31 +39,47 @@ class AppRouter {
 
         const buildDesktopNav = () => {
             let html = '';
-            Object.entries(modulesByGroup).forEach(([groupName, items], groupIdx) => {
-                // Filter out settings from the main list if we want to handle it separately
+            Object.entries(modulesByGroup).forEach(([groupName, items]) => {
                 const displayItems = items.filter(m => m.id !== 'settings');
                 if (displayItems.length === 0) return;
 
-                // Group Container
-                html += `<div class="flex items-center group/nav-section">`;
+                // Group Section
+                html += `<div class="mb-6">`;
                 
-                // Group Label (Vertical or Small lead)
+                // Group Header
                 html += `
-                    <div class="flex flex-col justify-center px-3 border-l first:border-l-0 border-slate-200 h-8">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-0.5">${groupName.split(' ')[0]}</span>
-                        <span class="text-[8px] font-black text-slate-300 uppercase tracking-tighter leading-none">${groupName.split(' ')[1] || ''}</span>
+                    <div class="px-6 mb-2 group-header">
+                        <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">${groupName}</span>
                     </div>
                 `;
 
+                // Nav Items
+                html += `<div class="space-y-1 px-3">`;
                 displayItems.forEach(m => {
                     const id = `nav-${m.id}`;
-                    html += `<button id="${id}" class="px-4 h-12 border-b-2 border-transparent flex items-center text-[10px] font-black uppercase tracking-widest transition-all hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400">
-                        <i class="fa-solid ${m.icon} mr-2 text-slate-400 dark:text-slate-500"></i>${m.label}
-                    </button>`;
+                    html += `
+                        <button id="${id}" title="${m.label}" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+                            <i class="fa-solid ${m.icon} w-5 text-center text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
+                            <span class="nav-label truncate">${m.label}</span>
+                        </button>
+                    `;
                 });
-
-                html += `</div>`;
+                html += `</div></div>`;
             });
+
+            // Specific Settings Link if not in list
+            const settingsModule = this.modules['settings'];
+            if (settingsModule) {
+                html += `
+                    <div class="mt-auto px-3 py-4 border-t border-slate-100 dark:border-slate-800">
+                        <button id="nav-settings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+                            <i class="fa-solid fa-cog w-5 text-center text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
+                            ${settingsModule.label}
+                        </button>
+                    </div>
+                `;
+            }
+
             return html;
         };
 
@@ -159,15 +175,25 @@ class AppRouter {
             btns.forEach(btn => {
                 if (!btn) return;
                 const isActive = m.id === this.currentModule.id;
+                const isMobile = btn.id.endsWith('-mobile');
                 
-                // Reset common colors
+                // Reset common classes
                 const colors = ['indigo', 'emerald', 'rose', 'amber', 'slate', 'violet', 'blue'];
                 colors.forEach(c => {
-                    btn.classList.remove(`text-${c}-600`, `border-${c}-600`, `bg-${c}-50/50`, `dark:text-${c}-400`, `dark:border-${c}-400`, `dark:bg-${c}-400/10`);
+                    btn.classList.remove(
+                        `text-${c}-600`, `border-${c}-600`, `bg-${c}-50/50`, 
+                        `dark:text-${c}-400`, `dark:border-${c}-400`, `dark:bg-${c}-400/10`,
+                        `border-l-4`, `border-b-2`
+                    );
                 });
 
                 if (isActive) {
-                    btn.classList.add(`text-${accent}-600`, `border-${accent}-600`, `bg-${accent}-50/50`, `dark:text-${accent}-400`, `dark:border-${accent}-400`, `dark:bg-${accent}-400/10`);
+                    if (isMobile) {
+                        btn.classList.add(`text-${accent}-600`, `bg-${accent}-50/50`, `dark:text-${accent}-400`, `dark:bg-${accent}-400/10`);
+                    } else {
+                        // Desktop Sidebar: Left border highlight
+                        btn.classList.add(`text-${accent}-600`, `bg-${accent}-50/50`, `border-l-4`, `border-${accent}-600`, `dark:text-${accent}-400`, `dark:bg-${accent}-400/10`);
+                    }
                     btn.classList.remove('border-transparent');
                 } else {
                     btn.classList.add('border-transparent');

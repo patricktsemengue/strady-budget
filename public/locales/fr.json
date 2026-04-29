@@ -75,6 +75,11 @@
     "dna_title": "DNA des Revenus",
     "dna_active": "Actif",
     "dna_passive": "Passif",
+    "jump": {
+      "summary": "Synthèse",
+      "indicators": "Indicateurs",
+      "analysis": "Analyse"
+    },
     "kpi": {
       "net_worth": {
         "definition": "C'est la somme de tout ce que vous possédez (Comptes, Épargne, Immobilier, Actions) moins tout ce que vous devez (Crédits, Dettes).",

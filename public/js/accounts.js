@@ -425,7 +425,7 @@ export const handleAdjustmentSubmit = async (e) => {
 
 // --- Internal Transfer Logic ---
 
-export const openTransferModal = () => {
+export const openTransferModal = (prefill = null) => {
     const sourceSelect = document.getElementById('transfer-source');
     const destSelect = document.getElementById('transfer-destination');
     
@@ -433,14 +433,19 @@ export const openTransferModal = () => {
     sourceSelect.innerHTML = options;
     destSelect.innerHTML = options;
 
-    if (state.accounts.length >= 2) {
+    if (prefill) {
+        if (prefill.source) sourceSelect.value = prefill.source;
+        if (prefill.destination) destSelect.value = prefill.destination;
+        if (prefill.amount) document.getElementById('transfer-amount').value = prefill.amount.toFixed(2);
+        if (prefill.label) document.getElementById('transfer-label').value = prefill.label;
+    } else if (state.accounts.length >= 2) {
         sourceSelect.selectedIndex = 0;
         destSelect.selectedIndex = 1;
     }
 
-    document.getElementById('transfer-amount').value = '';
+    if (!prefill || !prefill.amount) document.getElementById('transfer-amount').value = '';
     document.getElementById('transfer-date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('transfer-label').value = t('treasury.internal_transfer');
+    if (!prefill || !prefill.label) document.getElementById('transfer-label').value = t('treasury.internal_transfer');
 
     document.getElementById('transfer-modal').classList.remove('hidden');
 };

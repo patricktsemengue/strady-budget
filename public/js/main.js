@@ -132,6 +132,18 @@ const init = async () => {
             document.documentElement.classList.remove('dark');
         }
         updateThemeToggleIcons(isDark);
+
+        // Initialize Sidebar State
+        const isSidebarCollapsed = localStorage.getItem('strady_sidebar_collapsed') === 'true';
+        if (isSidebarCollapsed) {
+            const sidebar = document.getElementById('sidebar');
+            const mainWrapper = document.getElementById('main-wrapper');
+            const icon = document.getElementById('sidebar-toggle-icon');
+            if (sidebar) sidebar.classList.add('collapsed');
+            if (mainWrapper) mainWrapper.classList.add('sidebar-collapsed');
+            if (icon) icon.className = 'fa-solid fa-chevron-right text-[10px]';
+        }
+
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -323,6 +335,21 @@ const toggleTheme = () => {
     updateThemeToggleIcons(isDark);
 };
 
+const toggleSidebar = () => {
+    const sidebar = document.getElementById('sidebar');
+    const mainWrapper = document.getElementById('main-wrapper');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    mainWrapper.classList.toggle('sidebar-collapsed', isCollapsed);
+    
+    if (icon) {
+        icon.className = isCollapsed ? 'fa-solid fa-chevron-right text-[10px]' : 'fa-solid fa-chevron-left text-[10px]';
+    }
+    
+    localStorage.setItem('strady_sidebar_collapsed', isCollapsed);
+};
+
 const setupEventListeners = () => {
     const handleLogout = async () => {
         if (confirm(t('confirm.logout'))) {
@@ -384,7 +411,7 @@ const setupEventListeners = () => {
 };
 
 window.app = {
-    init, changeLanguage, toggleTheme, startTour: () => tourModule.start(),
+    init, changeLanguage, toggleTheme, toggleSidebar, startTour: () => tourModule.start(),
     updateCurrencySettings: (updates) => import('./settings.js').then(m => m.updateCurrencySettings(updates)),
     addExchangeRate: (code) => import('./settings.js').then(m => m.addExchangeRate(code)),
     updateExchangeRate: (code, val) => import('./settings.js').then(m => m.updateExchangeRate(code, val)),
@@ -409,7 +436,8 @@ window.app = {
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),
     openKPIInfo: (key) => import('./dashboard-new.js').then(m => m.openKPIInfo(key)),
-    closeInfoModal: () => import('./dashboard-new.js').then(m => m.closeInfoModal())
+    closeInfoModal: () => import('./dashboard-new.js').then(m => m.closeInfoModal()),
+    jumpToSection: (id) => import('./dashboard-new.js').then(m => m.jumpToSection(id))
 };
 
 document.addEventListener('DOMContentLoaded', init);

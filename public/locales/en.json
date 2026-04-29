@@ -83,6 +83,11 @@
     "dna_title": "Income DNA",
     "dna_active": "Active",
     "dna_passive": "Passive",
+    "jump": {
+      "summary": "Summary",
+      "indicators": "Indicators",
+      "analysis": "Analysis"
+    },
     "kpi": {
       "net_worth": {
         "definition": "It's the sum of everything you own (Accounts, Savings, Real Estate, Stocks) minus everything you owe (Credits, Debts).",

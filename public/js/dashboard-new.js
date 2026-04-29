@@ -66,6 +66,7 @@ const getMonthlyMetrics = (date) => {
     const activeIncome = monthIncome - passiveIncome;
 
     return { 
+        date,
         income: monthIncome, 
         expense: monthExpense, 
         fixedExpense, 
@@ -75,6 +76,30 @@ const getMonthlyMetrics = (date) => {
         allocation: { needs, leisure, savings },
         label: new Intl.DateTimeFormat('fr-BE', { month: 'short' }).format(date)
     };
+};
+
+/**
+ * Trend Calculation Helpers
+ */
+const calculateTrend = (current, previous) => {
+    if (previous === undefined || previous === null || previous === 0) return null;
+    return ((current - previous) / Math.abs(previous)) * 100;
+};
+
+const renderTrendBadge = (trend, inverted = false) => {
+    if (trend === null || isNaN(trend)) return '';
+    const isPositive = trend > 0;
+    // For expenses, positive trend is "bad" (red), unless inverted is true
+    const isGood = inverted ? !isPositive : isPositive;
+    const colorClass = isGood ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
+    const icon = isPositive ? 'fa-caret-up' : 'fa-caret-down';
+    
+    return `
+        <span class="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-black ${colorClass}">
+            <i class="fa-solid ${icon}"></i>
+            ${Math.abs(trend).toFixed(1)}%
+        </span>
+    `;
 };
 
 export const openKPIInfo = (kpiKey) => {
@@ -155,6 +180,18 @@ export const renderStrategicDashboard = () => {
     const m2 = getMonthlyMetrics(d2);
     const scorecard = [m2, m1, m0]; // History left to right
 
+    // Calculate Scorecard Trends
+    const trends = {
+        m0: {
+            income: calculateTrend(m0.income, m1.income),
+            net: calculateTrend(m0.income - m0.expense, m1.income - m1.expense)
+        },
+        m1: {
+            income: calculateTrend(m1.income, m2.income),
+            net: calculateTrend(m1.income - m1.expense, m2.income - m2.expense)
+        }
+    };
+
     // 2. Global CFO Metrics (Current Month)
     const balances = state.months[getMonthKey(d0)]?.balances || calculateBalances(d0);
     const totalLiquidity = Object.values(balances).reduce((sum, b) => sum + b, 0);
@@ -164,11 +201,17 @@ export const renderStrategicDashboard = () => {
     const actualBurnRate = calculateActualBurnRate(d0);
     
     const standardRunway = actualBurnRate > 0 ? (savingsBalance / actualBurnRate) : 0;
-    const fixedBurnRate = m0.fixedExpense || (actualBurnRate * 0.7);
-    const hardRunway = fixedBurnRate > 0 ? (savingsBalance / fixedBurnRate) : 0;
+
+    // Previous Month CFO Metrics (for Trends)
+    const prevBalances = state.months[getMonthKey(d1)]?.balances || calculateBalances(d1);
+    const prevLiquidity = Object.values(prevBalances).reduce((sum, b) => sum + b, 0);
+    const prevSavingsBalance = state.accounts.filter(a => a.isSaving).reduce((sum, a) => sum + (prevBalances[a.id] || 0), 0);
+    const prevBurnRate = calculateActualBurnRate(d1);
+    const prevRunway = prevBurnRate > 0 ? (prevSavingsBalance / prevBurnRate) : 0;
 
     // FFI Calculation: (Passive Income / Fixed Expenses) * 100
     const ffiIndex = m0.fixedExpense > 0 ? (m0.passiveIncome / m0.fixedExpense) * 100 : (m0.passiveIncome > 0 ? 100 : 0);
+    const prevFfiIndex = m1.fixedExpense > 0 ? (m1.passiveIncome / m1.fixedExpense) * 100 : (m1.passiveIncome > 0 ? 100 : 0);
 
     // 3. Cash Drag Detection
     const operationalBalances = state.accounts
@@ -179,6 +222,23 @@ export const renderStrategicDashboard = () => {
     const liquidityTarget = avgExpense * 1.5; // Target 1.5 month of average expense on current accounts
     const cashDrag = operationalBalances - liquidityTarget;
 
+    // Helper to trigger the one-click optimization
+    window.app.handleCashDragAction = () => {
+        // Find highest balance operational account as source
+        const operationalAccs = state.accounts.filter(acc => !acc.isSaving && !acc.isInvestmentAccount);
+        const sourceAcc = operationalAccs.sort((a, b) => (balances[b.id] || 0) - (balances[a.id] || 0))[0];
+        
+        // Find primary savings account as destination
+        const destAcc = state.accounts.find(acc => acc.isSaving) || state.accounts[0];
+
+        window.app.openTransferModal({
+            source: sourceAcc?.id,
+            destination: destAcc?.id,
+            amount: cashDrag,
+            label: "Optimisation Trésorerie (Cash Drag)"
+        });
+    };
+
     // 4. Net Worth (Latest Snapshots)
     const getLatestSnapshotVal = (entityId, isAsset = true, targetDate = d0) => {
         const dateStr = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -188,9 +248,19 @@ export const renderStrategicDashboard = () => {
         if (values.length === 0) return 0;
         return values.sort((a, b) => new Date(b.date) - new Date(a.date))[0].value;
     };
+    
     const totalAssetsVal = state.assets.reduce((sum, a) => sum + getLatestSnapshotVal(a.id, true), 0);
     const totalLiabilitiesVal = state.liabilities.reduce((sum, l) => sum + getLatestSnapshotVal(l.id, false), 0);
     const netWorth = totalLiquidity + totalAssetsVal - totalLiabilitiesVal;
+
+    const prevTotalAssetsVal = state.assets.reduce((sum, a) => sum + getLatestSnapshotVal(a.id, true, d1), 0);
+    const prevTotalLiabilitiesVal = state.liabilities.reduce((sum, l) => sum + getLatestSnapshotVal(l.id, false, d1), 0);
+    const prevNetWorth = prevLiquidity + prevTotalAssetsVal - prevTotalLiabilitiesVal;
+
+    // Trends for KPI Cards
+    const nwTrend = calculateTrend(netWorth, prevNetWorth);
+    const runwayTrend = calculateTrend(standardRunway, prevRunway);
+    const ffiTrend = calculateTrend(ffiIndex, prevFfiIndex);
 
     // Safe-to-spend logic
     const recurringExpense = (state.records[getMonthKey(d0)]?.items || [])
@@ -214,56 +284,94 @@ export const renderStrategicDashboard = () => {
     // Render HTML
     container.innerHTML = `
         <div class="space-y-8">
+            <!-- Sticky Jump Bar -->
+            <div class="sticky top-[124px] z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 -mx-4 px-4 py-2 mb-6 overflow-x-auto hide-scroll flex gap-2 items-center">
+                <button onclick="window.app.jumpToSection('dash-scorecard')" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 whitespace-nowrap">${t('dashboard.jump.summary')}</button>
+                <button onclick="window.app.jumpToSection('dash-kpis')" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 whitespace-nowrap">${t('dashboard.jump.indicators')}</button>
+                <button onclick="window.app.jumpToSection('dash-analysis')" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 whitespace-nowrap">${t('dashboard.jump.analysis')}</button>
+            </div>
+
             <!-- Improvement 1: Rolling 3-Month Scorecard -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                ${scorecard.map((m, idx) => `
-                    <div class="bg-white p-5 rounded-2xl border ${idx === 2 ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-slate-100 opacity-60'} flex flex-col justify-between transition-all">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${m.label} ${idx === 2 ? t('dashboard.actual') : ''}</span>
-                            <div class="px-2 py-0.5 rounded-full text-[9px] font-bold ${m.savingsRate >= 20 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}">
-                                SR: ${m.savingsRate.toFixed(0)}%
+            <div id="dash-scorecard" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                    ${scorecard.map((m, idx) => {
+                        const isSelected = getMonthKey(m.date) === getMonthKey(d0);
+                        const isToday = getMonthKey(m.date) === getMonthKey(new Date());
+                        const mTrend = idx === 0 ? null : (idx === 1 ? trends.m1 : trends.m0);
+                        
+                        return `
+                            <div onclick="window.app.setViewDate('${m.date.toISOString()}')" 
+                                 class="p-6 flex flex-col justify-between transition-all cursor-pointer hover:bg-slate-50 group ${isSelected ? 'bg-indigo-50/50 ring-1 ring-inset ring-indigo-100' : 'opacity-60'}">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="flex flex-col gap-1">
+                                        <span class="text-[10px] font-black ${isSelected ? 'text-indigo-600' : 'text-slate-400'} uppercase tracking-widest">
+                                            ${m.label}
+                                        </span>
+                                        <div class="flex gap-1">
+                                            ${isToday ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 uppercase leading-none">Aujourd'hui</span>` : ''}
+                                            ${isSelected ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 uppercase leading-none">Sélection</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="px-2 py-0.5 rounded-full text-[9px] font-bold ${m.savingsRate >= 20 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}">
+                                        SR: ${m.savingsRate.toFixed(0)}%
+                                    </div>
+                                </div>
+                                <div class="flex items-end justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-1">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Cash-Flow Net</p>
+                                            ${mTrend ? renderTrendBadge(mTrend.net) : ''}
+                                        </div>
+                                        <h3 class="text-xl font-black ${m.income - m.expense >= 0 ? 'text-slate-800' : 'text-rose-600'}">
+                                            ${formatCurrency(m.income - m.expense)}
+                                        </h3>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="flex items-center justify-end gap-1">
+                                            ${mTrend ? renderTrendBadge(mTrend.income) : ''}
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">${t('dashboard.income')}</p>
+                                        </div>
+                                        <p class="text-xs font-bold text-emerald-600">${formatCurrency(m.income)}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex items-end justify-between">
-                            <div>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase">Cash-Flow Net</p>
-                                <h3 class="text-xl font-black ${m.income - m.expense >= 0 ? 'text-slate-800' : 'text-rose-600'}">
-                                    ${formatCurrency(m.income - m.expense)}
-                                </h3>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase">${t('dashboard.income')}</p>
-                                <p class="text-xs font-bold text-emerald-600">${formatCurrency(m.income)}</p>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
+                        `;
+                    }).join('')}
+                </div>
             </div>
 
             <!-- Improvement 2: Cash Drag Alert -->
             ${cashDrag > 1000 ? `
-                <div class="bg-amber-50 border border-amber-200 p-5 rounded-2xl flex items-start gap-4 shadow-sm">
-                    <div class="w-10 h-10 rounded-xl bg-amber-200 text-amber-700 flex items-center justify-center flex-shrink-0">
-                        <i class="fa-solid fa-bolt-lightning"></i>
+                <div class="bg-amber-50 border border-amber-200 p-5 rounded-2xl flex items-start justify-between gap-4 shadow-sm">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-200 text-amber-700 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-bolt-lightning"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-amber-900 text-sm italic underline decoration-amber-300">${t('dashboard.cash_drag')}</h4>
+                            <p class="text-xs text-amber-800 mt-1 leading-relaxed">
+                                Vous avez <b>${formatCurrency(cashDrag)}</b> d'excédent stagnant sur vos comptes courants (au-delà de vos besoins de 1.5 mois). 
+                                Ce capital "dort" au lieu de travailler.
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h4 class="font-bold text-amber-900 text-sm italic underline decoration-amber-300">${t('dashboard.cash_drag')}</h4>
-                        <p class="text-xs text-amber-800 mt-1 leading-relaxed">
-                            Vous avez <b>${formatCurrency(cashDrag)}</b> d'excédent stagnant sur vos comptes courants (au-delà de vos besoins de 1.5 mois). 
-                            Ce capital "dort" au lieu de travailler. Envisagez un virement vers vos <b>Comptes d'Épargne</b> ou d'investissement.
-                        </p>
-                    </div>
+                    <button onclick="window.app.handleCashDragAction()" class="flex-shrink-0 px-4 py-2 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-colors shadow-sm self-center">
+                        Optimiser
+                    </button>
                 </div>
             ` : ''}
 
             <!-- Strategic KPI Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div id="dash-kpis" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Net Worth Card -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden hover:border-indigo-300 transition-all hover:shadow-lg group">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.net_worth')}</p>
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('dashboard.net_worth')}</p>
+                                ${renderTrendBadge(nwTrend)}
+                            </div>
                             <h2 class="text-4xl font-black text-indigo-600">${formatCurrency(netWorth)}</h2>
                         </div>
                         <button onclick="window.app.openKPIInfo('net_worth')" class="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
@@ -280,7 +388,10 @@ export const renderStrategicDashboard = () => {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.runway')}</p>
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('dashboard.runway')}</p>
+                                ${renderTrendBadge(runwayTrend)}
+                            </div>
                             <div class="flex items-baseline gap-2">
                                 <h2 class="text-4xl font-black ${standardRunway >= runwayGoal ? 'text-emerald-600' : 'text-amber-600'}">${standardRunway.toFixed(1)}</h2>
                                 <span class="text-slate-400 font-bold text-xs uppercase">${t('dashboard.months')}</span>
@@ -336,7 +447,10 @@ export const renderStrategicDashboard = () => {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Souveraineté (FFI)</p>
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Souveraineté (FFI)</p>
+                                ${renderTrendBadge(ffiTrend)}
+                            </div>
                             <div class="flex items-baseline gap-2">
                                 <h2 class="text-4xl font-black ${ffiIndex >= 100 ? 'text-emerald-600' : 'text-indigo-600'}">${ffiIndex.toFixed(0)}%</h2>
                                 <span class="text-slate-400 font-bold text-[10px] uppercase">couverture</span>
@@ -380,7 +494,7 @@ export const renderStrategicDashboard = () => {
             </div>
 
             <!-- Detailed Analysis Widgets -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div id="dash-analysis" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Restant à Vivre -->
                 <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
                     <div class="flex justify-between items-start mb-8">
@@ -563,4 +677,21 @@ export const renderWealthEvolutionChart = () => {
 
     const chart = new google.visualization.LineChart(container);
     chart.draw(data, options);
+};
+
+export const jumpToSection = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    // Account for sticky headers (68px nav + 56px month + 44px jump bar = ~168px)
+    const offset = 175; 
+    const bodyRect = document.body.getBoundingClientRect().top;
+    const elementRect = el.getBoundingClientRect().top;
+    const elementPosition = elementRect - bodyRect;
+    const offsetPosition = elementPosition - offset;
+
+    window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+    });
 };
