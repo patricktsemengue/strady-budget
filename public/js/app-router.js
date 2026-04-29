@@ -72,9 +72,9 @@ class AppRouter {
             if (settingsModule) {
                 html += `
                     <div class="mt-auto px-3 py-4 border-t border-slate-100 dark:border-slate-800">
-                        <button id="nav-settings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+                        <button id="nav-settings" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
                             <i class="fa-solid fa-cog w-5 text-center text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
-                            ${settingsModule.label}
+                            <span class="nav-label truncate">${settingsModule.label}</span>
                         </button>
                     </div>
                 `;

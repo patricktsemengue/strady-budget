@@ -50,7 +50,8 @@ export let state = {
         startDate: `${currentYear}-01-01`,
         endDate: getFunctionalBoundaryDate(),
         step: 'month'
-    }
+    },
+    monthSelectorPosition: 'top' // 'top' or 'bottom'
 };
 
 export const updateState = (newState) => {

@@ -147,3 +147,28 @@ export const handleSaveMonthSelectorConfig = async (e) => {
         showNotification(t('settings.notifications.horizon_error'), 'error');
     }
 };
+
+export const updateMonthSelectorPosition = async (position) => {
+    try {
+        await updateSettingsInFirestore(currentUserId, 'ui', { monthSelectorPosition: position });
+        showNotification(t('settings.notifications.display_updated'));
+        applyMonthSelectorPosition(position);
+        router.render();
+    } catch (err) {
+        console.error(err);
+        showNotification(t('common.error'), 'error');
+    }
+};
+
+export const applyMonthSelectorPosition = (position) => {
+    const selector = document.getElementById('shared-month-selection');
+    if (!selector) return;
+
+    if (position === 'bottom') {
+        selector.classList.remove('sticky', 'top-[68px]', 'md:top-6', 'mt-6');
+        selector.classList.add('fixed', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'w-full', 'mb-2');
+    } else {
+        selector.classList.remove('fixed', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'w-full', 'mb-2');
+        selector.classList.add('sticky', 'top-[68px]', 'md:top-6', 'mt-6');
+    }
+};

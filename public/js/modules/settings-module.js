@@ -155,6 +155,17 @@ export default {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Card: Month Selector Position -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('settings.display.month_selector_pos'), t('settings.display.month_selector_pos_sub'), t('settings.display.month_selector_pos_why'), 'ui', 'fa-arrows-up-down', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
+                            <div class="px-6 pb-6 pt-2">
+                                <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                    <button onclick="window.app.updateMonthSelectorPosition('top')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.monthSelectorPosition === 'top' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">${t('settings.display.pos_top')}</button>
+                                    <button onclick="window.app.updateMonthSelectorPosition('bottom')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.monthSelectorPosition === 'bottom' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">${t('settings.display.pos_bottom')}</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 2. GROUP: STRATEGY -->

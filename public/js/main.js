@@ -286,8 +286,10 @@ const init = async () => {
                         isFirstFirestoreUpdate = false;
                     }
                     debouncedUpdateAndRender(newData);
-                });
-
+                    if (newData.monthSelectorPosition) {
+                        import('./settings.js').then(m => m.applyMonthSelectorPosition(newData.monthSelectorPosition));
+                    }
+                    });
                 const initialView = window.location.hash.substring(1) || 'education';
                 router.setView(initialView);
                 if (mainContent) mainContent.classList.remove('hidden');
@@ -432,6 +434,7 @@ window.app = {
     openTransferModal: () => import('./accounts.js').then(m => m.openTransferModal()),
     closeTransferModal: () => import('./accounts.js').then(m => m.closeTransferModal()),
     setSettingPreset: (type) => import('./settings.js').then(m => m.setSettingPreset(type)),
+    updateMonthSelectorPosition: (pos) => import('./settings.js').then(m => m.updateMonthSelectorPosition(pos)),
     updateEFMultiplier: (multiplier) => import('./settings.js').then(m => m.updateEFMultiplier(multiplier)),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),

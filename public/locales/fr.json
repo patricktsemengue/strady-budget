@@ -56,6 +56,14 @@
     "how_to_use": "Comment l'utiliser ?",
     "understood": "Compris !"
   },
+  "nature": {
+    "ALL": "TOUT",
+    "REVENU": "REVENUS",
+    "FIXE": "CHARGES FIXES",
+    "QUOTIDIEN": "VIE COURANTE",
+    "LOISIR": "LOISIRS",
+    "EPARGNE": "ÉPARGNE & INVEST."
+  },
   "dashboard": {
     "title": "Pilotage Stratégique",
     "mode_wealth": "Mode Wealth Manager",
@@ -68,7 +76,7 @@
     "budget_health": "Santé Budgétaire",
     "cash_drag": "Opportunité CFO : Cash Drag détecté",
     "months": "mois",
-    "actual": "(Actuel)",
+    "actual": "(Actual)",
     "wealth_evolution": "Évolution du Patrimoine Net",
     "balance_sheet": "Structure du Bilan",
     "self_financing_msg": "Votre capacité d'autofinancement mensuelle est de <b>{{amount}}</b>.",
@@ -194,7 +202,15 @@
       "horizon_boundary": "La date de fin ne peut pas dépasser la limite fonctionnelle ({{boundary}}).",
       "horizon_saved": "Configuration du sélecteur enregistrée.",
       "horizon_error": "Erreur lors de l'enregistrement de la configuration.",
-      "currency_updated": "Paramètres monétaires mis à jour."
+      "currency_updated": "Paramètres monétaires mis à jour.",
+      "display_updated": "Paramètres d'affichage mis à jour."
+    },
+    "display": {
+      "month_selector_pos": "Position du Sélecteur de Mois",
+      "month_selector_pos_sub": "Décidez où la timeline doit apparaître.",
+      "month_selector_pos_why": "Permet d'optimiser l'espace selon vos habitudes de navigation. En bas, il est plus proche de vos doigts sur mobile ; en haut, il ancre la vue.",
+      "pos_top": "En haut (Ancré)",
+      "pos_bottom": "En bas (Flottant)"
     }
   },
   "transactions": {
@@ -271,108 +287,108 @@
         "app": "Consultez l'alerte **Opportunité CFO** quand vos comptes opérationnels sont trop pleins."
       },
       "ffi": {
-        "title": "L'Indice de Souveraineté (FFI)",
-        "desc": "Le **Financial Independence Index** mesure votre liberté. Il représente le pourcentage de vos **Charges Fixes** (Loyer, Factures) couvert par vos **Revenus Passifs** (Loyers, Dividendes). À 100%, vous êtes souverain : vos actifs paient vos factures vitales, même si vous cessez de travailler.",
+        "title": "L'Indice de Souverainet\u00e9 (FFI)",
+        "desc": "Le **Financial Independence Index** mesure votre libert\u00e9. Il repr\u00e9sente le pourcentage de vos **Charges Fixes** (Loyer, Factures) couvert par vos **Revenus Passifs** (Loyers, Dividendes). \u00c0 100%, vous \u00eates souverain : vos actifs paient vos factures vitales, m\u00eame si vous cessez de travailler.",
         "target": "Cible : 100%",
-        "help": "Identifiez vos revenus comme 'Passifs' dans l'onglet Catégories pour activer ce KPI."
+        "help": "Identifiez vos revenus comme 'Passifs' dans l'onglet Cat\u00e9gories pour activer ce KPI."
       }
     },
     "guide": {
       "title": "Guide de l'Utilisateur",
       "step1_title": "1. Configuration Initiale",
-      "step1_desc": "Commencez par créer vos <b>Comptes</b> réels. Pour chaque compte, spécifiez s'il s'agit d'un compte d'épargne (pour le calcul du Runway).",
-      "step2_title": "2. Le Moteur de Prévision",
-      "step2_desc": "Dans l'onglet <b>Flux</b>, créez vos <b>Modèles</b>. Salaire, Loyer, Internet... Strady générera automatiquement ces flux pour les 36 prochains mois. Votre futur financier devient visible immédiatement.",
-      "step3_title": "3. Réconciliation Hebdomadaire",
-      "step3_desc": "Une fois par semaine, comparez votre solde Strady avec votre application bancaire. Utilisez le bouton <b>\"Ajuster le solde\"</b> dans l'onglet Comptes pour corriger les écarts (cafés, imprévus).",
-      "step4_title": "4. Clôture de Mois",
-      "step4_desc": "Le dernier jour du mois, cliquez sur <b>\"Clôturer le mois\"</b>. Strady figera les données et reportera vos soldes exacts comme nouveau point de départ pour le mois suivant.",
-      "cta": "Prêt à piloter mon budget !"
+      "step1_desc": "Commencez par cr\u00e9er vos <b>Comptes</b> r\u00e9els. Pour chaque compte, sp\u00e9cifiez s'il s'agit d'un compte d'\u00e9pargne (pour le calcul du Runway).",
+      "step2_title": "2. Le Moteur de Pr\u00e9vision",
+      "step2_desc": "Dans l'onglet <b>Flux</b>, cr\u00e9ez vos <b>Mod\u00e8les</b>. Salaire, Loyer, Internet... Strady g\u00e9n\u00e9rera automatiquement ces flux pour les 36 prochains mois. Votre futur financier devient visible imm\u00e9diatement.",
+      "step3_title": "3. R\u00e9conciliation Hebdomadaire",
+      "step3_desc": "Une fois par semaine, comparez votre solde Strady avec votre application bancaire. Utilisez le bouton <b>\"Ajuster le solde\"</b> dans l'onglet Comptes pour corriger les \u00e9carts (caf\u00e9s, impr\u00e9vus).",
+      "step4_title": "4. Cl\u00f4ture de Mois",
+      "step4_desc": "Le dernier jour du mois, cliquez sur <b>\"Cl\u00f4turer le mois\"</b>. Strady figera les donn\u00e9es et reportera vos soldes exacts comme nouveau point de d\u00e9part pour le mois suivant.",
+      "cta": "Pr\u00eat \u00e0 piloter mon budget !"
     }
   },
   "tour": {
-    "assistant_label": "GUIDE STRADY • ÉTAPE {{current}}/{{total}}",
+    "assistant_label": "GUIDE STRADY \u2022 \u00c9TAPE {{current}}/{{total}}",
     "btn_skip": "Passer le tour",
     "btn_next": "Suivant",
     "btn_finish": "Terminer",
     "steps": {
       "accounts": {
         "title": "Vos Comptes",
-        "message": "Bienvenue ! Nous avons configuré vos comptes principaux. Le **Compte Joint** pour le quotidien et une **Épargne de Sécurité** pour vos projets.",
-        "is_savings": "Considérer comme épargne de précaution",
-        "is_investment": "Considérer comme compte d'investissement"
+        "message": "Bienvenue ! Nous avons configur\u00e9 vos comptes principaux. Le **Compte Joint** pour le quotidien et une **\u00c9pargne de S\u00e9curit\u00e9** pour vos projets.",
+        "is_savings": "Consid\u00e9rer comme \u00e9pargne de pr\u00e9caution",
+        "is_investment": "Consid\u00e9rer comme compte d'investissement"
       },
       "categories": {
-        "title": "Catégories & Classification",
-        "message": "Les catégories permettent de classer vos flux par nature : **Revenu**, **Fixe** (factures), **Quotidien** ou **Loisir**. C'est la base de votre analyse."
+        "title": "Cat\u00e9gories & Classification",
+        "message": "Les cat\u00e9gories permettent de classer vos flux par nature : **Revenu**, **Fixe** (factures), **Quotidien** ou **Loisir**. C'est la base de votre analyse."
       },
       "transactions": {
-        "title": "Moteur de Prévision",
-        "message": "C'est ici que la magie opère ! Vos revenus et factures sont des **modèles**. Strady les utilise pour projeter votre solde sur 36 mois."
+        "title": "Moteur de Pr\u00e9vision",
+        "message": "C'est ici que la magie op\u00e8re ! Vos revenus et factures sont des **mod\u00e8les**. Strady les utilise pour projeter votre solde sur 36 mois."
       },
       "wealth": {
         "title": "Patrimoine Global",
-        "message": "Au-delà du budget, suivez vos actifs (maison, crypto) et passifs (emprunts). Votre **Richesse Nette** est calculée automatiquement."
+        "message": "Au-del\u00e0 du budget, suivez vos actifs (maison, crypto) et passifs (emprunts). Votre **Richesse Nette** est calcul\u00e9e automatiquement."
       },
       "dashboard": {
         "title": "Le Tableau de Bord",
-        "message": "Terminons ici ! Le 'Safe-to-Spend' vous indique exactement ce que vous pouvez dépenser sans compromettre vos objectifs."
+        "message": "Terminons ici ! Le 'Safe-to-Spend' vous indique exactement ce que vous pouvez d\u00e9penser sans compromettre vos objectifs."
       }
     }
   },
   "wealth": {
     "title": "Patrimoine & Bilan",
-    "subtitle": "Suivi des actifs et du désendettement",
-    "assets_label": "ACTIFS (Ce que je possède)",
+    "subtitle": "Suivi des actifs et du d\u00e9sendettement",
+    "assets_label": "ACTIFS (Ce que je poss\u00e8de)",
     "liabilities_label": "PASSIFS (Ce que je dois)",
-    "balance_title": "Équilibre du Bilan",
-    "balance_desc": "Le <b>Patrimoine Net</b> représente votre richesse réelle (Actifs - Dettes). Chaque remboursement de crédit diminue vos passifs et augmente mécaniquement votre patrimoine net, même si votre épargne reste stable.",
-    "asset_type_help": "Actif Immobilier/Valorisé",
+    "balance_title": "\u00c9quilibre du Bilan",
+    "balance_desc": "Le <b>Patrimoine Net</b> repr\u00e9sente votre richesse r\u00e9elle (Actifs - Dettes). Chaque remboursement de cr\u00e9dit diminue vos passifs et augmente m\u00e9caniquement votre patrimoine net, m\u00eame si votre \u00e9pargne reste stable.",
+    "asset_type_help": "Actif Immobilier/Valoris\u00e9",
     "liability_type_help": "Dette / Emprunt Bancaire",
     "estimation_at": "Estimation au {{date}}",
     "balance_at": "Solde au {{date}}",
-    "no_assets": "Aucun actif enregistré pour cette période.",
-    "no_liabilities": "Aucun passif enregistré pour cette période.",
+    "no_assets": "Aucun actif enregistr\u00e9 pour cette p\u00e9riode.",
+    "no_liabilities": "Aucune dette enregistr\u00e9e pour cette p\u00e9riode.",
     "total_assets": "Total des Actifs",
     "total_liabilities": "Total des Dettes",
     "net_equity": "Patrimoine Net (Equity)",
-    "net_equity_help": "Valeur nette à cette période",
+    "net_equity_help": "Valeur nette \u00e0 cette p\u00e9riode",
     "history_empty": "Aucun historique de valeur.",
     "fill_required": "Veuillez remplir tous les champs obligatoires.",
-    "save_success": "Enregistré avec succès !",
+    "save_success": "Enregistr\u00e9 avec succ\u00e8s !",
     "save_error": "Erreur lors de l'enregistrement",
-    "delete_success": "Supprimé.",
-    "modal_details": "Détails",
+    "delete_success": "Supprim\u00e9.",
+    "modal_details": "D\u00e9tails",
     "modal_history": "Historique des valeurs",
     "modal_new_value": "Enregistrer une nouvelle valeur",
     "modal_amount": "Montant",
     "modal_date": "Date",
-    "modal_quantity": "Quantité",
-    "modal_update": "Mettre à jour",
+    "modal_quantity": "Quantit\u00e9",
+    "modal_update": "Mettre \u00e0 jour",
     "modal_delete": "Supprimer cet actif/passif"
   },
   "help_cards": {
-    "badge": "Focus Écran",
-    "btn_help": "Aide écran",
+    "badge": "Focus \u00c9cran",
+    "btn_help": "Aide \u00e9cran",
     "dashboard": {
-      "title": "Pilotage Stratégique",
-      "purpose": "Cet écran est votre tour de contrôle financière. Il agrège vos données pour vous donner une vision claire de votre santé financière globale et de votre capacité réelle de dépense.",
+      "title": "Pilotage Strat\u00e9gique",
+      "purpose": "Cet \u00e9cran est votre tour de contr\u00f4le financi\u00e8re. Il agr\u00e8ge vos donn\u00e9es pour vous donner une vision claire de votre sant\u00e9 financi\u00e8re globale et de votre capacit\u00e9 r\u00e9elle de d\u00e9pense.",
       "action1_label": "Surveiller le Net Worth",
-      "action1_desc": "Suivez l'évolution de votre richesse réelle (Liquidités + Actifs - Dettes).",
-      "action2_label": "Vérifier le Fond de Sécurité",
-      "action2_desc": "Assurez-vous d'avoir assez de réserve pour couvrir vos dépenses en cas d'imprévu.",
+      "action1_desc": "Suivez l'\u00e9volution de votre richesse r\u00e9elle (Liquidit\u00e9s + Actifs - Dettes).",
+      "action2_label": "V\u00e9rifier le Fond de S\u00e9curit\u00e9",
+      "action2_desc": "Assurez-vous d'avoir assez de r\u00e9serve pour couvrir vos d\u00e9penses en cas d'impr\u00e9vu.",
       "action3_label": "Analyser le Burn Rate",
-      "action3_desc": "Comparez votre rythme de dépense réel par rapport à vos revenus."
+      "action3_desc": "Comparez votre rythme de d\u00e9pense r\u00e9el par rapport \u00e0 vos revenus."
     },
     "transactions": {
-      "title": "Flux & Prévisions",
-      "purpose": "Pilotez vos opérations courantes et anticipez le futur. Strady projette vos modèles de revenus et de dépenses pour vous montrer votre trajectoire financière.",
+      "title": "Flux & Pr\u00e9visions",
+      "purpose": "Pilotez vos op\u00e9rations courantes et anticipez le futur. Strady projette vos mod\u00e8les de revenus et de d\u00e9penses pour vous montrer votre trajectoire financi\u00e8re.",
       "action1_label": "Ajouter un Flux",
-      "action1_desc": "Enregistrez une dépense ponctuelle ou créez un modèle récurrent.",
+      "action1_desc": "Enregistrez une d\u00e9pense ponctuelle ou cr\u00e9ez un mod\u00e8le r\u00e9current.",
       "action2_label": "Filtrer par Nature",
-      "action2_desc": "Analysez vos dépenses par type (Fixe, Vie courante, Loisirs).",
+      "action2_desc": "Analysez vos d\u00e9penses par type (Fixe, Vie courante, Loisirs).",
       "action3_label": "Visualiser le Sankey",
-      "action3_desc": "Obtenez une vue graphique des entrées et sorties d'argent."
+      "action3_desc": "Obtenez une vue graphique des entr\u00e9es et sorties d'argent."
     },
     "wealth": {
       "title": "Gestion du Patrimoine",
@@ -380,49 +396,49 @@
       "action1_label": "Ajouter un Actif/Passif",
       "action1_desc": "Enregistrez un bien immobilier, un compte titres ou un emprunt.",
       "action2_label": "Actualiser les Valeurs",
-      "action2_desc": "Mettez à jour périodiquement la valeur de vos actifs pour un calcul précis du Net Worth.",
-      "action3_label": "Évolution Historique",
+      "action2_desc": "Mettez \u00e0 jour p\u00e9riodiquement la valeur de vos actifs pour un calcul pr\u00e9cis du Net Worth.",
+      "action3_label": "\u00c9volution Historique",
       "action3_desc": "Visualisez la trajectoire de votre patrimoine sur le temps long."
     },
     "accounts": {
-      "title": "Gestion de la Trésorerie",
-      "purpose": "Configurez vos comptes bancaires réels. C'est ici que vous définissez vos points de départ financiers (soldes initiaux) pour chaque compte.",
-      "action1_label": "Créer un Compte",
+      "title": "Gestion de la Tr\u00e9sorerie",
+      "purpose": "Configurez vos comptes bancaires r\u00e9els. C'est ici que vous d\u00e9finissez vos points de d\u00e9part financiers (soldes initiaux) pour chaque compte.",
+      "action1_label": "Cr\u00e9er un Compte",
       "action1_desc": "Ajoutez vos comptes courants, livreets A, ou PEA pour suivre leurs soldes.",
-      "action2_label": "Réconcilier les Soldes",
-      "action2_desc": "Ajustez le solde de l'application pour qu'il corresponde exactement à votre banque.",
+      "action2_label": "R\u00e9concilier les Soldes",
+      "action2_desc": "Ajustez le solde de l'application pour qu'il corresponde exactement \u00e0 votre banque.",
       "action3_label": "Virement Interne",
       "action3_desc": "Enregistrez un transfert d'argent entre deux de vos comptes sans affecter votre budget global."
     },
     "categories": {
       "title": "Analyses & Postes",
-      "purpose": "Les postes (catégories) sont les étiquettes que vous posez sur votre argent. Bien les configurer permet à Strady de calculer précisément votre santé budgétaire.",
+      "purpose": "Les postes (cat\u00e9gories) sont les \u00e9tiquettes que vous posez sur votre argent. Bien les configurer permet \u00e0 Strady de calculer pr\u00e9cis\u00e9ment votre sant\u00e9 budg\u00e9taire.",
       "action1_label": "Personnaliser les Postes",
-      "action1_desc": "Changez les icônes, les couleurs et les noms de vos catégories pour qu'elles vous ressemblent.",
+      "action1_desc": "Changez les ic\u00f4nes, les couleurs et les noms de vos cat\u00e9gories pour qu'elles vous ressemblent.",
       "action2_label": "Identifier les Revenus Passifs",
-      "action2_desc": "Cochez 'Revenu Passif' pour que vos dividendes ou loyers alimentent votre Indice de Souveraineté.",
-      "action3_label": "Réorganiser l'Ordre",
-      "action3_desc": "L'ordre défini ici sera celui utilisé pour afficher vos tableaux et graphiques."
+      "action2_desc": "Cochez 'Revenu Passif' pour que vos dividendes ou loyers alimentent votre Indice de Souverainet\u00e9.",
+      "action3_label": "R\u00e9organiser l'Ordre",
+      "action3_desc": "L'ordre d\u00e9fini ici sera celui utilis\u00e9 pour afficher vos tableaux et graphiques."
     },
     "education": {
       "title": "Philosophie & Guide",
-      "purpose": "Strady n'est pas qu'un outil technique, c'est une méthode. Apprenez les principes de la souveraineté financière pour transformer votre relation à l'argent.",
-      "action1_label": "Maîtriser les Concepts",
-      "action1_desc": "Découvrez le 70/20/10, le Pay Yourself First et l'indice FFI.",
+      "purpose": "Strady n'est pas qu'un outil technique, c'est une m\u00e9thode. Apprenez les principes de la souverainet\u00e9 financi\u00e8re pour transformer votre relation \u00e0 l'argent.",
+      "action1_label": "Ma\u00eetriser les Concepts",
+      "action1_desc": "D\u00e9couvrez le 70/20/10, le Pay Yourself First et l'indice FFI.",
       "action2_label": "Suivre le Guide",
-      "action2_desc": "Apprenez les 4 étapes clés pour piloter votre budget comme un pro.",
+      "action2_desc": "Apprenez les 4 \u00e9tapes cl\u00e9s pour piloter votre budget comme un pro.",
       "action3_label": "Lancer le Tour",
-      "action3_desc": "Redémarrez la visite guidée pour revoir les fonctionnalités de base."
+      "action3_desc": "Red\u00e9marrez la visite guid\u00e9e pour revoir les fonctionnalit\u00e9s de base."
     },
     "settings": {
-      "title": "Réglages Système",
-      "purpose": "Personnalisez votre expérience Strady. Gérez vos préférences d'affichage, vos sauvegardes et la sécurité de votre compte.",
+      "title": "R\u00e9glages Syst\u00e8me",
+      "purpose": "Personnalisez votre exp\u00e9rience Strady. G\u00e9rez vos pr\u00e9f\u00e9rences d'affichage, vos sauvegardes et la s\u00e9curit\u00e9 de votre compte.",
       "action1_label": "Ajuster l'Horizon",
-      "action1_desc": "Définissez jusqu'où vous souhaitez voir vos prévisions financières.",
-      "action2_label": "Exporter vos Données",
-      "action2_desc": "Créez une sauvegarde de sécurité ou transférez vos données vers un autre appareil.",
+      "action1_desc": "D\u00e9finissez jusqu'o\u00f9 vous souhaitez voir vos pr\u00e9visions financi\u00e8res.",
+      "action2_label": "Exporter vos Donn\u00e9es",
+      "action2_desc": "Cr\u00e9ez une sauvegarde de s\u00e9curit\u00e9 ou transf\u00e9rez vos donn\u00e9es vers un autre appareil.",
       "action3_label": "Changer la Langue",
-      "action3_desc": "Basculez entre le français et l'anglais pour l'ensemble de l'interface."
+      "action3_desc": "Basculez entre le fran\u00e7ais et l'anglais pour l'ensemble de l'interface."
     }
   },
   "nature": {
@@ -453,7 +469,7 @@
     "title": "Ma Trésorerie",
     "operational_liquidity": "Liquidité Opérationnelle",
     "total_savings": "Total Épargne",
-    "total_investments": "Total Investissements",
+    "total_investissements": "Total Investissements",
     "internal_transfer": "Virement interne",
     "new_account": "Nouveau compte",
     "adjust": "Ajuster",

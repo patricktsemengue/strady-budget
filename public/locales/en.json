@@ -202,7 +202,15 @@
       "horizon_boundary": "End date cannot exceed the functional limit ({{boundary}}).",
       "horizon_saved": "Selector configuration saved.",
       "horizon_error": "Error saving the configuration.",
-      "currency_updated": "Currency settings updated."
+      "currency_updated": "Currency settings updated.",
+      "display_updated": "Display settings updated."
+    },
+    "display": {
+      "month_selector_pos": "Month Selector Position",
+      "month_selector_pos_sub": "Decide where the timeline appears.",
+      "month_selector_pos_why": "Allows you to optimize the space based on your navigation habits. At the bottom, it's closer to your fingers on mobile; at the top, it anchors the view.",
+      "pos_top": "Top (Anchored)",
+      "pos_bottom": "Bottom (Floating)"
     }
   },
   "transactions": {

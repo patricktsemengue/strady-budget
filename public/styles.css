@@ -13,16 +13,17 @@ html {
     #sidebar {
         width: 260px;
         height: 100vh;
-        position: fixed;
+        position: sticky;
         left: 0;
         top: 0;
         border-right: 1px solid #e2e8f0;
-        background-color: white;
+        background-color: #fcfdfe; /* Very slight off-white for the sidebar */
         z-index: 50;
         display: flex;
         flex-direction: column;
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
+        flex-shrink: 0;
     }
 
     #sidebar.collapsed {
@@ -43,6 +44,25 @@ html {
         justify-content: center;
     }
 
+    #sidebar.collapsed #desktop-switcher,
+    #sidebar.collapsed #lang-selector {
+        flex-direction: column;
+        gap: 0.5rem;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #sidebar.collapsed #user-info {
+        justify-content: center;
+        gap: 0.25rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    #sidebar.collapsed #user-info > div {
+        margin-right: 0;
+    }
+
     #sidebar.collapsed .nav-item {
         justify-content: center;
         padding-left: 0;
@@ -61,29 +81,19 @@ html {
     }
 
     #main-wrapper {
-        margin-left: 260px;
         flex: 1;
-        width: calc(100% - 260px);
+        min-width: 0;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
-        transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
     }
 
-    #main-wrapper.sidebar-collapsed {
-        margin-left: 80px;
-        width: calc(100% - 80px);
-    }
-
-    /* Fixed top elements inside wrapper should account for margin */
+    /* Fixed/Sticky elements inside wrapper now naturally center with mx-auto 
+       because main-wrapper occupies the remaining space. */
     #data-status-indicator, #shared-month-selection {
-        left: calc(50% + 130px);
-        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    #main-wrapper.sidebar-collapsed #data-status-indicator, 
-    #main-wrapper.sidebar-collapsed #shared-month-selection {
-        left: calc(50% + 40px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 }
 
@@ -109,7 +119,7 @@ html {
 }
 
 body {
-    background-color: #f8fafc;
+    background-color: #eef2f6; /* Softer, slightly deeper slate-blue for better contrast with white cards */
     color: #0f172a; /* Darker slate for primary text */
 }
 

@@ -45,7 +45,7 @@
     <!-- Desktop Sidebar -->
     <aside id="sidebar" class="hidden md:flex flex-col relative group/sidebar">
         <!-- Sidebar Toggle -->
-        <button onclick="window.app.toggleSidebar()" class="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-sm z-[60] transition-all opacity-0 group-hover/sidebar:opacity-100">
+        <button onclick="window.app.toggleSidebar()" class="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-sm z-[60] transition-all opacity-20 group-hover/sidebar:opacity-100">
             <i id="sidebar-toggle-icon" class="fa-solid fa-chevron-left text-[10px]"></i>
         </button>
 
@@ -70,8 +70,8 @@
 
         <div class="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <!-- Theme & Language Switcher (Desktop) -->
-            <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center">
+            <div id="desktop-switcher" class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div id="lang-selector" class="flex items-center">
                     <button onclick="window.app.changeLanguage('fr')" id="lang-fr" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">FR</button>
                     <button onclick="window.app.changeLanguage('en')" id="lang-en" class="px-2 py-1 rounded-lg text-[10px] font-black transition-all dark:text-slate-400">EN</button>
                 </div>
@@ -144,7 +144,7 @@
         </nav>
 
 
-    <div id="data-status-indicator" class="hidden fixed top-[68px] md:top-4 left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300">
+    <div id="data-status-indicator" class="hidden fixed md:sticky top-[68px] md:top-4 left-1/2 -translate-x-1/2 z-40 px-3 py-1 text-xs font-semibold rounded-full shadow-md transition-all duration-300">
     </div>
 
     <!-- Shared Month Selection -->
