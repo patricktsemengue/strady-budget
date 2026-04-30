@@ -117,7 +117,15 @@ export default {
                 </div>
 
                 <div class="flex-1 w-full space-y-12">
-                    <h2 class="md:hidden text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">${t('settings.title')}</h2>
+                    <!-- Mobile Sticky Header -->
+                    <div class="page-header-sticky md:hidden mb-6">
+                        <div class="flex items-center gap-4">
+                            <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">${t('settings.title')}</h2>
+                            <button onclick="window.app.showHelp('settings')" class="p-2 text-slate-300 hover:text-slate-600 transition-colors" title="${t('help_cards.btn_help')}">
+                                <i class="fa-solid fa-circle-question text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- 1. GROUP: DISPLAY -->
                     <div id="group-display" class="space-y-4">
@@ -155,21 +163,9 @@ export default {
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Card: Month Selector Position -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            ${renderCardHeader(t('settings.display.month_selector_pos'), t('settings.display.month_selector_pos_sub'), t('settings.display.month_selector_pos_why'), 'ui', 'fa-arrows-up-down', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
-                            <div class="px-6 pb-6 pt-2">
-                                <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                    <button onclick="window.app.updateMonthSelectorPosition('top')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.monthSelectorPosition === 'top' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">${t('settings.display.pos_top')}</button>
-                                    <button onclick="window.app.updateMonthSelectorPosition('bottom')" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.monthSelectorPosition === 'bottom' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">${t('settings.display.pos_bottom')}</button>
-                                </div>
-                            </div>
                         </div>
-                    </div>
 
-                    <!-- 2. GROUP: STRATEGY -->
-                    <div id="group-strategy" class="space-y-4 pt-4">
+                        <!-- 2. GROUP: STRATEGY -->                    <div id="group-strategy" class="space-y-4 pt-4">
                         <div class="flex items-center gap-2 mb-2 ml-1">
                             <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.strategy')}</h4>

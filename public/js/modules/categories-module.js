@@ -25,11 +25,19 @@ export default {
     }),
     getTemplate: () => `
         <div id="view-categories" class="space-y-6 max-w-6xl mx-auto px-4 pb-20">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-slate-800">Analyses</h1>
-                <button onclick="window.app.openAddCategoryDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 items-center gap-2 shadow-md">
-                    <i class="fa-solid fa-plus text-xs"></i> Nouveau poste
-                </button>
+            <!-- Sticky Header -->
+            <div class="page-header-sticky">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-2xl font-bold text-slate-800">Analyses</h1>
+                        <button onclick="window.app.showHelp('categories')" class="p-2 text-slate-300 hover:text-amber-600 transition-colors" title="${t('help_cards.btn_help')}">
+                            <i class="fa-solid fa-circle-question text-lg"></i>
+                        </button>
+                    </div>
+                    <button onclick="window.app.openAddCategoryDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-900 flex items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
+                        <i class="fa-solid fa-plus text-xs"></i> Nouveau poste
+                    </button>
+                </div>
             </div>
 
             <!-- Categories List Grouped by Nature -->

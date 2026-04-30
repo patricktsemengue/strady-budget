@@ -26,22 +26,58 @@ export default {
     }),
     getTemplate: () => `
         <div id="view-wealth" class="space-y-8 max-w-6xl mx-auto px-4 pb-20">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">${t('wealth.title')}</h1>
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">${t('wealth.subtitle')}</p>
+            <!-- Sticky Header -->
+            <div class="page-header-sticky">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <h1 class="text-2xl font-black text-slate-800 tracking-tight">${t('wealth.title')}</h1>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">${t('wealth.subtitle')}</p>
+                        </div>
+                        <button onclick="window.app.showHelp('wealth')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors" title="${t('help_cards.btn_help')}">
+                            <i class="fa-solid fa-circle-question text-lg"></i>
+                        </button>
+                    </div>
+                    <button onclick="window.app.openWealthDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-900 items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
+                        <i class="fa-solid fa-plus text-xs"></i> ${t('common.add')}
+                    </button>
                 </div>
-                <button onclick="window.app.openWealthDrawer()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-900 flex items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
-                    <i class="fa-solid fa-plus text-xs"></i> ${t('common.add')}
-                </button>
             </div>
 
             <!-- Net Worth Summary -->
-            <div id="wealth-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Injected by JS: Total Assets, Total Liabilities, Net Worth -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm animate-pulse h-24"></div>
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm animate-pulse h-24"></div>
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm animate-pulse h-24"></div>
+            <div id="wealth-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Assets Card -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-emerald-200 transition-all">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-gem"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('wealth.total_assets')}</p>
+                        <p id="wealth-stat-assets" class="text-2xl font-black text-slate-900">€0,00</p>
+                    </div>
+                </div>
+
+                <!-- Liabilities Card -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-rose-200 transition-all">
+                    <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-hand-holding-dollar"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('wealth.total_liabilities')}</p>
+                        <p id="wealth-stat-liabilities" class="text-2xl font-black text-rose-600">€0,00</p>
+                    </div>
+                </div>
+
+                <!-- Net Wealth Card -->
+                <div class="bg-indigo-600 rounded-2xl p-6 shadow-lg shadow-indigo-100 flex items-center gap-5 group hover:bg-indigo-700 transition-all">
+                    <div class="w-14 h-14 rounded-2xl bg-white/20 text-white flex items-center justify-center text-2xl shadow-inner group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">${t('wealth.net_equity')}</p>
+                        <p id="wealth-stat-net" class="text-2xl font-black text-white italic">€0,00</p>
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

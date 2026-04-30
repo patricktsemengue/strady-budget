@@ -21,13 +21,21 @@ export default {
     getFabConfig: () => null,
     getTemplate: () => `
         <div id="view-education" class="max-w-4xl mx-auto px-4 pb-20">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 class="text-3xl font-black text-slate-800">${t('education.title')}</h1>
-                    <p class="text-slate-500 font-medium italic">${t('education.subtitle')}</p>
-                </div>
-                <div class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-200">
-                    ${t('education.badge')}
+            <!-- Sticky Header -->
+            <div class="page-header-sticky mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <h1 class="text-3xl font-black text-slate-800">${t('education.title')}</h1>
+                            <p class="text-slate-500 font-medium italic">${t('education.subtitle')}</p>
+                        </div>
+                        <button onclick="window.app.showHelp('education')" class="p-2 text-slate-300 hover:text-violet-600 transition-colors" title="${t('help_cards.btn_help')}">
+                            <i class="fa-solid fa-circle-question text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-200">
+                        ${t('education.badge')}
+                    </div>
                 </div>
             </div>
 

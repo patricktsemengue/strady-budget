@@ -32,29 +32,73 @@ export default {
     },
     getTemplate: () => `
         <div id="view-transactions" class="space-y-6 max-w-6xl mx-auto px-4 relative pb-24">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-slate-800">${t('transactions.title')}</h1>
-                <div class="flex items-center gap-2">
-                    <button id="btn-expand-all" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Tout développer">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </button>
-                    <button id="btn-collapse-all" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Tout réduire">
-                        <i class="fa-solid fa-compress"></i>
-                    </button>
-                    <button id="btn-show-sankey" class="p-2 text-slate-500 hover:text-indigo-600 transition-colors" title="Diagramme Sankey">
-                        <i class="fa-solid fa-chart-pie"></i>
-                    </button>
+            <!-- Sticky Header -->
+            <div class="page-header-sticky space-y-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-2xl font-bold text-slate-800">${t('transactions.title')}</h1>
+                        <button onclick="window.app.showHelp('transactions')" class="p-2 text-slate-300 hover:text-indigo-600 transition-colors" title="${t('help_cards.btn_help')}">
+                            <i class="fa-solid fa-circle-question text-lg"></i>
+                        </button>
+                    </div>
+                    <div class="hidden md:flex items-center gap-2">
+                        <button id="btn-expand-all" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Tout développer">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </button>
+                        <button id="btn-collapse-all" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Tout réduire">
+                            <i class="fa-solid fa-compress"></i>
+                        </button>
+                        <button id="btn-show-sankey" class="p-2 text-slate-500 hover:text-indigo-600 transition-colors" title="Diagramme Sankey">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Nature Filter Pills (Inside Sticky) -->
+                <div class="flex flex-wrap gap-2 overflow-x-auto pb-2 hide-scroll" id="nature-filters-sticky">
+                    <button data-nature="ALL" onclick="window.app.setNatureFilter('ALL')" class="nature-pill ${localStorage.getItem('strady_nature_filter') === 'ALL' || !localStorage.getItem('strady_nature_filter') ? 'active bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500'} px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.ALL') || 'TOUT'}</button>
+                    <button data-nature="REVENU" onclick="window.app.setNatureFilter('REVENU')" class="nature-pill ${localStorage.getItem('strady_nature_filter') === 'REVENU' ? 'active bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500'} px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.REVENU')}</button>
+                    <button data-nature="FIXE" onclick="window.app.setNatureFilter('FIXE')" class="nature-pill ${localStorage.getItem('strady_nature_filter') === 'FIXE' ? 'active bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500'} px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.FIXE')}</button>
+                    <button data-nature="QUOTIDIEN" onclick="window.app.setNatureFilter('QUOTIDIEN')" class="nature-pill ${localStorage.getItem('strady_nature_filter') === 'QUOTIDIEN' ? 'active bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500'} px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.QUOTIDIEN')}</button>
+                    <button data-nature="LOISIR" onclick="window.app.setNatureFilter('LOISIR')" class="nature-pill ${localStorage.getItem('strady_nature_filter') === 'LOISIR' ? 'active bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500'} px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.LOISIR')}</button>
+                    <button data-nature="EPARGNE" onclick="window.app.setNatureFilter('EPARGNE')" class="nature-pill ${localStorage.getItem('strady_nature_filter') === 'EPARGNE' ? 'active bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500'} px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.EPARGNE')}</button>
                 </div>
             </div>
 
-            <!-- Nature Filter Pills -->
-            <div class="flex flex-wrap gap-2 overflow-x-auto pb-2 hide-scroll" id="nature-filters">
-                <button onclick="window.app.setNatureFilter('ALL')" class="nature-pill active bg-slate-800 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">${t('nature.ALL') || 'TOUT'}</button>
-                <button onclick="window.app.setNatureFilter('REVENU')" class="nature-pill bg-white border border-slate-200 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">${t('nature.REVENU')}</button>
-                <button onclick="window.app.setNatureFilter('FIXE')" class="nature-pill bg-white border border-slate-200 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-all shadow-sm">${t('nature.FIXE')}</button>
-                <button onclick="window.app.setNatureFilter('QUOTIDIEN')" class="nature-pill bg-white border border-slate-200 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all shadow-sm">${t('nature.QUOTIDIEN')}</button>
-                <button onclick="window.app.setNatureFilter('LOISIR')" class="nature-pill bg-white border border-slate-200 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-all shadow-sm">${t('nature.LOISIR')}</button>
-                <button onclick="window.app.setNatureFilter('EPARGNE')" class="nature-pill bg-white border border-slate-200 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 transition-all shadow-sm">${t('nature.EPARGNE')}</button>
+            <!-- Desktop Stats Dashboard (Below sticky to allow scrolling) -->
+            <div class="hidden md:grid grid-cols-3 gap-6">
+                <!-- Inflows Card -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-emerald-200 transition-all">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('transactions.inflows')}</p>
+                        <p id="desktop-stats-in" class="text-2xl font-black text-slate-900">€0,00</p>
+                    </div>
+                </div>
+
+                <!-- Outflows Card -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-rose-200 transition-all">
+                    <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-arrow-trend-down"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('transactions.outflows')}</p>
+                        <p id="desktop-stats-out" class="text-2xl font-black text-slate-900">€0,00</p>
+                    </div>
+                </div>
+
+                <!-- Net Card -->
+                <div class="bg-indigo-600 rounded-2xl p-6 shadow-lg shadow-indigo-100 flex items-center gap-5 group hover:bg-indigo-700 transition-all">
+                    <div class="w-14 h-14 rounded-2xl bg-white/20 text-white flex items-center justify-center text-2xl shadow-inner group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">${t('transactions.monthly_net')}</p>
+                        <p id="desktop-stats-net" class="text-2xl font-black text-white italic">€0,00</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Monthly Transactions -->
@@ -110,27 +154,14 @@ export default {
                 </div>
             </div>
 
-            <!-- Net Cash Flow Sticky Bar -->
-            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-2xl bg-slate-900/90 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-white/10 p-4 flex items-center justify-between px-8">
-                <div class="flex items-center gap-6">
-                    <div>
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">${t('transactions.inflows')}</p>
-                        <p id="net-bar-in" class="text-sm font-bold text-emerald-400">€0,00</p>
-                    </div>
-                    <div class="w-px h-8 bg-white/10"></div>
-                    <div>
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">${t('transactions.outflows')}</p>
-                        <p id="net-bar-out" class="text-sm font-bold text-rose-400">€0,00</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">${t('transactions.monthly_net')}</p>
-                    <p id="net-bar-total" class="text-lg font-black italic">€0,00</p>
-                </div>
             </div>
         </div>
     `,
     render: () => {
+        // Show mobile net strip
+        const mobileNetHeader = document.getElementById('mobile-net-header-strip');
+        if (mobileNetHeader) mobileNetHeader.classList.remove('hidden');
+
         renderTimeline();
         renderTransactions();
     },

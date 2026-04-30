@@ -142,13 +142,17 @@ class AppRouter {
     render() {
         if (!this.currentModule) return;
 
+        // Global UI resets for mobile
+        const mobileNetHeader = document.getElementById('mobile-net-header-strip');
+        if (mobileNetHeader) mobileNetHeader.classList.add('hidden');
+
         const appContent = document.getElementById('app-content');
         if (!appContent) return;
 
-        // Show/Hide Shared Month Selection
+        // Show/Hide Shared Month Selection (Mobile Puck Only)
         const sharedMonthSelection = document.getElementById('shared-month-selection');
         if (sharedMonthSelection) {
-            if (this.currentModule.showMonthSelection) {
+            if (this.currentModule.showMonthSelection && window.innerWidth < 768) {
                 sharedMonthSelection.classList.remove('hidden');
             } else {
                 sharedMonthSelection.classList.add('hidden');
@@ -208,7 +212,7 @@ class AppRouter {
                 const config = this.currentModule.getFabConfig();
                 if (config) {
                     mobileFab.classList.remove('hidden');
-                    mobileFab.className = `md:hidden fixed bottom-6 right-6 w-14 h-14 ${config.color || 'bg-slate-800'} text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
+                    mobileFab.className = `md:hidden fixed bottom-4 right-4 w-14 h-14 ${config.color || 'bg-slate-800'} text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
                     mobileFab.innerHTML = `<i class="fa-solid ${config.icon || 'fa-plus'} text-xl"></i>`;
                     mobileFab.onclick = config.action;
                 } else {
@@ -216,7 +220,7 @@ class AppRouter {
                 }
             } else if (this.currentModule.showMobileFab && this.currentModule.showMobileFab()) {
                 mobileFab.classList.remove('hidden');
-                mobileFab.className = `md:hidden fixed bottom-6 right-6 w-14 h-14 bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
+                mobileFab.className = `md:hidden fixed bottom-4 right-4 bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
                 mobileFab.innerHTML = `<i class="fa-solid fa-plus text-xl"></i>`;
                 mobileFab.onclick = () => window.app.openTransactionModal();
             } else {
@@ -255,15 +259,6 @@ class AppRouter {
                             `).join('')}
                         </div>
                     </div>
-                </div>
-            `;
-        } else if (helpContent) {
-            // Mini button to reopen
-            helpHtml = `
-                <div class="max-w-6xl mx-auto px-4 mt-2 flex justify-end">
-                    <button onclick="window.app.showHelp('${this.currentModule.id}')" class="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-${currentAccent}-600 transition-colors flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
-                        <i class="fa-solid fa-circle-question"></i> ${t('help_cards.btn_help')}
-                    </button>
                 </div>
             `;
         }

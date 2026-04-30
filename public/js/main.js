@@ -350,6 +350,9 @@ const toggleSidebar = () => {
     }
     
     localStorage.setItem('strady_sidebar_collapsed', isCollapsed);
+    
+    // Re-render timeline to switch between 3x4 and 1x3 views
+    import('./dashboard.js').then(m => m.renderTimeline());
 };
 
 const setupEventListeners = () => {

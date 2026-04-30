@@ -284,13 +284,6 @@ export const renderStrategicDashboard = () => {
     // Render HTML
     container.innerHTML = `
         <div class="space-y-8">
-            <!-- Sticky Jump Bar -->
-            <div class="sticky top-[124px] z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 -mx-4 px-4 py-2 mb-6 overflow-x-auto hide-scroll flex gap-2 items-center">
-                <button onclick="window.app.jumpToSection('dash-scorecard')" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 whitespace-nowrap">${t('dashboard.jump.summary')}</button>
-                <button onclick="window.app.jumpToSection('dash-kpis')" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 whitespace-nowrap">${t('dashboard.jump.indicators')}</button>
-                <button onclick="window.app.jumpToSection('dash-analysis')" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 whitespace-nowrap">${t('dashboard.jump.analysis')}</button>
-            </div>
-
             <!-- Improvement 1: Rolling 3-Month Scorecard -->
             <div id="dash-scorecard" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
@@ -683,6 +676,16 @@ export const jumpToSection = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
     
+    // Update Button Visual States
+    document.querySelectorAll('.jump-link').forEach(btn => {
+        const isActive = btn.getAttribute('data-section') === id;
+        if (isActive) {
+            btn.className = 'jump-link px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 whitespace-nowrap border border-indigo-100 dark:border-indigo-800 shadow-sm transition-all';
+        } else {
+            btn.className = 'jump-link px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 whitespace-nowrap border border-transparent transition-all';
+        }
+    });
+
     // Account for sticky headers (68px nav + 56px month + 44px jump bar = ~168px)
     const offset = 175; 
     const bodyRect = document.body.getBoundingClientRect().top;

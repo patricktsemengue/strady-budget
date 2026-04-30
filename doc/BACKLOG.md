@@ -55,6 +55,7 @@ This document outlines the strategic roadmap to evolve **Strady Budget** from a 
 | UX-05 | **Health Signal (Traffic Lights)** | Simple Green/Amber/Red indicators for the month: Green = On track, Amber = Buffer used, Red = Savings goals at risk. | TO-DO |
 | UX-06 | **Collapsible Grouping** | Flux & Prévisions view grouped by Category with collapsible sections and "Expand/Collapse All" global toggle. State is persisted in localStorage. | **DONE** |
 | UX-07 | **MoM Variance Analysis** | Category headers display the total amount for the month AND a percentage/absolute delta compared to the previous month. | **DONE** |
+| UX-08 | **"Wealth Mode" Toggle** | A setting to silo user types: "Wealth-only" (hides transactions/budgeting modules) vs. "Full Suite" (shows everything). | TO-DO |
 
 ## 6. Family Collaboration
 *Multi-user dynamics and reporting.*

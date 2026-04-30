@@ -108,25 +108,12 @@ export const renderWealthList = () => {
     if (assetsLabel) assetsLabel.textContent = formatCurrency(totalAssets);
     if (liabilitiesLabel) liabilitiesLabel.textContent = formatCurrency(totalLiabilities);
 
-    if (summary) {
-        summary.innerHTML = `
-            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('wealth.total_assets')}</p>
-                <p class="text-2xl font-black text-slate-800">${formatCurrency(totalAssets)}</p>
-                <div class="mt-2 h-1 w-12 bg-emerald-500 rounded-full"></div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('wealth.total_liabilities')}</p>
-                <p class="text-2xl font-black text-rose-600">${formatCurrency(totalLiabilities)}</p>
-                <div class="mt-2 h-1 w-12 bg-rose-500 rounded-full"></div>
-            </div>
-            <div class="bg-slate-900 p-6 rounded-2xl shadow-xl transition-all hover:scale-[1.02]">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">${t('wealth.net_equity')}</p>
-                <p class="text-2xl font-black text-white">${formatCurrency(netWorth)}</p>
-                <p class="text-[10px] font-bold text-slate-400 mt-2 italic">${t('wealth.net_equity_help')}</p>
-            </div>
-        `;
-    }
+    const wStatAssets = document.getElementById('wealth-stat-assets');
+    const wStatLiabilities = document.getElementById('wealth-stat-liabilities');
+    const wStatNet = document.getElementById('wealth-stat-net');
+    if (wStatAssets) wStatAssets.textContent = formatCurrency(totalAssets);
+    if (wStatLiabilities) wStatLiabilities.textContent = formatCurrency(totalLiabilities);
+    if (wStatNet) wStatNet.textContent = formatCurrency(netWorth);
 };
 
 export const handleAddWealthEntity = async (e) => {

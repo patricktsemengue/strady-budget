@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { generateId, getMonthKey, getTxDisplayInfo, generateDeterministicTransactionId, generateDeterministicTemplateId } from './utils.js';
+import { generateId, getMonthKey, getTxDisplayInfo, generateDeterministicTransactionId, generateDeterministicTemplateId, formatCurrency } from './utils.js';
 import { currentUserId } from './storage.js';
 import { t } from './i18n.js';
 import { 

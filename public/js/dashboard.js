@@ -81,6 +81,29 @@ export const renderTransactions = () => {
         netBarTotal.className = `text-lg font-black italic ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
     }
 
+    // Update Desktop Stats Grid (Top of page)
+    const dStatIn = document.getElementById('desktop-stats-in');
+    const dStatOut = document.getElementById('desktop-stats-out');
+    const dStatNet = document.getElementById('desktop-stats-net');
+    if (dStatIn) dStatIn.textContent = formatCurrency(totalIn);
+    if (dStatOut) dStatOut.textContent = formatCurrency(totalOut);
+    if (dStatNet) {
+        const net = totalIn - totalOut;
+        dStatNet.textContent = (net >= 0 ? '+' : '') + formatCurrency(net);
+    }
+
+    // Update Mobile Sub-Header Strip
+    const stripIn = document.getElementById('mobile-strip-in');
+    const stripOut = document.getElementById('mobile-strip-out');
+    const stripTotal = document.getElementById('mobile-strip-total');
+    if (stripIn) stripIn.textContent = formatCurrency(totalIn);
+    if (stripOut) stripOut.textContent = formatCurrency(totalOut);
+    if (stripTotal) {
+        const net = totalIn - totalOut;
+        stripTotal.textContent = (net >= 0 ? '+' : '') + formatCurrency(net);
+        stripTotal.className = `text-xs font-black italic ${net >= 0 ? 'text-emerald-500' : 'text-rose-500'}`;
+    }
+
     // Update Pills
     document.querySelectorAll('.nature-pill').forEach(pill => {
         const onclick = pill.getAttribute('onclick');
@@ -261,6 +284,17 @@ export const renderTransactions = () => {
 
 export const setNatureFilter = (nature) => {
     localStorage.setItem('strady_nature_filter', nature);
+    
+    // Update Button Visual States
+    document.querySelectorAll('.nature-pill').forEach(btn => {
+        const btnNature = btn.getAttribute('data-nature');
+        if (btnNature === nature) {
+            btn.className = 'nature-pill active bg-slate-800 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm';
+        } else {
+            btn.className = 'nature-pill bg-white border border-slate-200 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-slate-50 transition-all shadow-sm';
+        }
+    });
+
     renderTransactions();
 };
 
@@ -286,75 +320,128 @@ export const toggleAllCategoryGroups = (expand) => {
 };
 
 export const renderTimeline = () => {
-    const container = document.getElementById('month-timeline');
-    if (!container) return;
+    const desktopContainer = document.getElementById('desktop-month-selector');
+    const mobileContainer = document.getElementById('month-timeline');
+    
+    if (!desktopContainer && !mobileContainer) return;
 
     const config = state.monthSelectorConfig;
     const startDate = new Date(config.startDate + 'T00:00:00Z');
     const endDate = new Date(config.endDate + 'T23:59:59Z');
-    const step = config.step;
-
-    let html = '';
-    let current = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
 
     const now = new Date();
     const currentYear = now.getUTCFullYear();
     const currentMonth = now.getUTCMonth();
 
-    let lastYear = null;
+    // 1. Render Desktop Sidebar (Grid view)
+    if (desktopContainer && window.innerWidth >= 768) {
+        const isCollapsed = document.getElementById('sidebar')?.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            // FOLDED: 1x3 View with Arrows
+            let cur = new Date(Date.UTC(state.viewDate.getUTCFullYear(), state.viewDate.getUTCMonth() - 1, 1));
+            let dHtml = `
+                <div class="flex flex-col items-center">
+                    <button onclick="window.app.setViewDate('${new Date(Date.UTC(state.viewDate.getUTCFullYear(), state.viewDate.getUTCMonth() - 1, 1)).toISOString()}')" class="nav-arrow">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                    <div class="timeline-grid w-full">`;
+            
+            for (let i = 0; i < 3; i++) {
+                const isSelected = (cur.getUTCMonth() === state.viewDate.getUTCMonth() && cur.getUTCFullYear() === state.viewDate.getUTCFullYear());
+                let label = new Intl.DateTimeFormat('fr-BE', { month: 'short', timeZone: 'UTC' }).format(cur).replace('.', '');
+                // Add tiny year if not current year
+                if (cur.getUTCFullYear() !== currentYear) {
+                    label += `<span class="block text-[7px] opacity-50">${cur.getUTCFullYear().toString().slice(-2)}</span>`;
+                }
 
-    while (current <= endDate) {
-        const year = current.getUTCFullYear();
+                dHtml += `
+                    <button onclick="window.app.setViewDate('${cur.toISOString()}')" class="${isSelected ? 'selected' : ''}">
+                        ${label}
+                    </button>
+                `;
+                cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
+            }
 
-        // Add Year Separator
-        if (lastYear !== null && year !== lastYear) {
-            html += `<div class="w-px h-6 bg-slate-200 mx-2 self-center"></div>`;
-        }
-        lastYear = year;
-
-        const isSelected = (step === 'month')
-            ? (current.getUTCMonth() === state.viewDate.getUTCMonth() && current.getUTCFullYear() === state.viewDate.getUTCFullYear())
-            : (Math.floor(current.getUTCMonth() / 3) === Math.floor(state.viewDate.getUTCMonth() / 3) && current.getUTCFullYear() === state.viewDate.getUTCFullYear());
-
-        const isToday = (step === 'month')
-            ? (current.getUTCMonth() === currentMonth && current.getUTCFullYear() === currentYear)
-            : (Math.floor(current.getUTCMonth() / 3) === Math.floor(currentMonth / 3) && current.getUTCFullYear() === currentYear);
-
-        let label = '';
-        if (step === 'month') {
-            label = new Intl.DateTimeFormat('fr-BE', { month: 'short', timeZone: 'UTC' }).format(current).replace('.', '');
-            const yrLabel = current.getUTCFullYear().toString().slice(-2);
-            label = `<span class="uppercase">${label}</span><span class="text-[9px] opacity-60 ml-0.5">${yrLabel}</span>`;
+            dHtml += `
+                    </div>
+                    <button onclick="window.app.setViewDate('${new Date(Date.UTC(state.viewDate.getUTCFullYear(), state.viewDate.getUTCMonth() + 1, 1)).toISOString()}')" class="nav-arrow">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                </div>`;
+            desktopContainer.innerHTML = dHtml;
         } else {
-            const quarter = Math.floor(current.getUTCMonth() / 3) + 1;
-            label = `T${quarter} <span class="text-[9px] opacity-60 ml-0.5">${current.getUTCFullYear().toString().slice(-2)}</span>`;
-        }
+            // UNFOLDED: 3x4 Grid View
+            let dHtml = `<div class="timeline-grid">`;
+            let cur = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+            
+            // For 3x4, we typically want to show the full current year
+            let yearToRender = state.viewDate.getUTCFullYear();
+            cur = new Date(Date.UTC(yearToRender, 0, 1));
 
-        let bgClass = 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800';
-        if (isSelected) {
-            bgClass = 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105 z-10';
-        }
-
-        html += `
-            <button onclick="window.app.setViewDate('${current.toISOString()}')" 
-                    class="flex-none px-5 py-2.5 rounded-xl text-[11px] font-black transition-all duration-300 flex flex-col items-center gap-0.5 relative ${bgClass}">
-                ${label}
-                ${isToday && !isSelected ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-500"></div>' : ''}
-            </button>
-        `;
-
-        if (step === 'month') {
-            current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 1));
-        } else {
-            current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 3, 1));
+            for (let i = 0; i < 12; i++) {
+                const isSelected = (cur.getUTCMonth() === state.viewDate.getUTCMonth() && cur.getUTCFullYear() === state.viewDate.getUTCFullYear());
+                const label = new Intl.DateTimeFormat('fr-BE', { month: 'short', timeZone: 'UTC' }).format(cur).replace('.', '');
+                
+                dHtml += `
+                    <button onclick="window.app.setViewDate('${cur.toISOString()}')" class="${isSelected ? 'selected' : ''}">
+                        ${label}
+                    </button>
+                `;
+                cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
+            }
+            dHtml += `</div>`;
+            desktopContainer.innerHTML = dHtml;
         }
     }
 
-    container.innerHTML = html;
-    setTimeout(() => {
-        const selectedBtn = container.querySelector('.bg-indigo-600');
-        if(selectedBtn) selectedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-    }, 10);
+    // 2. Render Mobile Puck (Timeline view)
+    if (mobileContainer) {
+        let mHtml = '';
+        let mCur = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+        let lastYear = null;
+
+        while (mCur <= endDate) {
+            const year = mCur.getUTCFullYear();
+            if (lastYear !== null && year !== lastYear) {
+                mHtml += `<div class="w-px h-6 bg-slate-200 mx-2 self-center"></div>`;
+            }
+            lastYear = year;
+
+            const isSelected = (mCur.getUTCMonth() === state.viewDate.getUTCMonth() && mCur.getUTCFullYear() === state.viewDate.getUTCFullYear());
+            const isToday = (mCur.getUTCMonth() === currentMonth && mCur.getUTCFullYear() === currentYear);
+
+            let label = new Intl.DateTimeFormat('fr-BE', { month: 'short', timeZone: 'UTC' }).format(mCur).replace('.', '');
+            const yrLabel = mCur.getUTCFullYear().toString().slice(-2);
+            label = `<span class="uppercase">${label}</span><span class="text-[9px] opacity-60 ml-0.5">${yrLabel}</span>`;
+
+            let bgClass = isSelected ? 'bg-indigo-600 text-white shadow-lg' : 'bg-transparent text-slate-500';
+
+            mHtml += `
+                <button onclick="window.app.setViewDate('${mCur.toISOString()}')" 
+                        class="flex-none px-5 py-2.5 rounded-xl text-[11px] font-black transition-all duration-300 flex flex-col items-center gap-0.5 relative ${bgClass}">
+                    ${label}
+                    ${isToday && !isSelected ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-500"></div>' : ''}
+                </button>
+            `;
+            mCur = new Date(Date.UTC(mCur.getUTCFullYear(), mCur.getUTCMonth() + 1, 1));
+        }
+        mobileContainer.innerHTML = mHtml;
+
+        // Update Mobile Label (Puck)
+        const mobileLabel = document.getElementById('mobile-month-label');
+        if (mobileLabel) {
+            const d = state.viewDate;
+            const monthName = new Intl.DateTimeFormat(getCurrentLanguage() === 'en' ? 'en-US' : 'fr-BE', { month: 'long' }).format(d);
+            const year = d.getFullYear();
+            mobileLabel.textContent = `${monthName} ${year}`;
+        }
+
+        setTimeout(() => {
+            const selectedBtn = mobileContainer.querySelector('.bg-indigo-600');
+            if(selectedBtn) selectedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+        }, 10);
+    }
 };
 export const renderAnticipatedExpenses = () => {
     const anticipatedList = document.getElementById('anticipated-list');
@@ -849,11 +936,20 @@ export const renderSankeyChart = (isExpanded = false) => {
     chart.draw(data, options);
 };
 
-// Handle window resize for chart responsiveness
+// Handle window resize for chart responsiveness and timeline layout
 window.addEventListener('resize', () => {
+    // Update timeline (switches between Desktop Sidebar and Mobile Puck)
+    renderTimeline();
+
+    // Update charts
     if (googleChartsLoaded) {
         if (document.getElementById('sankey-chart')) renderSankeyChart();
         if (document.getElementById('liquidity-chart')) renderLiquidityChart();
+    }
+
+    // Trigger router UI resets (like hiding/showing the shared month selection based on width)
+    if (window.app && window.app.router) {
+        window.app.router.render();
     }
 });
 
