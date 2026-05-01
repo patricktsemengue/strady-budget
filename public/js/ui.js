@@ -167,3 +167,170 @@ export const showOnboardingModal = (onChoice) => {
     document.getElementById('btn-starter-pack').onclick = () => close('starter');
     document.getElementById('btn-scratch-pack').onclick = () => close('scratch');
 };
+
+/**
+ * Global SwipeManager to handle touch gestures on list items.
+ * Reveals action layers behind the content layer.
+ */
+export class SwipeManager {
+    constructor(containerId, options = {}) {
+        this.container = document.getElementById(containerId);
+        this.options = {
+            threshold: 40,
+            snapWidth: 80,
+            itemSelector: '.swipe-item',
+            contentSelector: '.swipe-content',
+            onSwipeLeft: null,  // Usually Delete
+            onSwipeRight: null, // Usually Edit
+            onTap: null,
+            ...options
+        };
+
+        this.startX = 0;
+        this.startY = 0;
+        this.currentX = 0;
+        this.activeItem = null;
+        this.activeContent = null;
+        this.isSwiping = false;
+        this.isMoving = false;
+        this.startTime = 0;
+
+        if (this.container) {
+            this.init();
+        }
+    }
+
+    init() {
+        this.container.addEventListener('touchstart', (e) => this.handleStart(e), { passive: true });
+        this.container.addEventListener('touchmove', (e) => this.handleMove(e), { passive: false });
+        this.container.addEventListener('touchend', (e) => this.handleEnd(e));
+        
+        // Close swiped items when clicking elsewhere
+        document.addEventListener('touchstart', (e) => {
+            if (this.activeContent && !this.activeContent.contains(e.target)) {
+                this.resetItem(this.activeContent);
+            }
+        }, { passive: true });
+    }
+
+    handleStart(e) {
+        // If touching a button that is NOT inside the content layer, it's an action button
+        // We should let the browser handle it and skip swipe logic.
+        if (e.target.closest('button') && !e.target.closest(this.options.contentSelector)) {
+            return;
+        }
+
+        const item = e.target.closest(this.options.itemSelector);
+        if (!item) return;
+
+        const content = item.querySelector(this.options.contentSelector);
+        if (!content) return;
+
+        // Reset previous swiped items if it's a different one
+        if (this.activeContent && this.activeContent !== content) {
+            this.resetItem(this.activeContent);
+        }
+
+        this.activeItem = item;
+        this.activeContent = content;
+        this.startX = e.touches[0].clientX;
+        this.startY = e.touches[0].clientY;
+        this.startTime = Date.now();
+        this.isSwiping = false;
+        this.isMoving = false;
+        this.currentX = this.getTranslateX(this.activeContent);
+        
+        this.activeContent.style.transition = 'none';
+    }
+
+    handleMove(e) {
+        if (!this.activeContent) return;
+
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+        const deltaX = touchX - this.startX;
+        const deltaY = touchY - this.startY;
+
+        if (!this.isSwiping) {
+            // Determine if it's a horizontal swipe or vertical scroll
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+                this.isSwiping = true;
+            } else if (Math.abs(deltaY) > 10) {
+                this.activeContent = null;
+                return;
+            }
+        }
+
+        if (this.isSwiping) {
+            e.preventDefault();
+            this.isMoving = true;
+            // Add some resistance to swiping
+            let newX = this.currentX + deltaX;
+            
+            // Limit the swipe range
+            if (newX > this.options.snapWidth) newX = this.options.snapWidth + (newX - this.options.snapWidth) * 0.3;
+            if (newX < -this.options.snapWidth) newX = -this.options.snapWidth + (newX + this.options.snapWidth) * 0.3;
+
+            this.activeContent.style.transform = `translateX(${newX}px)`;
+        }
+    }
+
+    handleEnd(e) {
+        if (!this.activeContent) return;
+
+        const duration = Date.now() - this.startTime;
+        const deltaX = e.changedTouches[0].clientX - this.startX;
+
+        // Handle Tap
+        if (!this.isMoving && duration < 250 && Math.abs(deltaX) < 10) {
+            if (this.options.onTap) {
+                this.options.onTap(this.activeItem.dataset.id);
+            }
+            this.resetItem(this.activeContent);
+            return;
+        }
+
+        if (!this.isSwiping) return;
+
+        this.activeContent.style.transition = 'transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+        
+        const finalX = this.getTranslateX(this.activeContent);
+
+        if (finalX < -this.options.threshold) {
+            // Snap Left (Reveals Right Action)
+            this.activeContent.style.transform = `translateX(-${this.options.snapWidth}px)`;
+        } else if (finalX > this.options.threshold) {
+            // Snap Right (Reveals Left Action)
+            this.activeContent.style.transform = `translateX(${this.options.snapWidth}px)`;
+            // If onSwipeRight is provided, trigger it and reset
+            if (this.options.onSwipeRight) {
+                setTimeout(() => {
+                    this.options.onSwipeRight(this.activeItem.dataset.id);
+                    this.resetItem(this.activeContent);
+                }, 200);
+            }
+        } else {
+            this.resetItem(this.activeContent);
+        }
+
+        this.isSwiping = false;
+        this.isMoving = false;
+    }
+
+    getTranslateX(el) {
+        const style = window.getComputedStyle(el);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        return matrix.m41;
+    }
+
+    resetItem(el) {
+        if (!el) return;
+        el.style.transition = 'transform 0.3s ease';
+        el.style.transform = 'translateX(0)';
+        if (el === this.activeContent) {
+            this.activeContent = null;
+            this.activeItem = null;
+        }
+    }
+}
+

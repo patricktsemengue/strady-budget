@@ -5,7 +5,7 @@ import {
     addAssetToFirestore, deleteAssetFromFirestore, addAssetValueToFirestore, deleteAssetValueFromFirestore,
     addLiabilityToFirestore, deleteLiabilityFromFirestore, addLiabilityValueToFirestore, deleteLiabilityValueFromFirestore
 } from './firestore-service.js';
-import { showNotification } from './ui.js';
+import { showNotification, SwipeManager } from './ui.js';
 import { formatCurrency, formatSpecificCurrency, convertToAppCurrency, generateDeterministicUUID } from './utils.js';
 
 export const renderWealthList = () => {
@@ -42,28 +42,50 @@ export const renderWealthList = () => {
         totalAssets += convertedValue;
         
         return `
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:border-indigo-200 transition-all cursor-pointer group relative overflow-hidden" onclick="window.app.openWealthDetails('${asset.id}', 'asset')">
-                <div class="flex justify-between items-start">
-                    <div class="flex items-center gap-4">
+            <div data-id="${asset.id}" class="swipe-item relative overflow-hidden rounded-2xl group shadow-sm mb-4">
+                <!-- Action Layers -->
+                <div class="absolute inset-0 flex justify-between items-center text-white overflow-hidden rounded-2xl">
+                    <div class="w-1/2 h-full bg-rose-600 flex justify-start items-center px-6">
+                        <button onclick="window.app.deleteWealthEntityById('${asset.id}', 'asset')" class="flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-trash-can text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Supprimer</span>
+                        </button>
+                    </div>
+                    <div class="w-1/2 h-full bg-blue-600 flex justify-end items-center px-6">
+                        <button onclick="window.app.openWealthDetails('${asset.id}', 'asset')" class="flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-pen-to-square text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Détails</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Layer -->
+                <div class="swipe-content relative bg-white border border-slate-100 p-5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-indigo-200 cursor-pointer">
+                    <div class="flex items-center gap-4 flex-grow truncate">
                         <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
                             <i class="fa-solid fa-gem text-lg"></i>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-slate-800 leading-tight">${asset.name}</h4>
+                        <div class="truncate">
+                            <h4 class="font-bold text-slate-800 leading-tight truncate">${asset.name}</h4>
                             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                                 ${asset.currency && asset.currency !== state.displayCurrency ? `${asset.currency} • ` : ''}${t('wealth.asset_type_help')}
                             </p>
                         </div>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex-shrink-0">
                         <p class="text-lg font-black text-slate-900 leading-none">${formatCurrency(convertedValue)}</p>
                         <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">
                             ${asset.currency && asset.currency !== state.displayCurrency ? `${formatSpecificCurrency(latest.value, asset.currency)} • ` : ''}${t('wealth.estimation_at', { date: latest.date })}
                         </p>
                     </div>
-                </div>
-                <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <i class="fa-solid fa-chevron-right text-[10px] text-indigo-400"></i>
+                    <div class="hidden md:flex w-24 justify-end items-center gap-1 ml-4 border-l border-slate-50 pl-2">
+                        <button onclick="window.app.openWealthDetails('${asset.id}', 'asset')" class="ghost-action-btn p-2 text-slate-300 hover:text-blue-600 transition-all">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="window.app.deleteWealthEntityById('${asset.id}', 'asset')" class="ghost-action-btn p-2 text-slate-300 hover:text-rose-600 transition-all">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -76,32 +98,62 @@ export const renderWealthList = () => {
         totalLiabilities += convertedValue;
 
         return `
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:border-rose-200 transition-all cursor-pointer group relative overflow-hidden" onclick="window.app.openWealthDetails('${liability.id}', 'liability')">
-                <div class="flex justify-between items-start">
-                    <div class="flex items-center gap-4">
+            <div data-id="${liability.id}" class="swipe-item relative overflow-hidden rounded-2xl group shadow-sm mb-4">
+                <!-- Action Layers -->
+                <div class="absolute inset-0 bg-rose-600 flex justify-start items-center px-6 text-white">
+                    <button onclick="window.app.deleteWealthEntityById('${liability.id}', 'liability')" class="flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-trash-can text-lg"></i>
+                        <span class="text-[8px] font-bold uppercase tracking-tighter">Supprimer</span>
+                    </button>
+                </div>
+                <div class="absolute inset-0 bg-blue-600 flex justify-end items-center px-6 text-white">
+                    <div class="flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-pen-to-square text-lg"></i>
+                        <span class="text-[8px] font-bold uppercase tracking-tighter">Détails</span>
+                    </div>
+                </div>
+
+                <!-- Content Layer -->
+                <div class="swipe-content relative bg-white border border-slate-100 p-5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-rose-200">
+                    <div class="flex items-center gap-4 flex-grow truncate">
                         <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm">
                             <i class="fa-solid fa-hand-holding-dollar text-lg"></i>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-slate-800 leading-tight">${liability.name}</h4>
+                        <div class="truncate">
+                            <h4 class="font-bold text-slate-800 leading-tight truncate">${liability.name}</h4>
                             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                                 ${liability.currency && liability.currency !== state.displayCurrency ? `${liability.currency} • ` : ''}${t('wealth.liability_type_help')}
                             </p>
                         </div>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex-shrink-0">
                         <p class="text-lg font-black text-rose-600 leading-none">${formatCurrency(convertedValue)}</p>
                         <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">
                             ${liability.currency && liability.currency !== state.displayCurrency ? `${formatSpecificCurrency(latest.value, liability.currency)} • ` : ''}${t('wealth.balance_at', { date: latest.date })}
                         </p>
                     </div>
-                </div>
-                <div class="absolute bottom-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <i class="fa-solid fa-chevron-right text-[10px] text-rose-400"></i>
+                    <div class="hidden md:flex w-24 justify-end items-center gap-1 ml-4 border-l border-slate-50 pl-2">
+                        <button onclick="window.app.openWealthDetails('${liability.id}', 'liability')" class="ghost-action-btn p-2 text-slate-300 hover:text-blue-600 transition-all">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="window.app.deleteWealthEntityById('${liability.id}', 'liability')" class="ghost-action-btn p-2 text-slate-300 hover:text-rose-600 transition-all">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
     }).join('') || `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">${t('wealth.no_liabilities')}</div>`;
+
+    // Initialize SwipeManager for mobile
+    if (window.innerWidth < 768) {
+        new SwipeManager('wealth-assets-list', {
+            onTap: (id) => openWealthDetails(id, 'asset')
+        });
+        new SwipeManager('wealth-liabilities-list', {
+            onTap: (id) => openWealthDetails(id, 'liability')
+        });
+    }
 
     // Update Totals and Summary
     const netWorth = totalAssets - totalLiabilities;
@@ -258,6 +310,27 @@ export const deleteWealthEntity = async () => {
             await deleteLiabilityFromFirestore(currentUserId, currentWealthEntityId);
         }
         closeWealthDetails();
+        showNotification(t('wealth.delete_success'));
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+export const deleteWealthEntityById = async (id, type) => {
+    const entity = type === 'asset' 
+        ? state.assets.find(a => a.id === id)
+        : state.liabilities.find(l => l.id === id);
+    
+    if (!entity) return;
+
+    if (!confirm(t('confirm.delete_wealth', { label: entity.name }))) return;
+    
+    try {
+        if (type === 'asset') {
+            await deleteAssetFromFirestore(currentUserId, id);
+        } else {
+            await deleteLiabilityFromFirestore(currentUserId, id);
+        }
         showNotification(t('wealth.delete_success'));
     } catch (err) {
         console.error(err);

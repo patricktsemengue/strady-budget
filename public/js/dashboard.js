@@ -3,7 +3,7 @@ import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './
 import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate } from './calculations.js';
 import { currentUserId } from './storage.js';
 import { updateMonthStatus, updateAccountInFirestore } from './firestore-service.js';
-import { showNotification } from './ui.js';
+import { showNotification, SwipeManager } from './ui.js';
 import { router } from './app-router.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
@@ -208,7 +208,7 @@ export const renderTransactions = () => {
                     };
 
                     html += `
-                        <tr class="group hover:bg-slate-50/30 transition-colors ${isFuture ? 'opacity-60' : ''} border-l-4" style="border-left-color: ${category?.color || '#cbd5e1'}">
+                        <tr class="group hover:bg-slate-50/30 transition-colors ${isFuture ? 'opacity-60' : ''} border-l-4 relative" style="border-left-color: ${category?.color || '#cbd5e1'}">
                             <td class="px-6 py-4 text-xs font-bold text-slate-400 whitespace-nowrap">${formatDateStr(item.date)}</td>
                             <td class="px-6 py-4">
                                 <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${txInfo.ui.color} bg-white border border-current uppercase">${txInfo.isIncome ? 'REVENU' : 'DÉPENSE'}</span>
@@ -222,9 +222,9 @@ export const renderTransactions = () => {
                             <td class="px-4 py-4 text-right opacity-60 text-xs font-bold text-slate-500">${getFutureAmount(data.m1, item.Model, item.label)}</td>
                             <td class="px-4 py-4 text-right opacity-30 text-xs font-bold text-slate-400">${getFutureAmount(data.m2, item.Model, item.label)}</td>
                             <td class="px-6 py-4 text-center">
-                                <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onclick="window.app.editTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
-                                    <button onclick="window.app.deleteTransaction('${item.id}')" class="p-2 text-slate-300 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                                <div class="flex items-center justify-center gap-1">
+                                    <button onclick="window.app.editTransaction('${item.id}')" class="ghost-action-btn p-2 text-slate-300 hover:text-blue-600 transition-all"><i class="fa-solid fa-pen text-xs"></i></button>
+                                    <button onclick="window.app.deleteTransaction('${item.id}')" class="ghost-action-btn p-2 text-slate-300 hover:text-rose-600 transition-all"><i class="fa-solid fa-trash text-xs"></i></button>
                                 </div>
                             </td>
                         </tr>`;
@@ -253,13 +253,31 @@ export const renderTransactions = () => {
                     }
                     const txInfo = getTxDisplayInfo(item.source, item.destination);
                     itemsHtml += `
-                        <li onclick="window.app.openMobileActions('${item.id}')" class="p-4 flex items-center justify-between border-b border-slate-50 last:border-0">
-                            <div class="truncate pr-4">
-                                <p class="font-bold text-slate-800 truncate text-sm">${item.label}</p>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${formatDateStr(item.date)} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
+                        <div data-id="${item.id}" class="swipe-item relative overflow-hidden border-b border-slate-50 last:border-0 group">
+                            <!-- Action Layers -->
+                            <div class="absolute inset-0 bg-blue-600 flex justify-start items-center px-6 text-white">
+                                <div class="flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-pen-to-square text-lg"></i>
+                                    <span class="text-[8px] font-bold uppercase tracking-tighter">Modifier</span>
+                                </div>
                             </div>
-                            <span class="font-black ${txInfo.ui.color}">${formatCurrency(item.amount)}</span>
-                        </li>`;
+                            <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white">
+                                <button onclick="window.app.deleteTransaction('${item.id}')" class="flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-trash-can text-lg"></i>
+                                    <span class="text-[8px] font-bold uppercase tracking-tighter">Supprimer</span>
+                                </button>
+                            </div>
+
+                            <!-- Content Layer -->
+                            <div class="swipe-content relative bg-white p-4 flex items-center justify-between transition-all duration-200"
+                                 onclick="if(window.innerWidth < 768) window.app.editTransaction('${item.id}')">
+                                <div class="truncate pr-4">
+                                    <p class="font-bold text-slate-800 truncate text-sm">${item.label}</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${formatDateStr(item.date)} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
+                                </div>
+                                <span class="font-black ${txInfo.ui.color}">${formatCurrency(item.amount)}</span>
+                            </div>
+                        </div>`;
                 });
             }
 
@@ -275,12 +293,21 @@ export const renderTransactions = () => {
                             ${renderVarianceUI(catId, m0Total)}
                         </div>
                     </div>
-                    <ul class="${isExpanded ? '' : 'hidden'}">${itemsHtml}</ul>
+                    <div class="${isExpanded ? '' : 'hidden'}">${itemsHtml}</div>
                 </div>`;
         });
         container.innerHTML = mobileHtml || '<div class="p-12 text-center text-slate-400 italic">Aucun flux trouvé</div>';
+
+        // Initialize SwipeManager for mobile transactions
+        if (window.innerWidth < 768) {
+            new SwipeManager('transactions-container', {
+                onSwipeRight: (id) => editTransaction(id),
+                onTap: (id) => editTransaction(id)
+            });
+        }
     }
 };
+
 
 export const setNatureFilter = (nature) => {
     localStorage.setItem('strady_nature_filter', nature);

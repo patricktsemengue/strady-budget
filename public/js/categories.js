@@ -2,8 +2,9 @@ import { state } from './state.js';
 import { generateId, generateDeterministicUUID } from './utils.js';
 import { currentUserId } from './storage.js';
 import { addCategoryToFirestore, updateCategoryInFirestore, deleteCategoryFromFirestore, updateCategoryOrderInFirestore } from './firestore-service.js';
-import { showNotification } from './ui.js';
+import { showNotification, SwipeManager } from './ui.js';
 import { router } from './app-router.js';
+import { t } from './i18n.js';
 
 let sortableInstance = null;
 
@@ -160,18 +161,39 @@ export const renderCategoriesList = () => {
             const isDisabled = isUsed || isDefaultOther;
 
             return `
-                <div data-id="${cat.id}" class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center justify-between gap-4 group hover:border-indigo-200 transition-all">
-                    <div class="flex items-center gap-4 flex-grow truncate">
-                        <div class="drag-handle cursor-move text-slate-200 p-1 hover:text-indigo-400"><i class="fa-solid fa-grip-vertical"></i></div>
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0 text-xs shadow-sm" style="background-color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i></div>
-                        <div class="flex flex-col truncate">
-                            <span class="font-bold text-slate-800 truncate">${cat.label}</span>
-                            <span class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Priorité #${cat['index-order'] || (idx + 1)}</span>
+                <div data-id="${cat.id}" class="swipe-item relative overflow-hidden rounded-xl group">
+                    <!-- Action Layers -->
+                    <div class="absolute inset-0 bg-blue-600 flex justify-start items-center px-6 text-white">
+                        <div class="flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-pen-to-square text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Modifier</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="window.app.openEditCategory('${cat.id}')" class="p-2 text-slate-300 hover:text-blue-600 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>
-                        <button onclick="window.app.deleteCategory('${cat.id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors disabled:opacity-20" ${isDisabled ? 'disabled' : ''}><i class="fa-solid fa-trash-can text-xs"></i></button>
+                    <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white">
+                        <button onclick="window.app.deleteCategory('${cat.id}')" class="flex flex-col items-center gap-1 ${isDisabled ? 'opacity-30' : ''}" ${isDisabled ? 'disabled' : ''}>
+                            <i class="fa-solid fa-trash-can text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Supprimer</span>
+                        </button>
+                    </div>
+
+                    <!-- Content Layer -->
+                    <div class="swipe-content relative bg-white border border-slate-100 p-4 flex items-center justify-between gap-4 transition-all duration-200 hover:border-indigo-200">
+                        <div class="flex items-center gap-4 flex-grow truncate">
+                            <div class="drag-handle cursor-move text-slate-200 p-1 hover:text-indigo-400"><i class="fa-solid fa-grip-vertical"></i></div>
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0 text-xs shadow-sm" style="background-color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i></div>
+                            <div class="flex flex-col truncate">
+                                <span class="font-bold text-slate-800 truncate">${cat.label}</span>
+                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Priorité #${cat['index-order'] || (idx + 1)}</span>
+                            </div>
+                        </div>
+                        <div class="hidden md:flex items-center gap-1">
+                            <button onclick="window.app.openEditCategory('${cat.id}')" class="ghost-action-btn p-2 text-slate-300 hover:text-blue-600 transition-all">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="window.app.deleteCategory('${cat.id}')" class="ghost-action-btn p-2 text-slate-300 hover:text-rose-600 transition-all ${isDisabled ? 'opacity-20' : ''}" ${isDisabled ? 'disabled' : ''}>
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>`;
         }).join('');
@@ -186,8 +208,18 @@ export const renderCategoriesList = () => {
     };
 
     list.innerHTML = natureOrder.map(nature => renderGroup(nature)).join('');
+    
+    // Initialize SwipeManager for mobile
+    if (window.innerWidth < 768) {
+        new SwipeManager('mgmt-categories-list', {
+            onSwipeRight: (id) => openEditCategory(id),
+            onTap: (id) => openEditCategory(id)
+        });
+    }
+
     initSortableCategories();
 };
+
 
 let currentCategoryActionId = null;
 
@@ -302,13 +334,18 @@ export const openEditCategory = (id) => {
     const cat = state.categories.find(c => c.id === id);
     if (!cat) return;
 
-    document.getElementById('edit-cat-id').value = cat.id;
-    document.getElementById('edit-cat-name').value = cat.label;
-    document.getElementById('edit-cat-nature').value = cat.nature || 'QUOTIDIEN';
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    };
+
+    setVal('edit-cat-id', cat.id);
+    setVal('edit-cat-name', cat.label);
+    setVal('edit-cat-nature', cat.nature || 'QUOTIDIEN');
     
     const iconValue = cat.icon ? cat.icon.replace('fa-', '') : 'tag';
-    document.getElementById('edit-cat-icon').value = iconValue;
-    document.getElementById('edit-cat-color').value = cat.color || '#94a3b8';
+    setVal('edit-cat-icon', iconValue);
+    setVal('edit-cat-color', cat.color || '#94a3b8');
     
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('category-edit-drawer').classList.add('active');

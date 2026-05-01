@@ -26,6 +26,37 @@ export default {
             `<option value="${code}" ${state.displayCurrency === code ? 'selected' : ''}>${info.symbol} ${info.label} (${code})</option>`
         ).join('');
 
+        const ratesCardsMobile = Object.entries(state.exchangeRates || {}).map(([code, rate]) => {
+            const info = currencyMap[code] || { symbol: '', label: code };
+            return `
+                <div data-id="${code}" class="swipe-item relative overflow-hidden rounded-xl group shadow-sm mb-3">
+                    <!-- Action Layers -->
+                    <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white">
+                        <button onclick="window.app.deleteExchangeRate('${code}')" class="flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-trash-can text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Supprimer</span>
+                        </button>
+                    </div>
+
+                    <!-- Content Layer -->
+                    <div class="swipe-content relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-between gap-4 transition-all duration-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+                                ${info.symbol}
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 dark:text-slate-100">${code}</p>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">1 ${code} = ${rate} ${state.displayCurrency}</p>
+                            </div>
+                        </div>
+                        <input type="number" step="0.0001" value="${rate}" 
+                            onchange="window.app.updateExchangeRate('${code}', this.value)"
+                            class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 font-black text-indigo-600 dark:text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+            `;
+        }).join('');
+
         const ratesRows = Object.entries(state.exchangeRates || {}).map(([code, rate]) => {
             const info = currencyMap[code] || { symbol: '', label: code };
             return `
@@ -54,7 +85,7 @@ export default {
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                 ${t('settings.currency.verify')}
                             </a>
-                            <button onclick="window.app.deleteExchangeRate('${code}')" class="p-2 text-slate-300 hover:text-rose-500 transition-all">
+                            <button onclick="window.app.deleteExchangeRate('${code}')" class="ghost-action-btn p-2 text-slate-300 hover:text-rose-500 transition-all">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
@@ -229,7 +260,7 @@ export default {
                             ${renderCardHeader(t('settings.currency.title_rates'), t('settings.currency.subtitle_rates'), t('settings.currency.why_rates'), 'calc', 'fa-chart-line', 'bg-violet-50 dark:bg-violet-900/20 text-violet-600')}
                             <div class="px-0 pb-6">
                                 <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse">
+                                    <table class="hidden md:table w-full text-left border-collapse">
                                         <thead>
                                             <tr class="bg-slate-50/50 dark:bg-slate-800/30">
                                                 <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_master')}</th>
@@ -242,6 +273,9 @@ export default {
                                             ${ratesRows || `<tr><td colspan="4" class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</td></tr>`}
                                         </tbody>
                                     </table>
+                                    <div id="currency-rates-mobile" class="md:hidden px-4 pt-4">
+                                        ${ratesCardsMobile || `<div class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</div>`}
+                                    </div>
                                 </div>
                                 <div class="p-6">
                                     <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
@@ -380,5 +414,12 @@ export default {
                 import('../data.js').then(m => m.importFullBackupCSV(e));
             }
         });
+
+        // Initialize SwipeManager for mobile currency rates
+        if (window.innerWidth < 768) {
+            import('../ui.js').then(m => {
+                new m.SwipeManager('currency-rates-mobile');
+            });
+        }
     }
 };

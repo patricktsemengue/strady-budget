@@ -6,7 +6,7 @@ import {
     addAccountToFirestore, updateAccountInFirestore, deleteAccountFromFirestore,
     addTransactionToFirestore
 } from './firestore-service.js';
-import { showNotification } from './ui.js';
+import { showNotification, SwipeManager } from './ui.js';
 import { calculateBalances } from './calculations.js';
 import { formatCurrency } from './utils.js';
 
@@ -18,7 +18,7 @@ export const openAddAccountDrawer = () => {
 
 export const closeAddAccountDrawer = () => {
     document.getElementById('drawer-overlay').classList.remove('active');
-    document.getElementById('account-add-drawer').classList.add('active');
+    document.getElementById('account-add-drawer').classList.remove('active');
 };
 
 export const handleAddAccount = async (e) => {
@@ -144,6 +144,14 @@ export const handleUpdateAccount = async (e) => {
 };
 
 export const deleteAccount = async (id) => {
+    const isUsedInTransactions = state.transactions.some(tx => tx.source === id || tx.destination === id);
+    const isUsedInTemplates = state.recurringTemplates.some(tpl => tpl.source === id || tpl.destination === id);
+
+    if (isUsedInTransactions || isUsedInTemplates) {
+        showNotification("Impossible de supprimer un compte utilisé dans des transactions ou modèles.", "error");
+        return;
+    }
+
     if (confirm(t('confirm.delete_acc'))) {
         try {
             await deleteAccountFromFirestore(currentUserId, id);
@@ -213,10 +221,11 @@ export const renderAccountsList = () => {
     if (headerContainer) {
         headerContainer.innerHTML = `
             <div class="col-span-4">${t('common.label')}</div>
-            <div class="col-span-2 text-right">${t('transactions.col_var')}</div>
+            <div class="col-span-1 text-right">${t('transactions.col_var')}</div>
             <div class="col-span-2 text-right text-slate-900 font-black">${getMonthName(m0Date)}</div>
             <div class="col-span-2 text-right opacity-60">${getMonthName(m1Date)}</div>
             <div class="col-span-2 text-right opacity-40">${getMonthName(m2Date)}</div>
+            <div class="col-span-1"></div>
         `;
     }
 
@@ -233,6 +242,16 @@ export const renderAccountsList = () => {
     };
 
     let totalLiquid = 0, totalSavings = 0, totalInvest = 0;
+
+    const usedAccountIds = new Set();
+    state.transactions.forEach(tx => {
+        if (tx.source) usedAccountIds.add(tx.source);
+        if (tx.destination) usedAccountIds.add(tx.destination);
+    });
+    state.recurringTemplates.forEach(tpl => {
+        if (tpl.source) usedAccountIds.add(tpl.source);
+        if (tpl.destination) usedAccountIds.add(tpl.destination);
+    });
 
     state.accounts.forEach(acc => {
         const b0 = balM0[acc.id] || 0;
@@ -291,52 +310,81 @@ export const renderAccountsList = () => {
         if (accounts.length === 0) return '';
         
         const itemsHtml = accounts.map(acc => {
+            const isDisabled = usedAccountIds.has(acc.id);
             const isDirty = acc.balanceDirty !== false;
             const typeLabel = acc.isSaving ? t('treasury.type_savings') : (acc.isInvestmentAccount ? t('treasury.type_investment') : t('treasury.type_checking'));
+            const iconClass = acc.isSaving ? 'fa-piggy-bank' : (acc.isInvestmentAccount ? 'fa-money-bill-trend-up' : 'fa-wallet');
             
             return `
-                <!-- Desktop Table Row -->
-                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-white rounded-xl border border-slate-100 hover:border-indigo-200 transition-all items-center group shadow-sm">
-                    <div class="col-span-4 flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
-                        <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                            <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : (acc.isInvestmentAccount ? 'fa-money-bill-trend-up' : 'fa-wallet')}"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-slate-800 flex items-center gap-2">
-                                ${acc.name}
-                                ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs"></i>' : ''}
-                            </div>
-                            <div class="text-[9px] text-slate-400 font-bold uppercase">${typeLabel}</div>
+                <div data-id="${acc.id}" class="swipe-item relative overflow-hidden rounded-xl group shadow-sm">
+                    <!-- Action Layers -->
+                    <div class="absolute inset-0 bg-blue-600 flex justify-start items-center px-6 text-white">
+                        <div class="flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-pen-to-square text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Modifier</span>
                         </div>
                     </div>
-                    <div class="col-span-2 text-right bg-slate-50/30 py-2 rounded-lg pr-2">
-                        ${renderVariance(acc.b0, acc.bp)}
+                    <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white">
+                        <button onclick="window.app.deleteAccount('${acc.id}')" class="flex flex-col items-center gap-1 ${isDisabled ? 'opacity-30' : ''}" ${isDisabled ? 'disabled' : ''}>
+                            <i class="fa-solid fa-trash-can text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">Supprimer</span>
+                        </button>
                     </div>
-                    <div class="col-span-2 text-right bg-white shadow-sm ring-1 ring-slate-100 py-2 rounded-lg pr-2">
-                        <span class="text-base font-black ${acc.b0 >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.b0)}</span>
-                    </div>
-                    <div class="col-span-2 text-right opacity-60">
-                        <span class="text-sm font-bold text-slate-600">${formatCurrency(acc.b1)}</span>
-                    </div>
-                    <div class="col-span-2 text-right opacity-40">
-                        <span class="text-xs font-bold text-slate-500">${formatCurrency(acc.b2)}</span>
-                    </div>
-                </div>
 
-                <!-- Mobile Card (Keep it simple) -->
-                <div class="md:hidden bg-white rounded-xl border border-slate-100 p-4 flex items-center justify-between group shadow-sm">
-                    <div class="flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
-                        <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center">
-                            <i class="fa-solid ${acc.isSaving ? 'fa-piggy-bank' : (acc.isInvestmentAccount ? 'fa-money-bill-trend-up' : 'fa-wallet')}"></i>
+                    <!-- Content Layer -->
+                    <div class="swipe-content relative bg-white border border-slate-100 p-4 flex flex-col md:grid md:grid-cols-12 md:items-center gap-4 transition-all duration-200 hover:border-indigo-200">
+                        <!-- Desktop View Contents -->
+                        <div class="hidden md:contents">
+                            <div class="col-span-4 flex items-center gap-4 cursor-pointer" onclick="window.app.openAccountActions('${acc.id}')">
+                                <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                    <i class="fa-solid ${iconClass}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-800 flex items-center gap-2">
+                                        ${acc.name}
+                                        ${isDirty ? '<i class="fa-solid fa-sync fa-spin text-blue-400 text-xs"></i>' : ''}
+                                    </div>
+                                    <div class="text-[9px] text-slate-400 font-bold uppercase">${typeLabel}</div>
+                                </div>
+                            </div>
+                            <div class="col-span-1 text-right bg-slate-50/30 py-2 rounded-lg pr-2">
+                                ${renderVariance(acc.b0, acc.bp)}
+                            </div>
+                            <div class="col-span-2 text-right bg-white shadow-sm ring-1 ring-slate-100 py-2 rounded-lg pr-2">
+                                <span class="text-base font-black ${acc.b0 >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.b0)}</span>
+                            </div>
+                            <div class="col-span-2 text-right opacity-60">
+                                <span class="text-sm font-bold text-slate-600">${formatCurrency(acc.b1)}</span>
+                            </div>
+                            <div class="col-span-2 text-right opacity-40">
+                                <span class="text-xs font-bold text-slate-500">${formatCurrency(acc.b2)}</span>
+                            </div>
+                            <div class="col-span-1 flex justify-end items-center gap-1">
+                                <button onclick="window.app.openEditAccount('${acc.id}')" class="ghost-action-btn p-2 text-slate-300 hover:text-blue-600 transition-all">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="window.app.deleteAccount('${acc.id}')" class="ghost-action-btn p-2 text-slate-300 hover:text-rose-600 transition-all ${isDisabled ? 'opacity-20' : ''}" ${isDisabled ? 'disabled' : ''}>
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-bold text-slate-800">${acc.name}</div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase">${typeLabel}</div>
+
+                        <!-- Mobile View Contents -->
+                        <div class="md:hidden flex items-center justify-between w-full">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center">
+                                    <i class="fa-solid ${iconClass}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-800">${acc.name}</div>
+                                    <div class="text-[10px] text-slate-400 font-bold uppercase">${typeLabel}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-black ${acc.b0 >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.b0)}</div>
+                                ${renderVariance(acc.b0, acc.bp)}
+                            </div>
                         </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-lg font-black ${acc.b0 >= 0 ? 'text-slate-900' : 'text-rose-600'}">${formatCurrency(acc.b0)}</div>
-                        ${renderVariance(acc.b0, acc.bp)}
                     </div>
                 </div>
             `;
@@ -351,7 +399,16 @@ export const renderAccountsList = () => {
     };
 
     list.innerHTML = Object.entries(groups).map(([id, accounts]) => renderGroup(groupLabels[id], accounts)).join('');
+    
+    // Initialize SwipeManager for mobile
+    if (window.innerWidth < 768) {
+        new SwipeManager('mgmt-accounts-list', {
+            onSwipeRight: (id) => openEditAccount(id),
+            onTap: (id) => openEditAccount(id)
+        });
+    }
 };
+
 
 // --- Adjustment Logic ---
 

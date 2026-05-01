@@ -58,7 +58,8 @@ import {
     closeWealthDetails,
     handleAddValueSnapshot,
     deleteWealthValue,
-    deleteWealthEntity
+    deleteWealthEntity,
+    deleteWealthEntityById
 } from './wealth.js';
 
 import { logout, onUserChanged, auth } from './auth.js';
@@ -428,7 +429,7 @@ window.app = {
     openEditAccount, deleteAccount, openAccountActions, openWealthDrawer, closeWealthDrawer,
     openAddAccountDrawer: () => import('./accounts.js').then(m => m.openAddAccountDrawer()),
     openAddCategoryDrawer: () => import('./categories.js').then(m => m.openAddCategoryDrawer()),
-    openWealthDetails, closeWealthDetails, deleteWealthValue, deleteWealthEntity,
+    openWealthDetails, closeWealthDetails, deleteWealthValue, deleteWealthEntity, deleteWealthEntityById,
     dismissHelp: (id) => router.dismissHelp(id),
     showHelp: (id) => router.showHelp(id),
     setNatureFilter: (nature) => import('./dashboard.js').then(m => m.setNatureFilter(nature)),
