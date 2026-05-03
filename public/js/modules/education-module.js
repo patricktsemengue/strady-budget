@@ -39,16 +39,64 @@ export default {
                 </div>
             </div>
 
-            <!-- Manual Restart Tour -->
-            <div class="mb-10 bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex items-center justify-between">
-                <div>
-                    <h4 class="text-indigo-900 font-bold text-sm">${t('education.tour.title')}</h4>
-                    <p class="text-indigo-700 text-xs mt-1">${t('education.tour.subtitle')}</p>
+            <!-- Mastery Center -->
+            <div class="mb-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">${t('mastery.title')}</h2>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">${t('mastery.subtitle')}</p>
+                    </div>
                 </div>
-                <button onclick="window.app.startTour()" class="bg-white text-indigo-600 px-6 py-2.5 rounded-xl text-xs font-black shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-play"></i>
-                    ${t('education.tour.button')}
-                </button>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Mission 1: Trajectory -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-emerald-50 rounded-full group-hover:scale-150 transition-transform"></div>
+                        <div class="relative">
+                            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-inner">
+                                <i class="fa-solid fa-rocket"></i>
+                            </div>
+                            <h3 class="font-black text-slate-800 mb-2">${t('mastery.mission1_title')}</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-6">${t('mastery.mission1_desc')}</p>
+                            <button onclick="window.app.startTour('budget')" class="w-full py-2.5 bg-slate-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-emerald-100">
+                                ${t('mastery.btn_launch')}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mission 2: Wealth -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-50 rounded-full group-hover:scale-150 transition-transform"></div>
+                        <div class="relative">
+                            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-inner">
+                                <i class="fa-solid fa-gem"></i>
+                            </div>
+                            <h3 class="font-black text-slate-800 mb-2">${t('mastery.mission2_title')}</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-6">${t('mastery.mission2_desc')}</p>
+                            <button onclick="window.app.startTour('wealth')" class="w-full py-2.5 bg-slate-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-indigo-100">
+                                ${t('mastery.btn_launch')}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mission 3: Entities -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-violet-50 rounded-full group-hover:scale-150 transition-transform"></div>
+                        <div class="relative">
+                            <div class="w-12 h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-inner">
+                                <i class="fa-solid fa-building-user"></i>
+                            </div>
+                            <h3 class="font-black text-slate-800 mb-2">${t('mastery.mission3_title')}</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-6">${t('mastery.mission3_desc')}</p>
+                            <button onclick="window.app.startTour('entities')" class="w-full py-2.5 bg-slate-50 hover:bg-violet-600 hover:text-white text-violet-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-violet-100">
+                                ${t('mastery.btn_launch')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Concepts Grid -->

@@ -109,10 +109,10 @@ export const renderCategoriesList = () => {
     if (!list || !state.transactions) return;
 
     const usedCategoryIds = new Set();
-    state.transactions.forEach(tx => {
+    (state.transactions || []).forEach(tx => {
         if (tx.Category) usedCategoryIds.add(tx.Category);
     });
-    state.recurringTemplates.forEach(tpl => {
+    (state.recurringTemplates || []).forEach(tpl => {
         if (tpl.category) usedCategoryIds.add(tpl.category);
     });
 
@@ -291,6 +291,14 @@ export const openAddCategoryDrawer = () => {
     // Assign an initial random color
     assignRandomColor('cat-color');
     
+    // Pre-fill for interactive setup
+    if (state.onboarding?.active && state.onboarding?.type === 'interactive_setup' && state.onboarding?.currentStep === 0) {
+        document.getElementById('cat-name').value = 'Housing';
+        document.getElementById('cat-nature').value = 'FIXE';
+        document.getElementById('cat-icon').value = 'house';
+        assignRandomColor('cat-color');
+    }
+
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('category-add-drawer').classList.add('active');
 };
@@ -325,6 +333,7 @@ export const handleAddCategory = async (e) => {
         await addCategoryToFirestore(currentUserId, newCategory);
         closeAddCategoryDrawer();
         showNotification('Catégorie ajoutée !');
+        if (window.app.onTourAction) window.app.onTourAction('category_created');
     } catch (err) {
         showNotification("Erreur lors de l'ajout", 'error');
     }

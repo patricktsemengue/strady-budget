@@ -54,7 +54,34 @@
     "icon": "Icon",
     "what_is_it": "What is it?",
     "how_to_use": "How to use it?",
-    "understood": "Understood!"
+    "understood": "Understood!",
+    "all_family": "ALL FAMILY",
+    "private": "Private",
+    "family": "Family / Joint",
+    "business": "Small Business"
+  },
+  "entities": {
+    "title": "Entity Management",
+    "subtitle": "Separate your private, shared or professional finances.",
+    "add_title": "Add an entity",
+    "name_placeholder": "Name (e.g., Alice, SCI, Business...)",
+    "type_private": "PRIVATE",
+    "type_family": "FAMILY / JOINT",
+    "type_business": "SMALL BUSINESS",
+    "success_added": "Entity added!",
+    "success_deleted": "Entity deleted.",
+    "error_linked": "Cannot delete an entity linked to accounts or transactions.",
+    "confirm_delete": "Delete this entity?"
+  },
+  "gps": {
+    "title": "Freedom Trajectory",
+    "unit_years": "YEARS",
+    "subtitle": "until financial independence",
+    "speed": "Current Speed",
+    "target": "Capital Goal",
+    "start": "Start",
+    "fi": "FI",
+    "per_month": "/ month"
   },
   "nature": {
     "ALL": "ALL",
@@ -83,6 +110,9 @@
     "dna_title": "Income DNA",
     "dna_active": "Active",
     "dna_passive": "Passive",
+    "self_financing_msg": "Your monthly self-financing capacity is <b>{{amount}}</b>.",
+    "cash_drag_msg": "You have <b>{{amount}}</b> of stagnant excess in your checking accounts (beyond your 1.5-month needs). This capital is \"sleeping\" instead of working.",
+    "optimize": "Optimize",
     "jump": {
       "summary": "Summary",
       "indicators": "Indicators",
@@ -306,36 +336,130 @@
       "cta": "Ready to pilot my budget!"
     }
   },
-  "tour": {
-    "assistant_label": "STRADY GUIDE • STEP {{current}}/{{total}}",
-    "btn_skip": "Skip tour",
-    "btn_next": "Next",
-    "btn_finish": "Finish",
-    "steps": {
-      "accounts": {
-        "title": "Your Accounts",
-        "message": "Welcome! We have set up your main accounts. The **Joint Account** for daily use and a **Security Fund** for your projects.",
-        "is_savings": "Consider as emergency savings",
-        "is_investment": "Consider as investment account"
+    "mastery": {
+      "title": "Mastery Missions",
+      "subtitle": "Level up your financial skills through interactive challenges.",
+      "mission1_title": "Trajectory Pilot",
+      "mission1_desc": "Master the art of forecasting and budget automation.",
+      "mission2_title": "Wealth Architect",
+      "mission2_desc": "Build and track your long-term assets and net worth.",
+      "mission3_title": "Entity Commander",
+      "mission3_desc": "Manage private, shared, and business finances with ease.",
+      "btn_launch": "Launch Mission",
+      "status_completed": "Mastered"
+    },
+    "onboarding": {
+      "title": "Choose your first Mission",
+      "subtitle": "Which part of your financial life do you want to master first?",
+      "track_budget": "Manage my Budget",
+      "track_wealth": "Build my Wealth",
+      "track_entities": "Organize my Entities",
+      "btn_skip": "I'll explore on my own"
+    },
+    "tour": {
+      "assistant_label": "MISSION • {{current}}/{{total}}",
+      "btn_skip": "Skip mission",
+      "btn_skip_step": "Skip step",
+      "btn_stop": "Quit mission",
+      "btn_next": "Next",
+      "btn_finish": "Mission Accomplished!",
+      "waiting_action": "Waiting for action...",
+      "steps": {
+        "budget": [
+          {
+            "title": "Alice & Bob's Setup",
+            "message": "Alice and Bob use categories to segment their lives: 'Shared Bills' for their common expenses and personal categories for their own leisure."
+          },
+          {
+            "title": "Shared Treasury",
+            "message": "They use a Joint account for common bills, while Alice and Bob keep their own personal checking accounts for individual freedom."
+          },
+          {
+            "title": "Automated Flow",
+            "message": "Salaries come in, and recurring templates automatically handle their shared electricity, water, and insurance payments."
+          },
+          {
+            "title": "Shared Contributions",
+            "message": "Every month, Bob sends his share of the housing costs from his personal account to the Shared Joint account via an internal transfer."
+          },
+          {
+            "title": "Total Visibility",
+            "message": "The result? Their 36-month trajectory is crystal clear. They know exactly how much they can spend today while securing their future."
+          }
+        ],
+        "wealth": [
+          {
+            "title": "Tracking Assets",
+            "message": "Alice and Bob own their principal residency, valued at €350,000. It's their primary engine for long-term wealth."
+          },
+          {
+            "title": "Managing Debt",
+            "message": "They also track their car loan and mortgage. Reducing these liabilities is their path to financial independence."
+          },
+          {
+            "title": "Net Worth Vision",
+            "message": "Their Dashboard shows their true Net Worth: the sum of their house and savings minus what they still owe to the bank."
+          }
+        ],
+        "entities": [
+          {
+            "title": "Structuring Worlds",
+            "message": "Alice and Bob start in **Settings** to define their financial worlds: 'Alice', 'Bob', and their 'Shared' household."
+          },
+          {
+            "title": "The Master Filter",
+            "message": "Once created, the **Entity Switcher** in the sidebar becomes their command center. Changing it filters the entire application instantly."
+          },
+          {
+            "title": "Segmented Treasury",
+            "message": "In the **Accounts** tab, they only see the wallets belonging to the selected world. Bob's personal savings stay out of the Shared view."
+          },
+          {
+            "title": "Clean Cash-Flow",
+            "message": "Transactions are also isolated. Alice can review her personal 'Leisure' spending without the noise of the family mortgage."
+          },
+          {
+            "title": "Distributed Assets",
+            "message": "Even **Wealth** is segmented. The principal residency is 'Shared', while Bob's car loan is his own personal liability."
+          }
+        ],
+        "interactive_setup": [
+          {
+            "title": "1. The Bucket",
+            "message": "Let's create your first category. Think of it as a 'bucket' for your money. Try adding 'Housing' or 'Food'."
+          },
+          {
+            "title": "2. The Source",
+            "message": "Great. Now, where does your money live? Create your primary bank account (e.g., 'Main Checking')."
+          },
+          {
+            "title": "3. The Automation",
+            "message": "Final step. Let's link them. Create a **Recurring Template** for your Rent or Salary to see your 3-year future."
+          },
+          {
+            "title": "Welcome Aboard",
+            "message": "Your personalized Starter Pack is ready. Explore your dashboard to see your financial speed and runway."
+          }
+        ]
       },
-      "categories": {
-        "title": "Categories & Classification",
-        "message": "Categories allow you to classify your flows by nature: **Income**, **Fixed** (bills), **Daily** or **Leisure**. This is the basis of your analysis."
+      "success": {
+        "aha_moment": "Aha! Moment",
+        "category_created": "Great! You've just created a budgetary 'bucket'. Now you can steer exactly where your money goes.",
+        "transaction_created": "Aha! By adding this template, Strady has automatically projected your balance for the next 3 years. You are now a pilot.",
+        "asset_created": "Asset added! Your balance sheet is growing. This is your first step toward real financial independence.",
+        "snapshot_created": "Perfect. Updating your values allows Strady to calculate your 'True North' (Net Worth) accurately.",
+        "entity_created": "Entity created! You've just separated your financial 'worlds'. Clarity is your new superpower.",
+        "transfer_created": "Transfer complete! You've just performed a 'salary' virement between entities. Mental load: Zero.",
+        "setup_bucket": "Bucket created! You've started building your financial structure. Every euro now has a home.",
+        "setup_account": "Account linked! Strady now knows where your cash is stored.",
+        "setup_engine": "Engine Started! Your 36-month trajectory is now alive. You are officially a Strady Pilot."
       },
-      "transactions": {
-        "title": "Forecasting Engine",
-        "message": "This is where the magic happens! Your income and bills are **templates**. Strady uses them to project your balance over 36 months."
-      },
-      "wealth": {
-        "title": "Global Wealth",
-        "message": "Beyond the budget, track your assets (house, crypto) and liabilities (loans). Your **Net Worth** is calculated automatically."
-      },
-      "dashboard": {
-        "title": "Strategic Dashboard",
-        "message": "Let's finish here! The 'Safe-to-Spend' tells you exactly what you can spend without compromising your goals."
+      "ui": {
+        "mission": "Mission",
+        "victory": "VICTORY",
+        "continue": "Continue"
       }
-    }
-  },
+    },
   "wealth": {
     "title": "Wealth & Balance Sheet",
     "subtitle": "Asset tracking and debt reduction",

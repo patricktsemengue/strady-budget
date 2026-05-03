@@ -72,11 +72,11 @@ export default {
                     </td>
                     <td class="py-3 px-4">
                         <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter whitespace-nowrap">1 ${code} =</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">1 ${code} =</span>
                             <input type="number" step="0.0001" value="${rate}" 
                                 onchange="window.app.updateExchangeRate('${code}', this.value)"
                                 class="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 font-black text-indigo-600 dark:text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">${state.displayCurrency}</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${state.displayCurrency}</span>
                         </div>
                     </td>
                     <td class="py-3 px-4">
@@ -127,53 +127,102 @@ export default {
 
         const sidebarItems = [
             { id: 'group-display', label: t('settings.groups_settings.display'), icon: 'fa-desktop' },
+            { id: 'group-entities', label: 'Entités & Famille', icon: 'fa-people-roof' },
             { id: 'group-strategy', label: t('settings.groups_settings.strategy'), icon: 'fa-bullseye' },
             { id: 'group-connectivity', label: t('settings.groups_settings.connectivity'), icon: 'fa-link' },
             { id: 'group-security', label: t('settings.groups_settings.security'), icon: 'fa-shield-halved' }
         ];
 
+        const entityCards = state.entities.map(ent => {
+            const countAccounts = state.accounts.filter(a => a.entityId === ent.id).length;
+            const countTransactions = (state.transactions || []).filter(t => t.entityId === ent.id).length;
+            const countAssets = state.assets.filter(a => a.entityId === ent.id).length;
+            const countLiabilities = state.liabilities.filter(l => l.entityId === ent.id).length;
+            
+            const isDeletable = countAccounts === 0 && countTransactions === 0 && countAssets === 0 && countLiabilities === 0;
+            const linkCount = countAccounts + countAssets + countLiabilities;
+
+            return `
+                <div data-id="${ent.id}" class="swipe-item relative overflow-hidden rounded-xl group shadow-sm mb-1">
+                    <!-- Action Layers (Mobile Swipe Only) -->
+                    <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white md:hidden">
+                        <button onclick="window.app.deleteEntity('${ent.id}')" class="flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-trash-can text-lg"></i>
+                            <span class="text-[8px] font-bold uppercase tracking-tighter">${t('common.delete')}</span>
+                        </button>
+                    </div>
+
+                    <!-- Content Layer -->
+                    <div class="swipe-content relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-between transition-all duration-200 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+                                <i class="fa-solid ${ent.type === 'PRIVATE' ? 'fa-user' : (ent.type === 'FAMILY' ? 'fa-people-roof' : 'fa-briefcase')} text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 dark:text-slate-100">${ent.name}</p>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${t(`entities.type_${ent.type.toLowerCase()}`)} • ${linkCount} ${t('nav.groups.operations').toLowerCase()}</p>
+                            </div>
+                        </div>
+
+                        <!-- Desktop Actions (Hidden on Mobile) -->
+                        <div class="hidden md:flex items-center gap-1">
+                            <button onclick="window.app.openEditEntity('${ent.id}')" class="p-2 text-slate-300 hover:text-indigo-600 transition-all" title="${t('common.edit')}">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="window.app.deleteEntity('${ent.id}')" 
+                                    class="p-2 text-slate-300 hover:text-rose-500 transition-all ${!isDeletable ? 'opacity-10 cursor-not-allowed' : ''}" 
+                                    ${!isDeletable ? `title="${t('entities.error_linked')}"` : `title="${t('common.delete')}"`}>
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+
+                        <!-- Mobile Indicator (Hidden on Desktop) -->
+                        <div class="md:hidden text-slate-200">
+                             <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
         return `
         <div id="view-settings" class="max-w-6xl mx-auto px-4 pb-20">
-            <div class="flex flex-col md:flex-row gap-8 items-start">
-                
-                <!-- Sidebar (Desktop) -->
-                <div class="hidden md:flex flex-col w-64 sticky top-24 gap-1">
-                    <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">${t('settings.title')}</h2>
-                    ${sidebarItems.map(item => `
-                        <button onclick="window.app.scrollToSettingsGroup('${item.id}')" class="settings-sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
-                            <i class="fa-solid ${item.icon} w-5 text-center"></i>
-                            ${item.label}
-                        </button>
-                    `).join('')}
-                </div>
-
-                <div class="flex-1 w-full space-y-12">
-                    <!-- Mobile Sticky Header -->
-                    <div class="page-header-sticky md:hidden mb-6">
+            
+            <!-- Universal Sticky Header (Matches Strady Header Style) -->
+            <div class="page-header-sticky mb-10">
+                <div class="flex flex-col gap-5">
+                    <!-- Title Row -->
+                    <div class="flex justify-between items-center">
                         <div class="flex items-center gap-4">
-                            <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">${t('settings.title')}</h2>
-                            <button onclick="window.app.showHelp('settings')" class="p-2 text-slate-300 hover:text-slate-600 transition-colors" title="${t('help_cards.btn_help')}">
+                            <div>
+                                <h1 class="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">${t('settings.title')}</h1>
+                                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">${t('settings.groups_settings.display')}</p>
+                            </div>
+                            <button onclick="window.app.showHelp('settings')" class="p-2 text-slate-300 hover:text-indigo-600 transition-colors" title="${t('help_cards.btn_help')}">
                                 <i class="fa-solid fa-circle-question text-lg"></i>
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- Horizontal Jump Bar (Pill Buttons - Responsive Wrap) -->
+                    <div class="flex flex-wrap items-center gap-2 pb-1" id="settings-jump-bar">
+                        ${sidebarItems.map(item => `
+                            <button onclick="window.app.scrollToSettingsGroup('${item.id}')" class="settings-sidebar-link whitespace-nowrap flex items-center gap-2.5 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-white dark:bg-slate-900 shadow-sm text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+                                <i class="fa-solid ${item.icon} text-[11px]"></i>
+                                ${item.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
 
-                    <!-- 1. GROUP: DISPLAY -->
-                    <div id="group-display" class="space-y-4">
+            <div class="w-full space-y-12">
+                <!-- 1. GROUP: DISPLAY -->
+                <div id="group-display" class="space-y-4">
                         <div class="flex items-center gap-2 mb-2 ml-1">
                             <div class="w-1 h-4 bg-indigo-500 rounded-full"></div>
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.display')}</h4>
-                        </div>
-
-                        <!-- Card: Language -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            ${renderCardHeader(t('settings.language.title'), t('settings.language.subtitle'), t('settings.language.why'), 'ui', 'fa-language', 'bg-blue-50 dark:bg-blue-900/20 text-blue-600')}
-                            <div class="px-6 pb-6 pt-2">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <button onclick="window.app.changeLanguage('fr')" class="p-4 rounded-xl border ${getCurrentLanguage() === 'fr' ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-800'} text-center font-bold transition-all">Français</button>
-                                    <button onclick="window.app.changeLanguage('en')" class="p-4 rounded-xl border ${getCurrentLanguage() === 'en' ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-800'} text-center font-bold transition-all">English</button>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Card: Master Currency -->
@@ -196,7 +245,41 @@ export default {
                         </div>
                         </div>
 
-                        <!-- 2. GROUP: STRATEGY -->                    <div id="group-strategy" class="space-y-4 pt-4">
+                        <!-- 2. GROUP: ENTITIES -->
+                        <div id="group-entities" class="space-y-4 pt-4">
+                            <div class="flex items-center gap-2 mb-2 ml-1">
+                                <div class="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('entities.title')}</h4>
+                            </div>
+
+                            <!-- Card: Entities List -->
+                            <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                                ${renderCardHeader(t('entities.title'), t('entities.subtitle'), 'Les entités permettent de filtrer votre patrimoine et votre trésorerie par "propriétaire". Idéal pour les couples ou les entrepreneurs.', 'data', 'fa-people-roof', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
+                                <div class="px-6 pb-6 pt-2 space-y-4">
+                                    <div id="entities-swipe-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        ${entityCards || `<div class="col-span-2 py-8 text-center text-slate-400 italic">Aucune entité configurée</div>`}
+                                    </div>
+
+                                    <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                        <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">${t('entities.add_title')}</h5>
+                                        <form id="add-entity-form" class="flex flex-col md:flex-row gap-3">
+                                            <input type="text" id="new-entity-name" placeholder="${t('entities.name_placeholder')}" required class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
+                                            <select id="new-entity-type" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
+                                                <option value="PRIVATE">${t('entities.type_private')}</option>
+                                                <option value="FAMILY">${t('entities.type_family')}</option>
+                                                <option value="SMALL_BUSINESS">${t('entities.type_business')}</option>
+                                            </select>
+                                            <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95">
+                                                <i class="fa-solid fa-plus mr-2"></i> ${t('common.add')}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. GROUP: STRATEGY -->
+                    <div id="group-strategy" class="space-y-4 pt-4">
                         <div class="flex items-center gap-2 mb-2 ml-1">
                             <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.strategy')}</h4>
@@ -355,42 +438,108 @@ export default {
     },
     render: () => {
         import('../settings.js').then(m => m.renderSettings());
+
+        // Initialize SwipeManager for mobile components AFTER render
+        if (window.innerWidth < 768) {
+            import('../ui.js').then(m => {
+                setTimeout(() => {
+                    new m.SwipeManager('currency-rates-mobile', {
+                        onSwipeRight: (id) => import('../settings.js').then(s => s.deleteExchangeRate(id))
+                    });
+                    new m.SwipeManager('entities-swipe-list', {
+                        onTap: (id) => window.app.openEditEntity(id)
+                    });
+                }, 150);
+            });
+        }
     },
     init: () => {
         window.app.scrollToSettingsGroup = (groupId) => {
             const el = document.getElementById(groupId);
             if (el) {
-                const navHeight = 120;
+                const navHeight = 180; // Adjusted for new header + jump bar height
                 const offset = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
                 window.scrollTo({ top: offset, behavior: 'smooth' });
             }
         };
 
+        window.app.openEditEntity = (id) => {
+            const ent = state.entities.find(e => e.id === id);
+            if (!ent) return;
+            document.getElementById('edit-ent-id').value = ent.id;
+            document.getElementById('edit-ent-name').value = ent.name;
+            document.getElementById('edit-ent-type').value = ent.type;
+            
+            document.getElementById('drawer-overlay').classList.add('active');
+            document.getElementById('entity-edit-drawer').classList.add('active');
+        };
+
+        window.app.closeEditEntity = () => {
+            document.getElementById('drawer-overlay').classList.remove('active');
+            document.getElementById('entity-edit-drawer').classList.remove('active');
+        };
+
+        const handleUpdateEntity = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-ent-id').value;
+            const name = document.getElementById('edit-ent-name').value.trim();
+            const type = document.getElementById('edit-ent-type').value;
+
+            try {
+                import('../firestore-service.js').then(async m => {
+                    await m.updateEntityInFirestore(state.user?.uid || '', id, { name, type });
+                    window.app.closeEditEntity();
+                    import('../ui.js').then(ui => ui.showNotification(t('common.success')));
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         // Sidebar active state on scroll
-        const groups = ['group-display', 'group-strategy', 'group-connectivity', 'group-security'];
+        const groups = ['group-display', 'group-entities', 'group-strategy', 'group-connectivity', 'group-security'];
         const updateActiveLink = () => {
             let current = '';
             for (const id of groups) {
                 const el = document.getElementById(id);
-                if (el && el.getBoundingClientRect().top < 200) {
-                    current = id;
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top < 250) { // Detection threshold
+                        current = id;
+                    }
                 }
             }
+            
             document.querySelectorAll('.settings-sidebar-link').forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('onclick')?.includes(current)) {
-                    link.classList.add('active');
+                const isMatch = link.getAttribute('onclick')?.includes(current);
+                
+                if (isMatch) {
+                    link.classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600', 'shadow-md');
+                    link.classList.remove('text-slate-500', 'hover:bg-slate-50', 'dark:hover:bg-slate-800', 'border-slate-100', 'dark:border-slate-800');
+                } else {
+                    link.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600', 'shadow-md');
+                    link.classList.add('text-slate-500', 'border-slate-100', 'dark:border-slate-800');
                 }
             });
         };
         window.addEventListener('scroll', updateActiveLink);
+        setTimeout(updateActiveLink, 100); // Initial check
 
         document.addEventListener('submit', (e) => {
             if (e.target.id === 'month-selector-config-form') {
                 import('../settings.js').then(m => m.handleSaveMonthSelectorConfig(e));
             }
+            if (e.target.id === 'add-entity-form') {
+                import('../settings.js').then(m => m.handleAddEntity(e));
+            }
+            if (e.target.id === 'edit-entity-form') {
+                handleUpdateEntity(e);
+            }
         });
         document.addEventListener('click', (e) => {
+            if (e.target.id === 'btn-cancel-edit-ent' || e.target.id === 'btn-close-edit-ent-drawer') {
+                window.app.closeEditEntity();
+            }
             if (e.target.id === 'btn-export-full-backup' || e.target.closest('#btn-export-full-backup')) {
                 import('../data.js').then(m => m.exportFullBackupCSV());
             }
@@ -414,12 +563,5 @@ export default {
                 import('../data.js').then(m => m.importFullBackupCSV(e));
             }
         });
-
-        // Initialize SwipeManager for mobile currency rates
-        if (window.innerWidth < 768) {
-            import('../ui.js').then(m => {
-                new m.SwipeManager('currency-rates-mobile');
-            });
-        }
     }
 };

@@ -63,8 +63,6 @@ export const changeLanguage = async (lng) => {
     if (typeof i18next === 'undefined') return;
     await i18next.changeLanguage(lng);
     localStorage.setItem('strady_language', lng);
-    // Refresh the UI
-    window.location.reload(); 
 };
 
 export const getCurrentLanguage = () => {

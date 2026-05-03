@@ -1,4 +1,9 @@
 {
+  "entities": [
+    { "id": "ent_alice", "name": "Alice", "type": "PRIVATE" },
+    { "id": "ent_bob", "name": "Bob", "type": "PRIVATE" },
+    { "id": "ent_family", "name": "Ménage", "type": "FAMILY" }
+  ],
   "categories": [
     { "id": "cat_salary", "label": "Salaire (Entrées)", "nature": "REVENU", "icon": "fa-money-bill-wave", "color": "#10b981", "isPassive": false },
     { "id": "cat_rent_in", "label": "Revenu Locatif", "nature": "REVENU", "icon": "fa-building-circle-check", "color": "#059669", "isPassive": true },
@@ -13,50 +18,56 @@
     { "id": "cat_leisure", "label": "Loisirs & Sorties", "nature": "LOISIR", "icon": "fa-gamepad", "color": "#8b5cf6" }
   ],
   "accounts": [
-    { "id": "acc_joint", "name": "Compte Principal (Ménage)", "initialBalance": 2500, "isSaving": false, "day": 1 },
-    { "id": "acc_savings", "name": "Épargne de Sécurité", "initialBalance": 8500, "isSaving": true, "day": 1 },
-    { "id": "acc_invest", "name": "Portefeuille Actions", "initialBalance": 2500, "isInvestmentAccount": true, "day": 1 }
+    { "id": "acc_joint", "name": "Compte Principal (Ménage)", "initialBalance": 2500, "isSaving": false, "day": 1, "entityId": "ent_family" },
+    { "id": "acc_alice", "name": "Compte Courant Alice", "initialBalance": 1200, "isSaving": false, "day": 1, "entityId": "ent_alice" },
+    { "id": "acc_bob", "name": "Compte Courant Bob", "initialBalance": 1150, "isSaving": false, "day": 1, "entityId": "ent_bob" },
+    { "id": "acc_savings", "name": "Épargne de Sécurité", "initialBalance": 8500, "isSaving": true, "day": 1, "entityId": "ent_family" },
+    { "id": "acc_invest", "name": "Portefeuille Actions", "initialBalance": 2500, "isInvestmentAccount": true, "day": 1, "entityId": "ent_family" }
   ],
   "templates": [
     {
       "id": "rec_sal_p1",
-      "label": "Salaire Parent 1 (Median BE)",
+      "label": "Salaire Alice (Median BE)",
       "amount": 2450,
       "day": 1,
       "category": "cat_salary",
       "source": "external",
-      "destination": "acc_joint",
-      "periodicity": "M"
+      "destination": "acc_alice",
+      "periodicity": "M",
+      "entityId": "ent_alice"
     },
     {
       "id": "rec_sal_p2",
-      "label": "Salaire Parent 2 (Median BE)",
+      "label": "Salaire Bob (Median BE)",
       "amount": 2380,
       "day": 1,
       "category": "cat_salary",
       "source": "external",
-      "destination": "acc_joint",
-      "periodicity": "M"
+      "destination": "acc_bob",
+      "periodicity": "M",
+      "entityId": "ent_bob"
     },
     {
-      "id": "rec_rent_income",
-      "label": "Loyer Appartement (Revenu)",
-      "amount": 800,
-      "day": 5,
-      "category": "cat_rent_in",
-      "source": "external",
+      "id": "rec_transfer_alice",
+      "label": "Virement Alice → Ménage",
+      "amount": 1800,
+      "day": 2,
+      "category": "cat_savings",
+      "source": "acc_alice",
       "destination": "acc_joint",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
-      "id": "rec_dividends",
-      "label": "Dividendes Portefeuille",
-      "amount": 125,
-      "day": 15,
-      "category": "cat_dividends",
-      "source": "external",
-      "destination": "acc_invest",
-      "periodicity": "M"
+      "id": "rec_transfer_bob",
+      "label": "Virement Bob → Ménage",
+      "amount": 1800,
+      "day": 2,
+      "category": "cat_savings",
+      "source": "acc_bob",
+      "destination": "acc_joint",
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
       "id": "rec_house_mortgage",
@@ -66,27 +77,8 @@
       "category": "cat_housing",
       "source": "acc_joint",
       "destination": "external",
-      "periodicity": "M"
-    },
-    {
-      "id": "rec_apt_mortgage",
-      "label": "Prêt Appartement Locatif",
-      "amount": 600,
-      "day": 5,
-      "category": "cat_housing",
-      "source": "acc_joint",
-      "destination": "external",
-      "periodicity": "M"
-    },
-    {
-      "id": "rec_car_loan",
-      "label": "Prêt Auto",
-      "amount": 320,
-      "day": 10,
-      "category": "cat_transport",
-      "source": "acc_joint",
-      "destination": "external",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
       "id": "rec_elec_gas",
@@ -96,7 +88,8 @@
       "category": "cat_energy",
       "source": "acc_joint",
       "destination": "external",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
       "id": "rec_water",
@@ -106,7 +99,8 @@
       "category": "cat_energy",
       "source": "acc_joint",
       "destination": "external",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
       "id": "rec_insurances",
@@ -116,17 +110,8 @@
       "category": "cat_insurance",
       "source": "acc_joint",
       "destination": "external",
-      "periodicity": "M"
-    },
-    {
-      "id": "rec_life_ins",
-      "label": "Assurance Vie",
-      "amount": 100,
-      "day": 28,
-      "category": "cat_insurance",
-      "source": "acc_joint",
-      "destination": "external",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
       "id": "rec_school",
@@ -136,7 +121,8 @@
       "category": "cat_school",
       "source": "acc_joint",
       "destination": "external",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     },
     {
       "id": "rec_monthly_savings",
@@ -146,23 +132,19 @@
       "category": "cat_savings",
       "source": "acc_joint",
       "destination": "acc_savings",
-      "periodicity": "M"
+      "periodicity": "M",
+      "entityId": "ent_family"
     }
   ],
   "pastTransactions": [
-    { "label": "Courses Delhaize", "amount": 145.20, "daysAgo": 1, "category": "cat_food", "source": "acc_joint", "destination": "external" },
-    { "label": "Plein Essence", "amount": 75.00, "daysAgo": 3, "category": "cat_transport", "source": "acc_joint", "destination": "external" },
-    { "label": "Resto Famille", "amount": 92.50, "daysAgo": 4, "category": "cat_leisure", "source": "acc_joint", "destination": "external" }
+    { "label": "Courses Delhaize", "amount": 145.20, "daysAgo": 1, "category": "cat_food", "source": "acc_joint", "destination": "external", "entityId": "ent_family" },
+    { "label": "Plein Essence Bob", "amount": 75.00, "daysAgo": 3, "category": "cat_transport", "source": "acc_bob", "destination": "external", "entityId": "ent_bob" },
+    { "label": "Yoga Alice", "amount": 15.00, "daysAgo": 2, "category": "cat_leisure", "source": "acc_alice", "destination": "external", "entityId": "ent_alice" }
   ],
   "assets": [
-    { "id": "ast_house", "name": "Maison (Résidence Principale)", "value": 300000, "quantity": 1 },
-    { "id": "ast_apt", "name": "Appartement Locatif", "value": 185000, "quantity": 1 },
-    { "id": "ast_crypto", "name": "Bitcoin (Portefeuille)", "value": 1000, "quantity": 0.015 },
-    { "id": "ast_shares", "name": "Actions Entreprise (ESPP)", "value": 2500, "quantity": 100 }
+    { "id": "ast_house", "name": "Maison (Résidence Principale)", "value": 300000, "quantity": 1, "entityId": "ent_family" }
   ],
   "liabilities": [
-    { "id": "lia_house_mortgage", "name": "Hypothèque Maison (RP)", "value": 265000 },
-    { "id": "lia_apt_mortgage", "name": "Crédit Appartement Locatif", "value": 120000 },
-    { "id": "lia_car", "name": "Financement Auto", "value": 15000 }
+    { "id": "lia_house_mortgage", "name": "Hypothèque Maison (RP)", "value": 265000, "entityId": "ent_family" }
   ]
 }

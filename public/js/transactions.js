@@ -36,6 +36,14 @@ export const openTransactionModal = (id = null) => {
 
     const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : null;
 
+    const entitySelect = document.getElementById('transaction-entity');
+    if (entitySelect) {
+        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
+        if (state.selectedEntityId !== 'all') {
+            entitySelect.value = state.selectedEntityId;
+        }
+    }
+
     if (id) { // EDIT MODE
         const modalTitle = document.getElementById('transaction-modal-title');
         if (modalTitle) modalTitle.textContent = t('transactions.modal_edit_title');
@@ -46,6 +54,23 @@ export const openTransactionModal = (id = null) => {
         if (modalTitle) modalTitle.textContent = t('transactions.modal_add_title');
         const editIdInput = document.getElementById('transaction-edit-id');
         if (editIdInput) editIdInput.value = '';
+
+        // Pre-fill for interactive setup
+        if (state.onboarding?.active && state.onboarding?.type === 'interactive_setup' && state.onboarding?.currentStep === 2) {
+            document.getElementById('transaction-label').value = 'Rent';
+            document.getElementById('transaction-amount').value = '1200';
+            document.getElementById('transaction-is-recurring').checked = true;
+            if (recurringFields) recurringFields.classList.remove('hidden');
+            
+            // Auto-select the source account we just created
+            const checkingAcc = state.accounts.find(a => a.name === 'Main Checking');
+            if (checkingAcc) sourceSelect.value = checkingAcc.id;
+            destSelect.value = ""; // External expense
+
+            // Auto-select the category we just created
+            const housingCat = state.categories.find(c => c.label === 'Housing');
+            if (housingCat) categorySelect.value = housingCat.id;
+        }
     }
 
     if (tx) { // Pre-fill for EDIT
@@ -155,6 +180,7 @@ export const handleSaveTransaction = async (e) => {
     const Category = document.getElementById('transaction-category').value;
     const source = document.getElementById('transaction-source').value;
     const destination = document.getElementById('transaction-destination').value;
+    const entityId = document.getElementById('transaction-entity').value;
     
     const isRecurring = document.getElementById('transaction-is-recurring').checked;
     const periodicity = document.getElementById('transaction-periodicity').value;
@@ -196,7 +222,7 @@ export const handleSaveTransaction = async (e) => {
                     // RECURRING UPDATE: delete-old and create-new
                     const newTemplateValues = { 
                         date, label, amount, source, destination, category: Category,
-                        recurring: true, endDate, periodicity
+                        recurring: true, endDate, periodicity, entityId
                     };
                     await updateRecurringSeriesInFirestore(currentUserId, tx.Model, newTemplateValues);
                     showNotification(t('transactions.success_recurring_updated'));
@@ -206,7 +232,7 @@ export const handleSaveTransaction = async (e) => {
             } else {
                 if (confirm(t('confirm.edit_tx'))) {
                     // SINGLE UPDATE: delete-old and create-new
-                    const newTxData = { label, amount, date, Category, source, destination, Model: null };
+                    const newTxData = { label, amount, date, Category, source, destination, Model: null, entityId };
                     await updateSingleTransactionInFirestore(currentUserId, id, newTxData);
                     showNotification(t('transactions.success_tx_updated'));
                 } else {
@@ -219,7 +245,7 @@ export const handleSaveTransaction = async (e) => {
                 // RECURRING CREATION: Align with TODO.litcoffee
                 const templateData = {
                     date, label, amount, source, destination, category: Category,
-                    recurring: true, endDate, periodicity
+                    recurring: true, endDate, periodicity, entityId
                 };
                 const templateId = generateDeterministicTemplateId(templateData);
 
@@ -237,7 +263,7 @@ export const handleSaveTransaction = async (e) => {
                 showNotification(t('transactions.success_recurring_created'));
             } else {
                 // SINGLE CREATION: Align with TODO.litcoffee
-                const newTxData = { label, amount, date, Category, source, destination, Model: null };
+                const newTxData = { label, amount, date, Category, source, destination, Model: null, entityId };
                 const newId = generateDeterministicTransactionId(newTxData);
 
                 // Check if transaction already exists
@@ -251,6 +277,7 @@ export const handleSaveTransaction = async (e) => {
                     id: newId, ...newTxData
                 });
                 showNotification(t('transactions.success_tx_created'));
+                if (window.app.onTourAction) window.app.onTourAction('transaction_created');
             }
         }
         closeTransactionModal();

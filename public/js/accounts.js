@@ -12,6 +12,22 @@ import { formatCurrency } from './utils.js';
 
 export const openAddAccountDrawer = () => {
     document.getElementById('add-account-form').reset();
+    
+    const entitySelect = document.getElementById('acc-entity');
+    if (entitySelect) {
+        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
+        if (state.selectedEntityId !== 'all') {
+            entitySelect.value = state.selectedEntityId;
+        }
+    }
+
+    // Pre-fill for interactive setup
+    if (state.onboarding?.active && state.onboarding?.type === 'interactive_setup' && state.onboarding?.currentStep === 1) {
+        document.getElementById('acc-name').value = 'Main Checking';
+        document.getElementById('acc-balance').value = '2500';
+        document.getElementById('acc-balance-date').value = new Date().toISOString().split('T')[0];
+    }
+
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('account-add-drawer').classList.add('active');
 };
@@ -28,8 +44,9 @@ export const handleAddAccount = async (e) => {
     const initialBalanceDate = document.getElementById('acc-balance-date').value;
     const isSaving = document.getElementById('acc-is-savings').checked;
     const isInvestmentAccount = document.getElementById('acc-is-investment').checked;
+    const entityId = document.getElementById('acc-entity').value;
 
-    if (!name || isNaN(initialBalance) || !initialBalanceDate) {
+    if (!name || isNaN(initialBalance) || !initialBalanceDate || !entityId) {
         showNotification('Veuillez remplir tous les champs.', 'error');
         return;
     }
@@ -47,12 +64,14 @@ export const handleAddAccount = async (e) => {
             initialBalance,
             initialBalanceDate,
             isSaving,
-            isInvestmentAccount
+            isInvestmentAccount,
+            entityId
         };
 
         await addAccountToFirestore(currentUserId, newAccount);
         closeAddAccountDrawer();
         showNotification('Compte ajouté !');
+        if (window.app.onTourAction) window.app.onTourAction('account_created');
     } catch (err) {
         console.error(err);
         showNotification("Erreur lors de l'ajout du compte.", 'error');
@@ -79,6 +98,12 @@ export const openEditAccount = (id) => {
     } else {
         dateInput.max = '';
         if (helpText) helpText.textContent = '';
+    }
+
+    const entitySelect = document.getElementById('edit-acc-entity');
+    if (entitySelect) {
+        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
+        entitySelect.value = acc.entityId || '';
     }
 
     document.getElementById('edit-acc-id').value = acc.id;
@@ -108,8 +133,9 @@ export const handleUpdateAccount = async (e) => {
     const createDate = document.getElementById('edit-acc-balance-date').value;
     const isSaving = document.getElementById('edit-acc-is-savings').checked;
     const isInvestmentAccount = document.getElementById('edit-acc-is-investment').checked;
+    const entityId = document.getElementById('edit-acc-entity').value;
 
-    if (!name || isNaN(newInitialBalance) || !createDate) {
+    if (!name || isNaN(newInitialBalance) || !createDate || !entityId) {
         showNotification('Veuillez remplir tous les champs.', 'error');
         return;
     }
@@ -134,7 +160,8 @@ export const handleUpdateAccount = async (e) => {
             initialBalance: newInitialBalance,
             createDate,
             isSaving,
-            isInvestmentAccount
+            isInvestmentAccount,
+            entityId
         }, oldInitialBalance);
         closeAccountDrawer();
         showNotification('Compte mis à jour !');
@@ -234,6 +261,9 @@ export const renderAccountsList = () => {
     const balM2 = calculateBalances(m2Date);
     const balPrev = calculateBalances(prevDate);
 
+    // Filter accounts by selected entity
+    const filteredAccounts = state.accounts.filter(acc => state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId);
+
     // Grouping Logic
     const groups = {
         'daily': [],
@@ -244,16 +274,16 @@ export const renderAccountsList = () => {
     let totalLiquid = 0, totalSavings = 0, totalInvest = 0;
 
     const usedAccountIds = new Set();
-    state.transactions.forEach(tx => {
+    (state.transactions || []).forEach(tx => {
         if (tx.source) usedAccountIds.add(tx.source);
         if (tx.destination) usedAccountIds.add(tx.destination);
     });
-    state.recurringTemplates.forEach(tpl => {
+    (state.recurringTemplates || []).forEach(tpl => {
         if (tpl.source) usedAccountIds.add(tpl.source);
         if (tpl.destination) usedAccountIds.add(tpl.destination);
     });
 
-    state.accounts.forEach(acc => {
+    filteredAccounts.forEach(acc => {
         const b0 = balM0[acc.id] || 0;
         const b1 = balM1[acc.id] || 0;
         const b2 = balM2[acc.id] || 0;
@@ -419,21 +449,19 @@ export const openAdjustmentModal = (accountId) => {
     const balances = calculateBalances(state.viewDate);
     const currentBal = balances[accountId] || 0;
 
+    const modal = document.getElementById('adjustment-modal');
     document.getElementById('adjustment-acc-id').value = accountId;
-    document.getElementById('adjustment-acc-name').textContent = acc.name;
-    document.getElementById('adjustment-current-bal').textContent = formatCurrency(currentBal);
+    
+    const accNameEl = document.getElementById('adjustment-acc-name');
+    if (accNameEl) accNameEl.textContent = acc.name;
+    
+    const currBalEl = document.getElementById('adjustment-current-bal');
+    if (currBalEl) currBalEl.textContent = formatCurrency(currentBal);
+    
     document.getElementById('adjustment-new-bal').value = currentBal.toFixed(2);
     document.getElementById('adjustment-date').value = new Date().toISOString().split('T')[0];
 
-    // Populate category dropdown
-    const catSelect = document.getElementById('adjustment-category');
-    catSelect.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
-    
-    // Select "Autre" or similar by default if possible
-    const otherCat = state.categories.find(c => c.label.toLowerCase().includes('autre'));
-    if (otherCat) catSelect.value = otherCat.id;
-
-    document.getElementById('adjustment-modal').classList.remove('hidden');
+    modal.classList.remove('hidden');
 };
 
 export const closeAdjustmentModal = () => {
@@ -444,7 +472,6 @@ export const handleAdjustmentSubmit = async (e) => {
     e.preventDefault();
     const accountId = document.getElementById('adjustment-acc-id').value;
     const newBal = parseFloat(document.getElementById('adjustment-new-bal').value);
-    const catId = document.getElementById('adjustment-category').value;
     const date = document.getElementById('adjustment-date').value;
 
     const balances = calculateBalances(state.viewDate);
@@ -456,6 +483,7 @@ export const handleAdjustmentSubmit = async (e) => {
         return;
     }
 
+    const acc = state.accounts.find(a => a.id === accountId);
     const isCredit = diff > 0;
     const amount = Math.abs(diff);
 
@@ -463,14 +491,15 @@ export const handleAdjustmentSubmit = async (e) => {
         label: t('treasury.adjust'),
         amount: amount,
         date: date,
-        Category: catId,
+        Category: state.categories.find(c => c.label.toLowerCase().includes('autre'))?.id || 'cat_other',
         source: isCredit ? 'external' : accountId,
         destination: isCredit ? accountId : 'external',
-        Model: null
+        Model: null,
+        entityId: acc?.entityId || null
     };
 
     try {
-        const id = generateId(); // Manual adjustments get unique IDs
+        const id = generateId(); 
         await addTransactionToFirestore(currentUserId, { ...txData, id });
         closeAdjustmentModal();
         showNotification(`Trésorerie ajustée de ${formatCurrency(diff)}`);
@@ -486,7 +515,11 @@ export const openTransferModal = (prefill = null) => {
     const sourceSelect = document.getElementById('transfer-source');
     const destSelect = document.getElementById('transfer-destination');
     
-    const options = state.accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+    // In transfer modal, we might want to see ALL accounts even if filtered, or only accounts for the same entity?
+    // Let's filter by the CURRENTLY SELECTED entity to be consistent with the view
+    const filtered = state.accounts.filter(acc => state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId);
+    
+    const options = filtered.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
     sourceSelect.innerHTML = options;
     destSelect.innerHTML = options;
 
@@ -495,7 +528,7 @@ export const openTransferModal = (prefill = null) => {
         if (prefill.destination) destSelect.value = prefill.destination;
         if (prefill.amount) document.getElementById('transfer-amount').value = prefill.amount.toFixed(2);
         if (prefill.label) document.getElementById('transfer-label').value = prefill.label;
-    } else if (state.accounts.length >= 2) {
+    } else if (filtered.length >= 2) {
         sourceSelect.selectedIndex = 0;
         destSelect.selectedIndex = 1;
     }
@@ -526,6 +559,8 @@ export const handleTransferSubmit = async (e) => {
 
     if (isNaN(amount) || amount <= 0) return;
 
+    const srcAcc = state.accounts.find(a => a.id === srcId);
+
     const txData = {
         label,
         amount,
@@ -533,14 +568,16 @@ export const handleTransferSubmit = async (e) => {
         Category: state.categories.find(c => c.label.toLowerCase().includes('virement') || c.label.toLowerCase().includes('autre'))?.id || '',
         source: srcId,
         destination: dstId,
-        Model: null
+        Model: null,
+        entityId: srcAcc?.entityId || null
     };
 
     try {
         const id = generateId();
         await addTransactionToFirestore(currentUserId, { ...txData, id });
-        closeTransferModal();
+        window.app.closeTransferModal();
         showNotification("Virement exécuté avec succès.");
+        if (window.app.onTourAction) window.app.onTourAction('transfer_created');
     } catch (err) {
         console.error(err);
         showNotification("Erreur lors du virement", "error");

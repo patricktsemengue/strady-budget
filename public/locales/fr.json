@@ -54,7 +54,34 @@
     "icon": "Icône",
     "what_is_it": "C'est quoi ?",
     "how_to_use": "Comment l'utiliser ?",
-    "understood": "Compris !"
+    "understood": "Compris !",
+    "all_family": "TOUT LE MÉNAGE",
+    "private": "Privée",
+    "family": "Famille / Joint",
+    "business": "Petite Entreprise"
+  },
+  "entities": {
+    "title": "Gestion des Entités",
+    "subtitle": "Séparez vos finances privées, communes ou professionnelles.",
+    "add_title": "Ajouter une entité",
+    "name_placeholder": "Nom (ex: Alice, SCI, Business...)",
+    "type_private": "PRIVÉE",
+    "type_family": "FAMILLE / JOINT",
+    "type_business": "PETITE ENTREPRISE",
+    "success_added": "Entité ajoutée !",
+    "success_deleted": "Entité supprimée.",
+    "error_linked": "Impossible de supprimer une entité liée à des comptes ou transactions.",
+    "confirm_delete": "Supprimer cette entité ?"
+  },
+  "gps": {
+    "title": "Trajectoire Liberté",
+    "unit_years": "ANS",
+    "subtitle": "jusqu'à l'indépendance financière",
+    "speed": "Vitesse Actuelle",
+    "target": "Objectif Capital",
+    "start": "Départ",
+    "fi": "FI",
+    "per_month": "/ mois"
   },
   "nature": {
     "ALL": "TOUT",
@@ -80,6 +107,8 @@
     "wealth_evolution": "Évolution du Patrimoine Net",
     "balance_sheet": "Structure du Bilan",
     "self_financing_msg": "Votre capacité d'autofinancement mensuelle est de <b>{{amount}}</b>.",
+    "cash_drag_msg": "Vous avez <b>{{amount}}</b> d'excédent stagnant sur vos comptes courants (au-delà de vos besoins de 1.5 mois). Ce capital \"dort\" au lieu de travailler.",
+    "optimize": "Optimiser",
     "dna_title": "DNA des Revenus",
     "dna_active": "Actif",
     "dna_passive": "Passif",
@@ -306,36 +335,131 @@
       "cta": "Pr\u00eat \u00e0 piloter mon budget !"
     }
   },
-  "tour": {
-    "assistant_label": "GUIDE STRADY \u2022 \u00c9TAPE {{current}}/{{total}}",
-    "btn_skip": "Passer le tour",
-    "btn_next": "Suivant",
-    "btn_finish": "Terminer",
-    "steps": {
-      "accounts": {
-        "title": "Vos Comptes",
-        "message": "Bienvenue ! Nous avons configur\u00e9 vos comptes principaux. Le **Compte Joint** pour le quotidien et une **\u00c9pargne de S\u00e9curit\u00e9** pour vos projets.",
-        "is_savings": "Consid\u00e9rer comme \u00e9pargne de pr\u00e9caution",
-        "is_investment": "Consid\u00e9rer comme compte d'investissement"
+    "mastery": {
+      "title": "Missions d'Apprentissage",
+      "subtitle": "Progressez à travers des défis interactifs pour maîtriser vos finances.",
+      "mission1_title": "Pilote de Trajectoire",
+      "mission1_desc": "Maîtrisez l'art de la prévision et l'automatisation de votre budget.",
+      "mission2_title": "Architecte de Patrimoine",
+      "mission2_desc": "Suivez vos actifs long terme et votre patrimoine net.",
+      "mission3_title": "Commandant d'Entités",
+      "mission3_desc": "Gérez vos finances privées, partagées et pro en toute clarté.",
+      "btn_launch": "Lancer la Mission",
+      "status_completed": "Maîtrisé"
+    },
+    "onboarding": {
+      "title": "Choisissez votre première Mission",
+      "subtitle": "Quelle partie de votre vie financière voulez-vous maîtriser en premier ?",
+      "track_budget": "Gérer mon Budget",
+      "track_wealth": "Bâtir mon Patrimoine",
+      "track_entities": "Organiser mes Entités",
+      "btn_skip": "Je vais explorer seul"
+    },
+    "tour": {
+      "assistant_label": "MISSION • {{current}}/{{total}}",
+      "btn_skip": "Passer la mission",
+      "btn_skip_step": "Passer l'étape",
+      "btn_stop": "Quitter la mission",
+      "btn_next": "Suivant",
+      "btn_finish": "Mission Accomplie !",
+      "waiting_action": "En attente d'action...",
+
+      "steps": {
+        "budget": [
+          {
+            "title": "Config de Alice & Bob",
+            "message": "Alice et Bob utilisent les catégories pour segmenter leur vie : 'Charges Communes' pour le foyer et des catégories personnelles pour leurs propres loisirs."
+          },
+          {
+            "title": "Trésorerie Partagée",
+            "message": "Ils utilisent un compte Joint pour les factures communes, tandis qu'Alice et Bob gardent chacun leur compte courant personnel pour leur liberté individuelle."
+          },
+          {
+            "title": "Flux Automatisés",
+            "message": "Les salaires tombent, et des modèles récurrents gèrent automatiquement leurs paiements d'électricité, d'eau et d'assurances."
+          },
+          {
+            "title": "Contributions Communes",
+            "message": "Chaque mois, Bob envoie sa part des frais de logement depuis son compte personnel vers le compte Joint via un virement interne."
+          },
+          {
+            "title": "Visibilité Totale",
+            "message": "Le résultat ? Leur trajectoire sur 36 mois est limpide. Ils savent exactement ce qu'ils peuvent dépenser aujourd'hui tout en sécurisant leur avenir."
+          }
+        ],
+        "wealth": [
+          {
+            "title": "Suivi des Actifs",
+            "message": "Alice et Bob possèdent leur résidence principale, estimée à 350 000 €. C'est leur principal moteur de richesse à long terme."
+          },
+          {
+            "title": "Gestion des Dettes",
+            "message": "Ils suivent également leur prêt auto et leur hypothèque. Réduire ces passifs est leur chemin vers l'indépendance financière."
+          },
+          {
+            "title": "Le Bilan Net",
+            "message": "Leur tableau de bord affiche leur Patrimoine Net réel : la somme de leur maison et de leur épargne, moins ce qu'ils doivent encore à la banque."
+          }
+        ],
+        "entities": [
+          {
+            "title": "Structurer les Mondes",
+            "message": "Alice et Bob commencent dans les **Paramètres** pour définir leurs mondes financiers : 'Alice', 'Bob', et leur foyer 'Commun'."
+          },
+          {
+            "title": "Le Filtre Maître",
+            "message": "Une fois créées, le **Sélecteur d'Entité** dans la barre latérale devient leur tour de contrôle. Le changer filtre toute l'application instantanément."
+          },
+          {
+            "title": "Trésorerie Segmentée",
+            "message": "Dans l'onglet **Comptes**, ils ne voient que les portefeuilles appartenant au monde sélectionné. L'épargne perso de Bob reste hors de la vue Commune."
+          },
+          {
+            "title": "Flux de Trésorerie Propres",
+            "message": "Les transactions sont également isolées. Alice peut revoir ses dépenses perso 'Loisirs' sans le bruit de l'hypothèque familiale."
+          },
+          {
+            "title": "Patrimoine Réparti",
+            "message": "Même le **Patrimoine** est segmenté. La résidence principale est 'Commune', tandis que le prêt auto de Bob est son propre passif personnel."
+          }
+        ],
+        "interactive_setup": [
+          {
+            "title": "1. Le Seau",
+            "message": "Créons votre première catégorie. Voyez-la comme un 'seau' pour votre argent. Essayez d'ajouter 'Logement' ou 'Alimentation'."
+          },
+          {
+            "title": "2. La Source",
+            "message": "Parfait. Maintenant, où habite votre argent ? Créez votre compte bancaire principal (ex: 'Compte Courant')."
+          },
+          {
+            "title": "3. L'Automatisation",
+            "message": "Dernière étape. Lions les deux. Créez un **Modèle Récurrent** pour votre Loyer ou votre Salaire pour voir votre futur sur 3 ans."
+          },
+          {
+            "title": "Bienvenue à bord",
+            "message": "Votre Starter Pack personnalisé est prêt. Explorez votre tableau de bord pour voir votre vitesse financière et votre autonomie."
+          }
+        ]
       },
-      "categories": {
-        "title": "Cat\u00e9gories & Classification",
-        "message": "Les cat\u00e9gories permettent de classer vos flux par nature : **Revenu**, **Fixe** (factures), **Quotidien** ou **Loisir**. C'est la base de votre analyse."
+      "success": {
+        "aha_moment": "Moment Aha !",
+        "category_created": "Super ! Vous venez de créer un 'seau' budgétaire. Vous pilotez désormais précisément la destination de votre argent.",
+        "transaction_created": "Aha ! En ajoutant ce modèle, Strady a automatiquement projeté votre solde sur les 3 prochaines années. Vous êtes maintenant un pilote.",
+        "asset_created": "Actif ajouté ! Votre bilan s'étoffe. C'est votre premier pas vers une réelle indépendance financière.",
+        "snapshot_created": "Parfait. Mettre à jour vos valeurs permet à Strady de calculer votre 'Nord Réel' (Patrimoine Net) avec précision.",
+        "entity_created": "Entité créée ! Vous venez de séparer vos 'mondes' financiers. La clarté est votre nouveau super-pouvoir.",
+        "transfer_created": "Transfert terminé ! Vous venez d'effectuer un virement 'salaire' entre entités. Charge mentale : Zéro.",
+        "setup_bucket": "Seau créé ! Vous avez commencé à bâtir votre structure financière. Chaque euro a désormais une maison.",
+        "setup_account": "Compte lié ! Strady sait maintenant où votre cash est stocké.",
+        "setup_engine": "Moteur démarré ! Votre trajectoire sur 36 mois est désormais vivante. Vous êtes officiellement un Pilote Strady."
       },
-      "transactions": {
-        "title": "Moteur de Pr\u00e9vision",
-        "message": "C'est ici que la magie op\u00e8re ! Vos revenus et factures sont des **mod\u00e8les**. Strady les utilise pour projeter votre solde sur 36 mois."
-      },
-      "wealth": {
-        "title": "Patrimoine Global",
-        "message": "Au-del\u00e0 du budget, suivez vos actifs (maison, crypto) et passifs (emprunts). Votre **Richesse Nette** est calcul\u00e9e automatiquement."
-      },
-      "dashboard": {
-        "title": "Le Tableau de Bord",
-        "message": "Terminons ici ! Le 'Safe-to-Spend' vous indique exactement ce que vous pouvez d\u00e9penser sans compromettre vos objectifs."
+      "ui": {
+        "mission": "Mission",
+        "victory": "VICTOIRE",
+        "continue": "Continuer"
       }
-    }
-  },
+    },
   "wealth": {
     "title": "Patrimoine & Bilan",
     "subtitle": "Suivi des actifs et du d\u00e9sendettement",

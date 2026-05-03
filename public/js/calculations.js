@@ -55,34 +55,132 @@ export const calculateBalances = (targetDate) => {
     return balances;
 };
 
-export const calculateActualBurnRate = (date) => {
+export const calculateActualBurnRate = (date = new Date()) => {
     let totalExpense = 0;
     let monthsCount = 0;
 
-    // Check last 3 months
+    // STRATEGY: Always use the latest 3 real months relative to TODAY for a stable baseline
+    const referenceDate = new Date();
+    
     for (let i = 0; i < 3; i++) {
-        const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
+        const d = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - i, 1);
         const monthKey = getMonthKey(d);
         const monthData = state.records[monthKey];
         
         if (monthData && monthData.items.length > 0) {
-            const monthExpense = monthData.items
+            const items = state.selectedEntityId === 'all' 
+                ? monthData.items 
+                : monthData.items.filter(it => it.entityId === state.selectedEntityId);
+
+            const monthExpense = items
                 .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
                 .reduce((sum, item) => sum + item.amount, 0);
             
-            totalExpense += monthExpense;
+            if (monthExpense > 0) {
+                totalExpense += monthExpense;
+                monthsCount++;
+            }
+        }
+    }
+
+    // Fallback: If no history, use the selected month's projection as a secondary reference
+    if (monthsCount === 0) {
+        const currentMonthKey = getMonthKey(date);
+        const monthItems = state.records[currentMonthKey]?.items || [];
+        const items = state.selectedEntityId === 'all' 
+            ? monthItems 
+            : monthItems.filter(it => it.entityId === state.selectedEntityId);
+
+        return items
+            .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+            .reduce((sum, item) => sum + item.amount, 0);
+    }
+
+    return totalExpense / monthsCount;
+};
+
+export const calculateAverageSavings = (date = new Date()) => {
+    let totalSavings = 0;
+    let monthsCount = 0;
+    const referenceDate = new Date();
+
+    for (let i = 0; i < 3; i++) {
+        const d = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - i, 1);
+        const monthKey = getMonthKey(d);
+        const monthData = state.records[monthKey];
+        
+        if (monthData && monthData.items.length > 0) {
+            const items = state.selectedEntityId === 'all' 
+                ? monthData.items 
+                : (monthData.items || []).filter(it => it.entityId === state.selectedEntityId);
+
+            let mIn = 0, mOut = 0;
+            items.forEach(item => {
+                const info = getTxDisplayInfo(item.source, item.destination);
+                if (info.isIncome) mIn += item.amount;
+                else if (info.isExpense) mOut += item.amount;
+            });
+
+            totalSavings += (mIn - mOut);
             monthsCount++;
         }
     }
 
-    // Fallback if no data in last 3 months: use current month's projected expense from templates
+    // Fallback to selected month if no history
     if (monthsCount === 0) {
-        const currentMonthKey = getMonthKey(date);
-        const currentMonthExpense = (state.records[currentMonthKey]?.items || [])
-            .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
-            .reduce((sum, item) => sum + item.amount, 0);
-        return currentMonthExpense;
+        const monthKey = getMonthKey(date);
+        const items = state.records[monthKey]?.items || [];
+        const filtered = state.selectedEntityId === 'all' ? items : items.filter(it => it.entityId === state.selectedEntityId);
+        let mIn = 0, mOut = 0;
+        filtered.forEach(item => {
+            const info = getTxDisplayInfo(item.source, item.destination);
+            if (info.isIncome) mIn += item.amount;
+            else if (info.isExpense) mOut += item.amount;
+        });
+        return mIn - mOut;
     }
 
-    return totalExpense / monthsCount;
+    return totalSavings / monthsCount;
+};
+
+/**
+ * Calculates the estimated years until Financial Independence.
+ * Formula: Uses NPER with compounding or linear if rate is 0.
+ * @returns {Object} { years, targetCapital, currentCapital, monthlySavings }
+ */
+export const calculateTimeToFreedom = (date) => {
+    const monthlyExpenses = calculateActualBurnRate(date);
+    const monthlySavings = calculateAverageSavings(date);
+    
+    // 1. The Target (4% Rule: Yearly Exp * 25)
+    const targetCapital = monthlyExpenses * 12 * 25;
+
+    // 2. Current Invested Capital
+    // Filter accounts by entity and type (Savings/Investment)
+    const currentCapital = state.accounts
+        .filter(acc => {
+            const isEntityMatch = state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId;
+            const isWealthAccount = acc.isSaving || acc.isInvestmentAccount;
+            return isEntityMatch && isWealthAccount;
+        })
+        .reduce((sum, acc) => {
+            const balances = calculateBalances(date);
+            return sum + (balances[acc.id] || 0);
+        }, 0);
+
+    if (currentCapital >= targetCapital) return { years: 0, targetCapital, currentCapital, monthlySavings };
+    if (monthlySavings <= 0) return { years: 99, targetCapital, currentCapital, monthlySavings };
+
+    // 3. Projection (assuming conservative 5% annual return)
+    const annualRate = 0.05;
+    const r = annualRate / 12; // monthly rate
+
+    // NPER Formula: n = log((Savings + Target * r) / (Savings + Current * r)) / log(1 + r)
+    try {
+        const n = Math.log((monthlySavings + targetCapital * r) / (monthlySavings + currentCapital * r)) / Math.log(1 + r);
+        const years = isNaN(n) ? 99 : Math.max(0, n / 12);
+        return { years, targetCapital, currentCapital, monthlySavings };
+    } catch (e) {
+        return { years: 99, targetCapital, currentCapital, monthlySavings };
+    }
 };

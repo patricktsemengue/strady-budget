@@ -32,7 +32,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     unsubscribeFromData();
     if (!userId) return;
 
-    let initialLoadsPending = 13; // Increased for onboarding + wealth + currency
+    let initialLoadsPending = 14; // Increased for onboarding + wealth + currency + entities
     const onInitialLoadComplete = () => {
         initialLoadsPending--;
         if (initialLoadsPending === 0) {
@@ -42,6 +42,7 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
 
     let localState = {
         accounts: [],
+        entities: [],
         categories: [],
         transactions: [],
         assets: [],
@@ -64,6 +65,11 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
     const triggerUpdate = () => {
         onDataUpdate({ ...localState });
     };
+
+    const entityUnsub = onSnapshot(collection(db, `users/${userId}/entities`), (snapshot) => {
+        localState.entities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
+    });
 
     const currencyUnsub = onSnapshot(doc(db, `users/${userId}/settings`, 'currency'), (docSnap) => {
         if (docSnap.exists()) {
@@ -151,7 +157,29 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
 
-    unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, balUnsub, recUnsub, settingsUnsub, onboardingUnsub, assetUnsub, assetValueUnsub, liabilityUnsub, liabilityValueUnsub);
+    unsubscribes.push(accUnsub, catUnsub, txUnsub, monthsUnsub, balUnsub, recUnsub, settingsUnsub, onboardingUnsub, assetUnsub, assetValueUnsub, liabilityUnsub, liabilityValueUnsub, entityUnsub, currencyUnsub);
+};
+
+// ENTITIES CRUD
+export const addEntityToFirestore = async (userId, entityData) => {
+    const entityId = generateId();
+    await setDoc(doc(db, `users/${userId}/entities`, entityId), {
+        ...entityData,
+        id: entityId,
+        updated_at: serverTimestamp()
+    });
+    return entityId;
+};
+
+export const updateEntityInFirestore = async (userId, entityId, entityData) => {
+    await setDoc(doc(db, `users/${userId}/entities`, entityId), {
+        ...entityData,
+        updated_at: serverTimestamp()
+    }, { merge: true });
+};
+
+export const deleteEntityFromFirestore = async (userId, entityId) => {
+    await deleteDoc(doc(db, `users/${userId}/entities`, entityId));
 };
 
 // Wealth Operations
@@ -578,6 +606,17 @@ export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransac
 
         const liavSnap = await getDocs(collection(db, `users/${userId}/liability_values`));
         liavSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        // Delete Categories and Entities only if we are wiping everything (deleteAccounts is true)
+        const catSnap = await getDocs(collection(db, `users/${userId}/categories`));
+        catSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        const entSnap = await getDocs(collection(db, `users/${userId}/entities`));
+        entSnap.forEach(docSnap => allRefs.push(docSnap.ref));
+
+        // Delete all Settings (Currency, Horizon, Emergency Fund, Onboarding)
+        const setSnap = await getDocs(collection(db, `users/${userId}/settings`));
+        setSnap.forEach(docSnap => allRefs.push(docSnap.ref));
     }
     
     // Process deletions in batches of 500
@@ -839,13 +878,19 @@ export const provisionStarterData = async (userId) => {
         const todayStr = now.toISOString().split('T')[0];
         const boundaryDateStr = getFunctionalBoundaryDate();
 
-        // 1. Categories
+        // 1. Entities
+        (data.entities || []).forEach(ent => {
+            const ref = doc(db, `users/${userId}/entities`, ent.id);
+            batch.set(ref, { ...ent, updated_at: serverTimestamp() });
+        });
+
+        // 2. Categories
         data.categories.forEach(cat => {
             const ref = doc(db, `users/${userId}/categories`, cat.id);
             batch.set(ref, { ...cat, updated_at: serverTimestamp() });
         });
 
-        // 2. Accounts
+        // 3. Accounts
         data.accounts.forEach(acc => {
             const createDate = `${currentMonthStr}-${String(acc.day || 1).padStart(2, '0')}`;
             const ref = doc(db, `users/${userId}/accounts`, acc.id);
@@ -855,6 +900,7 @@ export const provisionStarterData = async (userId) => {
                 createDate: createDate,
                 isSaving: acc.isSaving || false,
                 isInvestmentAccount: acc.isInvestmentAccount || false,
+                entityId: acc.entityId || null,
                 balanceDirty: false,
                 updated_at: serverTimestamp()
             });
@@ -869,7 +915,7 @@ export const provisionStarterData = async (userId) => {
             });
         });
 
-        // 3. Recurring Templates
+        // 4. Recurring Templates
         data.templates.forEach(tpl => {
             const date = `${currentMonthStr}-${String(tpl.day || 1).padStart(2, '0')}`;
             const tplData = { ...tpl, date, endDate: null };
@@ -891,6 +937,7 @@ export const provisionStarterData = async (userId) => {
                     source: tpl.source,
                     destination: tpl.destination,
                     Model: tpl.id,
+                    entityId: tpl.entityId || null
                 };
                 const txId = generateDeterministicTransactionId(txData);
                 const txRef = doc(db, `users/${userId}/transactions`, txId);
@@ -902,7 +949,7 @@ export const provisionStarterData = async (userId) => {
             }
         });
 
-        // 4. Past Transactions
+        // 5. Past Transactions
         data.pastTransactions.forEach(tx => {
             const d = new Date(now);
             d.setDate(now.getDate() - (tx.daysAgo || 0));
@@ -914,7 +961,8 @@ export const provisionStarterData = async (userId) => {
                 date: dateStr,
                 Category: tx.category,
                 source: tx.source,
-                destination: tx.destination
+                destination: tx.destination,
+                entityId: tx.entityId || null
             };
             const txId = generateDeterministicTransactionId(txData);
             const txRef = doc(db, `users/${userId}/transactions`, txId);
@@ -925,10 +973,10 @@ export const provisionStarterData = async (userId) => {
             });
         });
 
-        // 5. Assets
+        // 6. Assets
         (data.assets || []).forEach(ast => {
             const assetRef = doc(db, `users/${userId}/assets`, ast.id);
-            batch.set(assetRef, { id: ast.id, name: ast.name, updated_at: serverTimestamp() });
+            batch.set(assetRef, { id: ast.id, name: ast.name, entityId: ast.entityId || null, updated_at: serverTimestamp() });
 
             const valId = generateId();
             const valRef = doc(db, `users/${userId}/asset_values`, valId);
@@ -942,10 +990,10 @@ export const provisionStarterData = async (userId) => {
             });
         });
 
-        // 6. Liabilities
+        // 7. Liabilities
         (data.liabilities || []).forEach(lia => {
             const liaRef = doc(db, `users/${userId}/liabilities`, lia.id);
-            batch.set(liaRef, { id: lia.id, name: lia.name, updated_at: serverTimestamp() });
+            batch.set(liaRef, { id: lia.id, name: lia.name, entityId: lia.entityId || null, updated_at: serverTimestamp() });
 
             const valId = generateId();
             const valRef = doc(db, `users/${userId}/liability_values`, valId);
@@ -959,7 +1007,7 @@ export const provisionStarterData = async (userId) => {
             });
         });
 
-        // 7. Onboarding Setting
+        // 8. Onboarding Setting
         const onboardingRef = doc(db, `users/${userId}/settings`, 'onboarding');
         batch.set(onboardingRef, {
             starterPackApplied: true,

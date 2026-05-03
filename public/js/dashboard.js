@@ -425,34 +425,34 @@ export const renderTimeline = () => {
     // 2. Render Mobile Puck (Timeline view)
     if (mobileContainer) {
         let mHtml = '';
-        let mCur = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
-        let lastYear = null;
+        
+        // Render exactly 3 months centered on viewDate
+        const monthsToShow = [];
+        for (let i = -1; i <= 1; i++) {
+            monthsToShow.push(new Date(Date.UTC(state.viewDate.getUTCFullYear(), state.viewDate.getUTCMonth() + i, 1)));
+        }
 
-        while (mCur <= endDate) {
-            const year = mCur.getUTCFullYear();
-            if (lastYear !== null && year !== lastYear) {
-                mHtml += `<div class="w-px h-6 bg-slate-200 mx-2 self-center"></div>`;
-            }
-            lastYear = year;
-
+        monthsToShow.forEach(mCur => {
             const isSelected = (mCur.getUTCMonth() === state.viewDate.getUTCMonth() && mCur.getUTCFullYear() === state.viewDate.getUTCFullYear());
             const isToday = (mCur.getUTCMonth() === currentMonth && mCur.getUTCFullYear() === currentYear);
 
             let label = new Intl.DateTimeFormat('fr-BE', { month: 'short', timeZone: 'UTC' }).format(mCur).replace('.', '');
             const yrLabel = mCur.getUTCFullYear().toString().slice(-2);
-            label = `<span class="uppercase">${label}</span><span class="text-[9px] opacity-60 ml-0.5">${yrLabel}</span>`;
+            
+            // Format: "MAR 24"
+            const labelHtml = `<span class="uppercase font-black">${label}</span><span class="text-[8px] opacity-60 font-bold ml-0.5">${yrLabel}</span>`;
 
-            let bgClass = isSelected ? 'bg-indigo-600 text-white shadow-lg' : 'bg-transparent text-slate-500';
+            let bgClass = isSelected ? 'bg-indigo-600 text-white shadow-lg' : 'bg-transparent text-slate-500 dark:text-slate-400';
 
             mHtml += `
                 <button onclick="window.app.setViewDate('${mCur.toISOString()}')" 
-                        class="flex-none px-5 py-2.5 rounded-xl text-[11px] font-black transition-all duration-300 flex flex-col items-center gap-0.5 relative ${bgClass}">
-                    ${label}
+                        class="flex-none px-4 py-2 rounded-full text-[10px] transition-all duration-300 flex items-center justify-center gap-1 relative ${bgClass}">
+                    ${labelHtml}
                     ${isToday && !isSelected ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-500"></div>' : ''}
                 </button>
             `;
-            mCur = new Date(Date.UTC(mCur.getUTCFullYear(), mCur.getUTCMonth() + 1, 1));
-        }
+        });
+        
         mobileContainer.innerHTML = mHtml;
 
         // Update Mobile Label (Puck)
@@ -463,11 +463,6 @@ export const renderTimeline = () => {
             const year = d.getFullYear();
             mobileLabel.textContent = `${monthName} ${year}`;
         }
-
-        setTimeout(() => {
-            const selectedBtn = mobileContainer.querySelector('.bg-indigo-600');
-            if(selectedBtn) selectedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-        }, 10);
     }
 };
 export const renderAnticipatedExpenses = () => {
@@ -628,7 +623,7 @@ export const renderDashboard = () => {
     if (netWorthEl) {
         netWorthEl.innerHTML = `
             <div class="flex items-baseline gap-2">
-                <h2 class="text-3xl font-black text-indigo-600">${formatCurrency(netWorth)}</h2>
+                <h2 class="text-3xl font-black text-indigo-900">${formatCurrency(netWorth)}</h2>
             </div>
             <p class="text-xs text-slate-400 mt-1">Patrimoine Net Total</p>
         `;
@@ -822,7 +817,7 @@ export const renderLiquidityChart = () => {
             
             <div class="pt-4 border-t border-slate-200 flex justify-between items-center px-2">
                 <span class="text-xs font-black text-slate-900 uppercase tracking-wider">Patrimoine Net Total</span>
-                <span class="text-xl font-black text-indigo-600">${formatCurrency(totalNetWorth)}</span>
+                <span class="text-xl font-black text-indigo-900">${formatCurrency(totalNetWorth)}</span>
             </div>
         </div>
     `;

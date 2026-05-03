@@ -1,7 +1,11 @@
 import { renderCategoriesList } from './categories.js';
 import { renderAccountsList } from './accounts.js';
 import { state, getFunctionalBoundaryDate, updateState } from './state.js';
-import { updateSettingsInFirestore } from './firestore-service.js';
+import { 
+    updateSettingsInFirestore,
+    addEntityToFirestore,
+    deleteEntityFromFirestore
+} from './firestore-service.js';
 import { currentUserId } from './storage.js';
 import { showNotification } from './ui.js';
 import { t } from './i18n.js';
@@ -170,5 +174,48 @@ export const applyMonthSelectorPosition = (position) => {
     } else {
         selector.classList.remove('fixed', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'w-full', 'mb-2');
         selector.classList.add('sticky', 'top-[68px]', 'md:top-6', 'mt-6');
+    }
+};
+
+// ENTITY MANAGEMENT
+export const handleAddEntity = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('new-entity-name').value.trim();
+    const type = document.getElementById('new-entity-type').value;
+
+    if (!name) return;
+
+    try {
+        await addEntityToFirestore(currentUserId, { name, type });
+        showNotification("Entité ajoutée !");
+        if (window.app.onTourAction) window.app.onTourAction('entity_created');
+        e.target.reset();
+        router.render();
+    } catch (err) {
+        console.error(err);
+        showNotification("Erreur lors de l'ajout", "error");
+    }
+};
+
+export const deleteEntity = async (id) => {
+    const countAccounts = state.accounts.filter(a => a.entityId === id).length;
+    const countTransactions = (state.transactions || []).filter(t => t.entityId === id).length;
+    const countAssets = (state.assets || []).filter(a => a.entityId === id).length;
+    const countLiabilities = (state.liabilities || []).filter(l => l.entityId === id).length;
+
+    if (countAccounts > 0 || countTransactions > 0 || countAssets > 0 || countLiabilities > 0) {
+        showNotification(t('entities.error_linked'), "error");
+        return;
+    }
+
+    if (!confirm(t('entities.confirm_delete'))) return;
+
+    try {
+        await deleteEntityFromFirestore(currentUserId, id);
+        showNotification(t('entities.success_deleted'));
+        router.render();
+    } catch (err) {
+        console.error(err);
+        showNotification(t('common.error'), "error");
     }
 };

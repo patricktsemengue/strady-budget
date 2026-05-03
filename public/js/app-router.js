@@ -269,6 +269,9 @@ class AppRouter {
         // Call Module Render logic
         try {
             this.currentModule.render();
+            if (this.onRender) {
+                this.onRender(this.currentModule.id);
+            }
         } catch (renderErr) {
             console.error(`[Router] Render failed for ${this.currentModule.id}:`, renderErr);
         }

@@ -57,14 +57,17 @@ This document outlines the strategic roadmap to evolve **Strady Budget** from a 
 | UX-07 | **MoM Variance Analysis** | Category headers display the total amount for the month AND a percentage/absolute delta compared to the previous month. | **DONE** |
 | UX-08 | **"Wealth Mode" Toggle** | A setting to silo user types: "Wealth-only" (hides transactions/budgeting modules) vs. "Full Suite" (shows everything). | TO-DO |
 
-## 6. Family Collaboration
-*Multi-user dynamics and reporting.*
+## 6. Profiled Entities Flat Model (PEFM)
+*Multi-entity management with selective privacy.*
 
 | ID | Requirement | Description | Status |
 |:---|:---|:---|:---|
-| FAM-01 | **Contributor Reports** | Filter dashboard views by `member_id` to compare individual contributions to the family pot. | TO-DO |
-| FAM-02 | **Budget vs. Actual by Member** | Compare planned spending against actuals on a per-person basis. | TO-DO |
-| FAM-03 | **Inheritance/Succession View** | Specialized report showing asset distribution and beneficiary designations (Meta-data only). | TO-DO |
+| PEFM-01 | **Entity Schema** | Add `entityId` to Accounts, Assets, Liabilities, Categories, and Transactions. | TO-DO |
+| PEFM-02 | **Profile Definition** | Implement a `profiles` collection in Firestore to map UIDs to `visibleEntities` lists. | TO-DO |
+| PEFM-03 | **State-Level Filtering** | Update `rebuildRecords` and calculation engines to honor the current user's authorized entities. | TO-DO |
+| PEFM-04 | **Entity Selector UI** | Add a global "Entity Switcher" to filter the entire app by a specific entity (e.g., Alice, Bob, Joint). | TO-DO |
+| PEFM-05 | **Admin View** | Create a "Family Admin" view to manage entities and member permissions. | TO-DO |
+| PEFM-06 | **Cross-Entity Neutralization** | Ensure inter-entity transfers are neutralized in the "Global" view to avoid double-counting. | TO-DO |
 
 ## 7. Zero-Friction & "Ready-to-drive" Experience
 *Anticipating user intent and automating "mechanical" steps.*
@@ -78,3 +81,15 @@ This document outlines the strategic roadmap to evolve **Strady Budget** from a 
 | RTD-05 | **Heuristic Auto-Categorization** | Record and apply label-to-category mappings (e.g., "Shell" always = "Fuel") to pre-fill 90% of manual entries. | TO-DO |
 | RTD-06 | **Predictive Intent Mapping** | Detect keywords like "To" or "From" in labels to automatically toggle between Expense and Transfer modes. | TO-DO |
 | RTD-07 | **"One-Click" Action Feed** | Dashboard cards for "Due Today" recurring items allowing confirmation with zero navigation. | TO-DO |
+
+## 8. Financial Education & Philosophy
+*Establishing the Strady principles as a comprehensive digital resource.*
+
+| ID | Requirement | Description | Status |
+|:---|:---|:---|:---|
+| EDU-01 | **The Strady Digital Book** | Comprehensive digital book (200+ pages) deployed on a separate domain (e.g., `book.strady.app`) using a modern documentation engine (Docusaurus/GitBook). | TO-DO |
+| EDU-02 | **Contextual Deep-Linking** | Link app features and KPI info modals directly to relevant chapters/paragraphs in the Digital Book for instant education. | TO-DO |
+| EDU-03 | **Mastery Progress Integration** | Connect app-level mission completion with the Book UI via SSO (e.g., "You've mastered this concept" badges visible while reading). | TO-DO |
+| EDU-04 | **Sovereignty Scorecard** | Interactive assessment/quiz in the Book site that recommends specific App Missions based on results. | TO-DO |
+| EDU-05 | **Philosophical PWA** | Ensure the Digital Book is offline-ready for distraction-free reading of the Strady methodology. | TO-DO |
+

@@ -1,8 +1,10 @@
 erDiagram
     USER {
         string uid PK "Firebase User ID"
+        boolean isImporting
     }
 
+    USER ||--o{ ENTITY : owns
     USER ||--o{ ACCOUNT : owns
     USER ||--o{ CATEGORY : owns
     USER ||--o{ TRANSACTION : owns
@@ -11,18 +13,29 @@ erDiagram
     USER ||--o{ ACCOUNT_BALANCE : owns
     USER ||--o{ ASSET : owns
     USER ||--o{ LIABILITY : owns
+    USER ||--o{ ASSET_VALUE : owns
+    USER ||--o{ LIABILITY_VALUE : owns
     USER ||--o{ SETTINGS : has
+
+    ENTITY {
+        string id PK
+        string name
+        string type "PRIVATE, FAMILY, SMALL_BUSINESS"
+        timestamp updated_at
+    }
 
     ASSET {
         string id PK
+        string entityId FK
         string name
+        string currency
         timestamp updated_at
     }
 
     ASSET_VALUE {
         string id PK
-        string asset_id FK
-        string date
+        string asset_id FK "References ASSET.id"
+        string date "YYYY-MM-DD"
         float value
         float quantity
         timestamp updated_at
@@ -30,31 +43,24 @@ erDiagram
 
     LIABILITY {
         string id PK
+        string entityId FK
         string name
+        string currency
         timestamp updated_at
     }
 
     LIABILITY_VALUE {
         string id PK
-        string liability_id FK
-        string date
+        string liability_id FK "References LIABILITY.id"
+        string date "YYYY-MM-DD"
         float value
-        timestamp updated_at
-    }
-
-    ASSET ||--o{ ASSET_VALUE : "has values"
-    LIABILITY ||--o{ LIABILITY_VALUE : "has values"
-
-    SETTINGS {
-        string id PK "e.g., monthSelector"
-        string startDate
-        string endDate
-        string step
+        float quantity "Defaults to 0"
         timestamp updated_at
     }
 
     ACCOUNT {
         string id PK
+        string entityId FK
         string name "unique"
         string createDate "yyyy-MM-dd"
         boolean isSaving
@@ -67,27 +73,29 @@ erDiagram
         string id PK
         string label
         string nature "REVENU, FIXE, QUOTIDIEN, LOISIR, EPARGNE"
-        boolean isPassive
         string icon
         string color
-        int index_order "Primary sort for Smart Grouping"
+        boolean isPassive
+        int index-order
         timestamp updated_at
     }
 
     TRANSACTION {
         string id PK
+        string entityId FK
         string date
         string label
         float amount
         string source FK "Account.id or 'external'"
         string destination FK "Account.id or 'external'"
-        string Category FK "Category.id"
-        string Model FK "RecurringTemplate.id (nullable)"
+        string Category FK "Category.id (Note Case)"
+        string Model FK "RecurringTemplate.id (Note Case)"
         timestamp updated_at
     }
 
     RECURRING_TEMPLATE {
         string id PK
+        string entityId FK
         string date "anchor/start date"
         string label
         float amount
@@ -102,7 +110,7 @@ erDiagram
 
     MONTH {
         string id PK "YYYY-MM"
-        string status
+        string status "open, closed"
         timestamp updated_at
     }
 
@@ -113,6 +121,9 @@ erDiagram
         timestamp updated_at
     }
 
+    ASSET ||--o{ ASSET_VALUE : "has history"
+    LIABILITY ||--o{ LIABILITY_VALUE : "has history"
+    
     TRANSACTION }o--|| ACCOUNT : "has source"
     TRANSACTION }o--|| ACCOUNT : "has destination"
     TRANSACTION }o--|| CATEGORY : "categorized by (field: Category)"

@@ -25,20 +25,24 @@ export let state = {
     currentView: 'dashboard',
     viewDate: new Date(),
     accounts: [],
+    entities: [],
+    selectedEntityId: 'all',
     records: {},
+    transactions: [],
+    allTransactions: [],
     recurringTemplates: [],
     categories: [],
     assets: [],
     assetValues: [],
     liabilities: [],
     liabilityValues: [],
-    months: {}, // Stores month statuses
-    accountBalances: {}, // Stores pre-calculated balances: { "accountId_YYYY-MM-DD": balance }
+    months: {}, 
+    accountBalances: {},
     onboarding: {
         active: false,
         completed: false,
         currentStep: 0,
-        type: null // 'starter' or 'scratch'
+        type: null
     },
     emergencyFundMultiplier: 3,
     displayCurrency: 'EUR',
@@ -51,7 +55,7 @@ export let state = {
         endDate: getFunctionalBoundaryDate(),
         step: 'month'
     },
-    monthSelectorPosition: 'top' // 'top' or 'bottom'
+    monthSelectorPosition: 'top'
 };
 
 export const updateState = (newState) => {
@@ -64,8 +68,12 @@ export const rebuildRecords = (transactions, monthsStatuses) => {
     const nextMonthDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 1);
     const nextMonthKey = getMonthKey(nextMonthDate);
 
-    // Filter and aggregate transactions
-    transactions.forEach(tx => {
+    const filteredTransactions = (transactions || []).filter(tx => {
+        if (state.selectedEntityId === 'all') return true;
+        return tx.entityId === state.selectedEntityId;
+    });
+
+    filteredTransactions.forEach(tx => {
         if (!tx.date) return;
         const txDate = new Date(tx.date);
         const monthKey = getMonthKey(txDate);
@@ -78,25 +86,18 @@ export const rebuildRecords = (transactions, monthsStatuses) => {
             };
         }
 
-        // Calculate totals for all months
-        // Note: getTxDisplayInfo is in utils.js, but since we don't want to import circular dependencies, 
-        // we'll use a simplified check here or just assume it's done during render if needed.
-        // For pruning, the main goal is to only keep 'items' for relevant months.
-        
         const isIncome = !tx.source || tx.source === 'external';
         const isExpense = !tx.destination || tx.destination === 'external';
 
         if (isIncome) newRecords[monthKey].totals.income += tx.amount;
         if (isExpense) newRecords[monthKey].totals.expense += tx.amount;
 
-        // Pruning logic: Only keep full transaction objects for Current and Next month
         if (monthKey === viewMonthKey || monthKey === nextMonthKey) {
             newRecords[monthKey].items.push(tx);
         }
     });
 
-    // Ensure all explicit month statuses are in records
-    Object.keys(monthsStatuses).forEach(monthKey => {
+    Object.keys(monthsStatuses || {}).forEach(monthKey => {
         if (!newRecords[monthKey]) {
             newRecords[monthKey] = { status: monthsStatuses[monthKey].status, items: [], totals: { income: 0, expense: 0 } };
         }

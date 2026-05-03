@@ -36,7 +36,7 @@ export default {
                         </button>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="window.app.openTransferModal()" class="hidden md:flex bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 transition-all items-center gap-2 shadow-sm">
+                        <button id="btn-transfer-desktop" onclick="window.app.openTransferModal()" class="hidden md:flex bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 transition-all items-center gap-2 shadow-sm">
                             <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500"></i> ${t('treasury.internal_transfer')}
                         </button>
                         <button id="btn-add-account-desktop" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 items-center shadow-md">

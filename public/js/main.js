@@ -1,6 +1,6 @@
 import { state, updateState, defaultCategories, rebuildRecords } from './state.js';
 import { setStorageUser } from './storage.js';
-import { initI18n, t, changeLanguage, getCurrentLanguage, translatePage } from './i18n.js';
+import { initI18n, t, changeLanguage as i18nChangeLanguage, getCurrentLanguage, translatePage } from './i18n.js';
 import { 
     showNotification, 
     setDataStatusIndicator, 
@@ -208,13 +208,20 @@ const init = async () => {
             setTimeout(() => tourModule.start(), 500);
         }
 
+        if (sessionStorage.getItem('strady_trigger_interactive_setup') === 'true') {
+            sessionStorage.removeItem('strady_trigger_interactive_setup');
+            setTimeout(() => tourModule.start('interactive_setup'), 500);
+        }
+
         setupEventListeners();
         initCategoryEvents();
 
         const debouncedUpdateAndRender = debounce((newData) => {
             updateState({
                 accounts: newData.accounts || [],
+                entities: newData.entities || [],
                 transactions: newData.transactions || [],
+                allTransactions: newData.transactions || [],
                 categories: newData.categories || defaultCategories,
                 recurringTemplates: newData.recurringTemplates || [],
                 assets: newData.assets || [],
@@ -230,6 +237,7 @@ const init = async () => {
                 exchangeRates: newData.exchangeRates || {}
             });
             if (newData.categories && newData.categories.length === 0) updateState({ categories: defaultCategories });
+            updateEntitySelectors();
             rebuildRecords(newData.transactions || [], newData.months || {});
             router.render();
         }, 50);
@@ -259,11 +267,14 @@ const init = async () => {
 
                 if (userInfo) userInfo.classList.remove('hidden');
                 if (userName) userName.textContent = user.displayName;
-                if (userPhoto) userPhoto.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+                
+                const photoUrl = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+                if (userPhoto && userPhoto.getAttribute('src') !== photoUrl) userPhoto.src = photoUrl;
+                
                 if (userInfoMobile) userInfoMobile.classList.remove('hidden');
                 if (userNameMobile) userNameMobile.textContent = user.displayName;
                 if (userEmailMobile) userEmailMobile.textContent = user.email;
-                if (userPhotoMobile) userPhotoMobile.src = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+                if (userPhotoMobile && userPhotoMobile.getAttribute('src') !== photoUrl) userPhotoMobile.src = photoUrl;
 
                 let isFirstFirestoreUpdate = true;
                 subscribeToAppData(user.uid, (newData) => {
@@ -275,10 +286,22 @@ const init = async () => {
                         if ((newData.accounts || []).length === 0 && (isNewUserSession || !newData.onboarding)) {
                             showOnboardingModal(async (choice) => {
                                 if (choice === 'starter') {
-                                    try { await provisionStarterData(user.uid); showNotification("Starter Pack installé !"); tourModule.start(); }
-                                    catch (err) { console.error(err); showNotification("Erreur Starter Pack", "error"); }
+                                    try { 
+                                        // 1. Mark onboarding for Interactive Setup
+                                        await updateSettingsInFirestore(user.uid, 'onboarding', { 
+                                            starterPackApplied: false, 
+                                            onboardingComplete: false,
+                                            type: 'interactive_setup',
+                                            updated_at: serverTimestamp() 
+                                        });
+                                        tourModule.start('interactive_setup');
+                                    }
+                                    catch (err) { console.error(err); showNotification("Erreur Setup", "error"); }
                                 } else {
-                                    try { await updateSettingsInFirestore(user.uid, 'onboarding', { starterPackApplied: false, onboardingComplete: true, updated_at: serverTimestamp() }); }
+                                    try { 
+                                        await updateSettingsInFirestore(user.uid, 'onboarding', { starterPackApplied: false, onboardingComplete: true, updated_at: serverTimestamp() }); 
+                                        window.app.showTourSelection();
+                                    }
                                     catch (err) { console.error(err); }
                                 }
                                 sessionStorage.removeItem('strady_is_new_user_session');
@@ -323,6 +346,89 @@ const setViewDate = (date) => {
     const newDate = new Date(date);
     updateState({ viewDate: newDate });
     router.render();
+};
+
+const changeLanguage = async (lng) => {
+    await i18nChangeLanguage(lng);
+    
+    // Update active language button UI
+    ['', '-mobile'].forEach(suffix => {
+        const btnFr = document.getElementById(`lang-fr${suffix}`);
+        const btnEn = document.getElementById(`lang-en${suffix}`);
+        if (btnFr && btnEn) {
+            if (lng === 'fr') {
+                btnFr.classList.add('bg-white', 'shadow-sm', 'text-indigo-600', 'dark:bg-slate-800', 'dark:text-indigo-400');
+                btnEn.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600', 'dark:bg-slate-800', 'dark:text-indigo-400');
+                btnEn.classList.add('text-slate-400', 'dark:text-slate-500');
+                btnFr.classList.remove('text-slate-400', 'dark:text-slate-500');
+            } else {
+                btnEn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600', 'dark:bg-slate-800', 'dark:text-indigo-400');
+                btnFr.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600', 'dark:bg-slate-800', 'dark:text-indigo-400');
+                btnFr.classList.add('text-slate-400', 'dark:text-slate-500');
+                btnEn.classList.remove('text-slate-400', 'dark:text-slate-500');
+            }
+        }
+    });
+
+    translatePage();
+    router.render();
+};
+
+const changeEntity = (entityId) => {
+    state.selectedEntityId = entityId;
+    
+    // Update both selectors if they exist
+    const ds = document.getElementById('entity-switcher-desktop');
+    const ms = document.getElementById('entity-switcher-mobile');
+    if (ds) ds.value = entityId;
+    if (ms) ms.value = entityId;
+
+    rebuildRecords(state.allTransactions || [], state.months);
+    router.render();
+};
+
+const updateEntitySelectors = () => {
+    const desktopSelector = document.getElementById('entity-switcher-desktop');
+    const mobileSelector = document.getElementById('entity-switcher-mobile');
+    const transactionSelector = document.getElementById('transaction-entity');
+    const wealthSelector = document.getElementById('wealth-entity-id');
+
+    const selectors = [desktopSelector, mobileSelector, transactionSelector, wealthSelector].filter(s => s !== null);
+    
+    selectors.forEach(selector => {
+        const currentValue = selector.value;
+        selector.innerHTML = '';
+        
+        // Global view option for switchers
+        if (selector === desktopSelector || selector === mobileSelector) {
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = t ? t('common.all_family') : 'TOUT LE MÉNAGE';
+            selector.appendChild(allOption);
+        } else {
+            // Placeholder for form selectors
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Sélectionner une entité...';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            selector.appendChild(placeholder);
+        }
+
+        state.entities.forEach(ent => {
+            const option = document.createElement('option');
+            option.value = ent.id;
+            option.textContent = ent.name.toUpperCase();
+            selector.appendChild(option);
+        });
+
+        // Restore value if it still exists
+        if (currentValue && [...selector.options].some(o => o.value === currentValue)) {
+            selector.value = currentValue;
+        } else if (selector === desktopSelector || selector === mobileSelector) {
+            selector.value = state.selectedEntityId;
+        }
+    });
 };
 
 const updateThemeToggleIcons = (isDark) => {
@@ -401,8 +507,10 @@ const setupEventListeners = () => {
     addSafeListener('add-account-form', 'submit', handleAddAccount);
     addSafeListener('btn-close-add-acc-drawer', 'click', closeAddAccountDrawer);
     addSafeListener('btn-cancel-add-acc', 'click', closeAddAccountDrawer);
+    addSafeListener('btn-close-edit-ent-drawer', 'click', () => window.app.closeEditEntity());
+    addSafeListener('btn-cancel-edit-ent', 'click', () => window.app.closeEditEntity());
     addSafeListener('drawer-overlay', 'click', () => {
-        closeAccountDrawer(); closeAddAccountDrawer(); closeCategoryDrawer(); closeAddCategoryDrawer(); closeWealthDrawer();
+        closeAccountDrawer(); closeAddAccountDrawer(); closeCategoryDrawer(); closeAddCategoryDrawer(); closeWealthDrawer(); window.app.closeEditEntity();
     });
     addSafeListener('transaction-form', 'submit', handleSaveTransaction);
     addSafeListener('btn-cancel-transaction', 'click', closeTransactionModal);
@@ -417,7 +525,9 @@ const setupEventListeners = () => {
 };
 
 window.app = {
-    init, changeLanguage, toggleTheme, toggleSidebar, startTour: () => tourModule.start(),
+    init, changeLanguage, toggleTheme, toggleSidebar, changeEntity, 
+    startTour: (type) => tourModule.start(type),
+    showTourSelection: () => import('./ui.js').then(m => m.showTourSelectionModal()),
     updateCurrencySettings: (updates) => import('./settings.js').then(m => m.updateCurrencySettings(updates)),
     addExchangeRate: (code) => import('./settings.js').then(m => m.addExchangeRate(code)),
     updateExchangeRate: (code, val) => import('./settings.js').then(m => m.updateExchangeRate(code, val)),
@@ -426,7 +536,9 @@ window.app = {
     setView, setViewDate, editTransaction, deleteTransaction, openTransactionModal,
     openMobileActions, closeMobileActions, closeCategoryActions, closeAccountActions,
     renderAccountsList, openEditCategory, deleteCategory, openCategoryActions,
-    openEditAccount, deleteAccount, openAccountActions, openWealthDrawer, closeWealthDrawer,
+    openEditAccount, deleteAccount, deleteEntity: (id) => import('./settings.js').then(m => m.deleteEntity(id)), openAccountActions, openWealthDrawer, closeWealthDrawer,
+    openEditEntity: (id) => import('./modules/settings-module.js').then(m => m.default.init && window.app.openEditEntity(id)),
+    closeEditEntity: () => import('./modules/settings-module.js').then(m => m.default.init && window.app.closeEditEntity()),
     openAddAccountDrawer: () => import('./accounts.js').then(m => m.openAddAccountDrawer()),
     openAddCategoryDrawer: () => import('./categories.js').then(m => m.openAddCategoryDrawer()),
     openWealthDetails, closeWealthDetails, deleteWealthValue, deleteWealthEntity, deleteWealthEntityById,

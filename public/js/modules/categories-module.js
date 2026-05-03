@@ -34,7 +34,7 @@ export default {
                             <i class="fa-solid fa-circle-question text-lg"></i>
                         </button>
                     </div>
-                    <button onclick="window.app.openAddCategoryDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-900 flex items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
+                    <button id="btn-add-category-desktop" onclick="window.app.openAddCategoryDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-900 flex items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
                         <i class="fa-solid fa-plus text-xs"></i> Nouveau poste
                     </button>
                 </div>

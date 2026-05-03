@@ -77,6 +77,70 @@ export const setDataStatusIndicator = (status) => {
     }
 };
 
+export const showTourSelectionModal = () => {
+    const existing = document.getElementById('tour-selection-modal');
+    if (existing) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'tour-selection-modal';
+    modal.className = 'fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-opacity duration-300';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden transform transition-all duration-300 scale-95 opacity-0">
+            <div class="p-8 text-center">
+                <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                
+                <h2 class="text-2xl font-black text-slate-800 mb-2">${t('onboarding.title')}</h2>
+                <p class="text-slate-500 mb-10 font-medium italic">${t('onboarding.subtitle')}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                    <!-- Track 1: Budget -->
+                    <button onclick="window.app.startTour('budget'); document.getElementById('tour-selection-modal').remove();" class="group p-6 bg-slate-50 hover:bg-emerald-50 border-2 border-transparent hover:border-emerald-500 rounded-2xl transition-all">
+                        <div class="w-12 h-12 bg-white text-emerald-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-rocket"></i>
+                        </div>
+                        <h3 class="font-black text-slate-800 text-sm mb-1">${t('onboarding.track_budget')}</h3>
+                        <p class="text-[10px] text-slate-500 font-bold leading-relaxed">${t('mastery.mission1_desc')}</p>
+                    </button>
+                    
+                    <!-- Track 2: Wealth -->
+                    <button onclick="window.app.startTour('wealth'); document.getElementById('tour-selection-modal').remove();" class="group p-6 bg-slate-50 hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-500 rounded-2xl transition-all">
+                        <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-gem"></i>
+                        </div>
+                        <h3 class="font-black text-slate-800 text-sm mb-1">${t('onboarding.track_wealth')}</h3>
+                        <p class="text-[10px] text-slate-500 font-bold leading-relaxed">${t('mastery.mission2_desc')}</p>
+                    </button>
+
+                    <!-- Track 3: Entities -->
+                    <button onclick="window.app.startTour('entities'); document.getElementById('tour-selection-modal').remove();" class="group p-6 bg-slate-50 hover:bg-violet-50 border-2 border-transparent hover:border-violet-500 rounded-2xl transition-all">
+                        <div class="w-12 h-12 bg-white text-violet-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-sm group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-building-user"></i>
+                        </div>
+                        <h3 class="font-black text-slate-800 text-sm mb-1">${t('onboarding.track_entities')}</h3>
+                        <p class="text-[10px] text-slate-500 font-bold leading-relaxed">${t('mastery.mission3_desc')}</p>
+                    </button>
+                </div>
+
+                <div class="mt-10">
+                    <button onclick="document.getElementById('tour-selection-modal').remove()" class="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">
+                        ${t('onboarding.btn_skip')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    
+    setTimeout(() => {
+        const content = modal.querySelector('div');
+        content.classList.remove('scale-95', 'opacity-0');
+    }, 10);
+};
+
 export const setLoadingState = (isLoading, title = 'Chargement...', subtitle = 'Veuillez patienter un instant') => {
     const overlay = document.getElementById('loading-overlay');
     if (!overlay) return;
@@ -174,14 +238,21 @@ export const showOnboardingModal = (onChoice) => {
  */
 export class SwipeManager {
     constructor(containerId, options = {}) {
-        this.container = document.getElementById(containerId);
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Prevent double initialization
+        if (container.dataset.swipeInitialized === 'true') return;
+        container.dataset.swipeInitialized = 'true';
+
+        this.container = container;
         this.options = {
             threshold: 40,
             snapWidth: 80,
             itemSelector: '.swipe-item',
             contentSelector: '.swipe-content',
-            onSwipeLeft: null,  // Usually Delete
-            onSwipeRight: null, // Usually Edit
+            onSwipeLeft: null,
+            onSwipeRight: null,
             onTap: null,
             ...options
         };
@@ -195,15 +266,14 @@ export class SwipeManager {
         this.isMoving = false;
         this.startTime = 0;
 
-        if (this.container) {
-            this.init();
-        }
+        this.init();
     }
 
     init() {
-        this.container.addEventListener('touchstart', (e) => this.handleStart(e), { passive: true });
+        // Use { passive: false } to allow preventDefault during swiping
+        this.container.addEventListener('touchstart', (e) => this.handleStart(e), { passive: false });
         this.container.addEventListener('touchmove', (e) => this.handleMove(e), { passive: false });
-        this.container.addEventListener('touchend', (e) => this.handleEnd(e));
+        this.container.addEventListener('touchend', (e) => this.handleEnd(e), { passive: false });
         
         // Close swiped items when clicking elsewhere
         document.addEventListener('touchstart', (e) => {
@@ -214,19 +284,20 @@ export class SwipeManager {
     }
 
     handleStart(e) {
-        // If touching a button that is NOT inside the content layer, it's an action button
-        // We should let the browser handle it and skip swipe logic.
-        if (e.target.closest('button') && !e.target.closest(this.options.contentSelector)) {
-            return;
-        }
-
         const item = e.target.closest(this.options.itemSelector);
         if (!item) return;
+
+        // If touching an ignore-able element (like a button inside content)
+        if (e.target.closest('button')) {
+            // If it's a desktop button or action button, let it be.
+            // But if it's the content itself, we want to allow swiping.
+            if (!e.target.closest(this.options.contentSelector)) return;
+        }
 
         const content = item.querySelector(this.options.contentSelector);
         if (!content) return;
 
-        // Reset previous swiped items if it's a different one
+        // Reset previous swiped items
         if (this.activeContent && this.activeContent !== content) {
             this.resetItem(this.activeContent);
         }
@@ -238,7 +309,9 @@ export class SwipeManager {
         this.startTime = Date.now();
         this.isSwiping = false;
         this.isMoving = false;
-        this.currentX = this.getTranslateX(this.activeContent);
+        
+        const currentTransform = window.getComputedStyle(this.activeContent).transform;
+        this.currentX = this.parseTranslateX(currentTransform);
         
         this.activeContent.style.transition = 'none';
     }
@@ -252,24 +325,29 @@ export class SwipeManager {
         const deltaY = touchY - this.startY;
 
         if (!this.isSwiping) {
-            // Determine if it's a horizontal swipe or vertical scroll
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+            // Threshold for horizontal swipe vs vertical scroll
+            const horizontalWeight = Math.abs(deltaX);
+            const verticalWeight = Math.abs(deltaY);
+            
+            if (horizontalWeight > 10 && horizontalWeight > verticalWeight) {
                 this.isSwiping = true;
-            } else if (Math.abs(deltaY) > 10) {
+            } else if (verticalWeight > 10) {
+                // It's a vertical scroll, abort swipe tracking
                 this.activeContent = null;
                 return;
             }
         }
 
         if (this.isSwiping) {
-            e.preventDefault();
+            // Block page scrolling once we are certain it's a horizontal swipe
+            if (e.cancelable) e.preventDefault();
+            
             this.isMoving = true;
-            // Add some resistance to swiping
             let newX = this.currentX + deltaX;
             
-            // Limit the swipe range
-            if (newX > this.options.snapWidth) newX = this.options.snapWidth + (newX - this.options.snapWidth) * 0.3;
-            if (newX < -this.options.snapWidth) newX = -this.options.snapWidth + (newX + this.options.snapWidth) * 0.3;
+            // Limit and add resistance
+            if (newX > this.options.snapWidth) newX = this.options.snapWidth + (newX - this.options.snapWidth) * 0.2;
+            if (newX < -this.options.snapWidth) newX = -this.options.snapWidth + (newX + this.options.snapWidth) * 0.2;
 
             this.activeContent.style.transform = `translateX(${newX}px)`;
         }
@@ -281,8 +359,8 @@ export class SwipeManager {
         const duration = Date.now() - this.startTime;
         const deltaX = e.changedTouches[0].clientX - this.startX;
 
-        // Handle Tap
-        if (!this.isMoving && duration < 250 && Math.abs(deltaX) < 10) {
+        // Handle Tap (only if no movement occurred)
+        if (!this.isMoving && duration < 300 && Math.abs(deltaX) < 8) {
             if (this.options.onTap) {
                 this.options.onTap(this.activeItem.dataset.id);
             }
@@ -292,9 +370,9 @@ export class SwipeManager {
 
         if (!this.isSwiping) return;
 
-        this.activeContent.style.transition = 'transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+        this.activeContent.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         
-        const finalX = this.getTranslateX(this.activeContent);
+        const finalX = this.parseTranslateX(this.activeContent.style.transform);
 
         if (finalX < -this.options.threshold) {
             // Snap Left (Reveals Right Action)
@@ -302,12 +380,9 @@ export class SwipeManager {
         } else if (finalX > this.options.threshold) {
             // Snap Right (Reveals Left Action)
             this.activeContent.style.transform = `translateX(${this.options.snapWidth}px)`;
-            // If onSwipeRight is provided, trigger it and reset
             if (this.options.onSwipeRight) {
-                setTimeout(() => {
-                    this.options.onSwipeRight(this.activeItem.dataset.id);
-                    this.resetItem(this.activeContent);
-                }, 200);
+                this.options.onSwipeRight(this.activeItem.dataset.id);
+                setTimeout(() => this.resetItem(this.activeContent), 300);
             }
         } else {
             this.resetItem(this.activeContent);
@@ -317,20 +392,34 @@ export class SwipeManager {
         this.isMoving = false;
     }
 
-    getTranslateX(el) {
-        const style = window.getComputedStyle(el);
-        const matrix = new WebKitCSSMatrix(style.transform);
-        return matrix.m41;
+    parseTranslateX(transformStr) {
+        if (!transformStr || transformStr === 'none') return 0;
+        // Handle both matrix() and direct translateX()
+        const matrix = transformStr.match(/matrix\((.+)\)/);
+        if (matrix) {
+            return parseFloat(matrix[1].split(',')[4]);
+        }
+        const translate = transformStr.match(/translateX\((.+)px\)/);
+        if (translate) {
+            return parseFloat(translate[1]);
+        }
+        return 0;
     }
 
     resetItem(el) {
         if (!el) return;
         el.style.transition = 'transform 0.3s ease';
         el.style.transform = 'translateX(0)';
+        // Cleanup after transition
+        setTimeout(() => {
+            if (el.style.transform === 'translateX(0px)') {
+                el.style.transition = '';
+            }
+        }, 300);
+        
         if (el === this.activeContent) {
             this.activeContent = null;
             this.activeItem = null;
         }
     }
 }
-

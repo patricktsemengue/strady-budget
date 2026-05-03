@@ -38,7 +38,7 @@ export default {
                             <i class="fa-solid fa-circle-question text-lg"></i>
                         </button>
                     </div>
-                    <button onclick="window.app.openWealthDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-900 items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
+                    <button id="btn-add-wealth-desktop" onclick="window.app.openWealthDrawer()" class="hidden md:flex bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-900 items-center gap-2 shadow-md uppercase tracking-widest transition-all active:scale-95">
                         <i class="fa-solid fa-plus text-xs"></i> ${t('common.add')}
                     </button>
                 </div>

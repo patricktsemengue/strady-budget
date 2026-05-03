@@ -35,8 +35,11 @@ export const renderWealthList = () => {
     let totalAssets = 0;
     let totalLiabilities = 0;
 
+    const filteredAssets = state.assets.filter(a => state.selectedEntityId === 'all' || a.entityId === state.selectedEntityId);
+    const filteredLiabilities = state.liabilities.filter(l => state.selectedEntityId === 'all' || l.entityId === state.selectedEntityId);
+
     // Render Assets
-    assetList.innerHTML = state.assets.map(asset => {
+    assetList.innerHTML = filteredAssets.map(asset => {
         const latest = getLatestValue(asset.id, true);
         const convertedValue = convertToAppCurrency(latest.value, asset.currency);
         totalAssets += convertedValue;
@@ -176,8 +179,9 @@ export const handleAddWealthEntity = async (e) => {
     const date = document.getElementById('wealth-entity-date').value;
     const quantity = parseFloat(document.getElementById('wealth-entity-quantity').value || 1);
     const currency = document.getElementById('wealth-entity-currency').value;
+    const entityId = document.getElementById('wealth-entity-id').value;
 
-    if (!name || isNaN(value) || !date) {
+    if (!name || isNaN(value) || !date || !entityId) {
         showNotification(t('wealth.fill_required'), 'error');
         return;
     }
@@ -185,10 +189,11 @@ export const handleAddWealthEntity = async (e) => {
     try {
         const id = await generateDeterministicUUID(name);
         if (type === 'asset') {
-            await addAssetToFirestore(currentUserId, { id, name, currency });
+            await addAssetToFirestore(currentUserId, { id, name, currency, entityId });
             await addAssetValueToFirestore(currentUserId, { asset_id: id, value, date, quantity });
+            if (window.app.onTourAction) window.app.onTourAction('asset_created');
         } else {
-            await addLiabilityToFirestore(currentUserId, { id, name, currency });
+            await addLiabilityToFirestore(currentUserId, { id, name, currency, entityId });
             await addLiabilityValueToFirestore(currentUserId, { liability_id: id, value, date, quantity });
         }
         
@@ -204,6 +209,15 @@ export const handleAddWealthEntity = async (e) => {
 export const openWealthDrawer = () => {
     document.getElementById('wealth-add-form').reset();
     document.getElementById('wealth-entity-date').value = new Date().toISOString().split('T')[0];
+    
+    const entitySelect = document.getElementById('wealth-entity-id');
+    if (entitySelect) {
+        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
+        if (state.selectedEntityId !== 'all') {
+            entitySelect.value = state.selectedEntityId;
+        }
+    }
+
     document.getElementById('drawer-overlay').classList.add('active');
     document.getElementById('wealth-add-drawer').classList.add('active');
 };
@@ -277,6 +291,7 @@ export const handleAddValueSnapshot = async (e) => {
         document.getElementById('new-snapshot-date').value = new Date().toISOString().split('T')[0];
         // Re-render modal list
         openWealthDetails(currentWealthEntityId, currentWealthEntityType);
+        if (window.app.onTourAction) window.app.onTourAction('snapshot_created');
     } catch (err) {
         console.error(err);
     }

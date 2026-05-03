@@ -66,8 +66,13 @@ export const handleFactoryReset = async (mode = 'starter') => {
             await resetDataInFirestore(currentUserId, true, true);
 
             if (isStarter) {
-                // 2. Reprovision Starter Pack
-                await provisionStarterData(currentUserId);
+                // 2. Mark onboarding for Interactive Setup
+                await updateSettingsInFirestore(currentUserId, 'onboarding', { 
+                    starterPackApplied: false, 
+                    onboardingComplete: false,
+                    type: 'interactive_setup',
+                    updated_at: serverTimestamp() 
+                });
             } else {
                 // 2. Mark onboarding as complete but with no starter pack
                 await updateSettingsInFirestore(currentUserId, 'onboarding', { 
@@ -77,10 +82,10 @@ export const handleFactoryReset = async (mode = 'starter') => {
                 });
             }
 
-            showNotification(isStarter ? "Starter Pack restauré avec succès !" : "Espace vidé avec succès !");
+            showNotification(isStarter ? "Espace prêt pour votre configuration !" : "Espace vidé avec succès !");
             
             if (isStarter) {
-                sessionStorage.setItem('strady_trigger_tour', 'true');
+                sessionStorage.setItem('strady_trigger_interactive_setup', 'true');
             }
 
             window.location.hash = '#dashboard';
@@ -100,17 +105,17 @@ export const exportFullBackupCSV = () => {
     let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive\n";
     
     // 1. Accounts
-    state.accounts.forEach(acc => {
+    (state.accounts || []).forEach(acc => {
         csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},,\n`;
     });
 
     // 2. Categories
-    state.categories.forEach(cat => {
+    (state.categories || []).forEach(cat => {
         csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}",${cat.isPassive ? 1 : 0}\n`;
     });
 
     // 3. Recurring Templates
-    state.recurringTemplates.forEach(tpl => {
+    (state.recurringTemplates || []).forEach(tpl => {
         const sourceName = tpl.source === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.source)?.name || 'external');
         const destName = tpl.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.destination)?.name || 'external');
         const catName = state.categories.find(c => c.id === tpl.category)?.label || '';
@@ -119,7 +124,7 @@ export const exportFullBackupCSV = () => {
     });
 
     // 4. Standalone Transactions
-    state.transactions.forEach(tx => {
+    (state.transactions || []).forEach(tx => {
         if (!tx.Model) {
             const sourceName = tx.source === 'external' ? 'external' : (state.accounts.find(a => a.id === tx.source)?.name || 'external');
             const destName = tx.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tx.destination)?.name || 'external');
@@ -130,18 +135,18 @@ export const exportFullBackupCSV = () => {
     });
 
     // 5. Assets & Values
-    state.assets.forEach(ast => {
+    (state.assets || []).forEach(ast => {
         csv += `ASSET,,"${ast.name}",,,,,,,,,,\n`;
-        const values = state.assetValues.filter(v => v.asset_id === ast.id);
+        const values = (state.assetValues || []).filter(v => v.asset_id === ast.id);
         values.forEach(v => {
             csv += `ASSET_VALUE,${v.date},"${v.quantity}",${v.value},,,${ast.name},,,,,,\n`;
         });
     });
 
     // 6. Liabilities & Values
-    state.liabilities.forEach(lia => {
+    (state.liabilities || []).forEach(lia => {
         csv += `LIABILITY,,"${lia.name}",,,,,,,,,,\n`;
-        const values = state.liabilityValues.filter(v => v.liability_id === lia.id);
+        const values = (state.liabilityValues || []).filter(v => v.liability_id === lia.id);
         values.forEach(v => {
             csv += `LIABILITY_VALUE,${v.date},,${v.value},,,${lia.name},,,,,,\n`;
         });

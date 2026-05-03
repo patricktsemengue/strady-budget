@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { formatCurrency, getMonthKey, getTxDisplayInfo } from './utils.js';
-import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate } from './calculations.js';
+import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate, calculateTimeToFreedom } from './calculations.js';
 import { t } from './i18n.js';
 
 /**
@@ -194,8 +194,12 @@ export const renderStrategicDashboard = () => {
 
     // 2. Global CFO Metrics (Current Month)
     const balances = state.months[getMonthKey(d0)]?.balances || calculateBalances(d0);
-    const totalLiquidity = Object.values(balances).reduce((sum, b) => sum + b, 0);
-    const savingsBalance = state.accounts.filter(a => a.isSaving).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
+    
+    // Filter accounts by selected entity
+    const filteredAccounts = state.accounts.filter(acc => state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId);
+    
+    const totalLiquidity = filteredAccounts.reduce((sum, a) => sum + (balances[a.id] || 0), 0);
+    const savingsBalance = filteredAccounts.filter(a => a.isSaving).reduce((sum, a) => sum + (balances[a.id] || 0), 0);
     
     const runwayGoal = state.emergencyFundMultiplier || 3;
     const actualBurnRate = calculateActualBurnRate(d0);
@@ -204,8 +208,8 @@ export const renderStrategicDashboard = () => {
 
     // Previous Month CFO Metrics (for Trends)
     const prevBalances = state.months[getMonthKey(d1)]?.balances || calculateBalances(d1);
-    const prevLiquidity = Object.values(prevBalances).reduce((sum, b) => sum + b, 0);
-    const prevSavingsBalance = state.accounts.filter(a => a.isSaving).reduce((sum, a) => sum + (prevBalances[a.id] || 0), 0);
+    const prevLiquidity = filteredAccounts.reduce((sum, a) => sum + (prevBalances[a.id] || 0), 0);
+    const prevSavingsBalance = filteredAccounts.filter(a => a.isSaving).reduce((sum, a) => sum + (prevBalances[a.id] || 0), 0);
     const prevBurnRate = calculateActualBurnRate(d1);
     const prevRunway = prevBurnRate > 0 ? (prevSavingsBalance / prevBurnRate) : 0;
 
@@ -214,7 +218,7 @@ export const renderStrategicDashboard = () => {
     const prevFfiIndex = m1.fixedExpense > 0 ? (m1.passiveIncome / m1.fixedExpense) * 100 : (m1.passiveIncome > 0 ? 100 : 0);
 
     // 3. Cash Drag Detection
-    const operationalBalances = state.accounts
+    const operationalBalances = filteredAccounts
         .filter(acc => !acc.isSaving && !acc.isInvestmentAccount)
         .reduce((sum, acc) => sum + (balances[acc.id] || 0), 0);
     
@@ -225,11 +229,11 @@ export const renderStrategicDashboard = () => {
     // Helper to trigger the one-click optimization
     window.app.handleCashDragAction = () => {
         // Find highest balance operational account as source
-        const operationalAccs = state.accounts.filter(acc => !acc.isSaving && !acc.isInvestmentAccount);
+        const operationalAccs = filteredAccounts.filter(acc => !acc.isSaving && !acc.isInvestmentAccount);
         const sourceAcc = operationalAccs.sort((a, b) => (balances[b.id] || 0) - (balances[a.id] || 0))[0];
         
         // Find primary savings account as destination
-        const destAcc = state.accounts.find(acc => acc.isSaving) || state.accounts[0];
+        const destAcc = filteredAccounts.find(acc => acc.isSaving) || filteredAccounts[0];
 
         window.app.openTransferModal({
             source: sourceAcc?.id,
@@ -240,27 +244,35 @@ export const renderStrategicDashboard = () => {
     };
 
     // 4. Net Worth (Latest Snapshots)
-    const getLatestSnapshotVal = (entityId, isAsset = true, targetDate = d0) => {
+    const getLatestSnapshotVal = (id, isAsset = true, targetDate = d0) => {
         const dateStr = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).toISOString().split('T')[0];
         const values = isAsset 
-            ? state.assetValues.filter(v => v.asset_id === entityId && v.date <= dateStr)
-            : state.liabilityValues.filter(v => v.liability_id === entityId && v.date <= dateStr);
+            ? state.assetValues.filter(v => v.asset_id === id && v.date <= dateStr)
+            : state.liabilityValues.filter(v => v.liability_id === id && v.date <= dateStr);
         if (values.length === 0) return 0;
         return values.sort((a, b) => new Date(b.date) - new Date(a.date))[0].value;
     };
     
-    const totalAssetsVal = state.assets.reduce((sum, a) => sum + getLatestSnapshotVal(a.id, true), 0);
-    const totalLiabilitiesVal = state.liabilities.reduce((sum, l) => sum + getLatestSnapshotVal(l.id, false), 0);
+    const filteredAssets = state.assets.filter(a => state.selectedEntityId === 'all' || a.entityId === state.selectedEntityId);
+    const filteredLiabilities = state.liabilities.filter(l => state.selectedEntityId === 'all' || l.entityId === state.selectedEntityId);
+
+    const totalAssetsVal = filteredAssets.reduce((sum, a) => sum + getLatestSnapshotVal(a.id, true), 0);
+    const totalLiabilitiesVal = filteredLiabilities.reduce((sum, l) => sum + getLatestSnapshotVal(l.id, false), 0);
     const netWorth = totalLiquidity + totalAssetsVal - totalLiabilitiesVal;
 
-    const prevTotalAssetsVal = state.assets.reduce((sum, a) => sum + getLatestSnapshotVal(a.id, true, d1), 0);
-    const prevTotalLiabilitiesVal = state.liabilities.reduce((sum, l) => sum + getLatestSnapshotVal(l.id, false, d1), 0);
+    const prevTotalAssetsVal = filteredAssets.reduce((sum, a) => sum + getLatestSnapshotVal(a.id, true, d1), 0);
+    const prevTotalLiabilitiesVal = filteredLiabilities.reduce((sum, l) => sum + getLatestSnapshotVal(l.id, false, d1), 0);
     const prevNetWorth = prevLiquidity + prevTotalAssetsVal - prevTotalLiabilitiesVal;
 
     // Trends for KPI Cards
     const nwTrend = calculateTrend(netWorth, prevNetWorth);
     const runwayTrend = calculateTrend(standardRunway, prevRunway);
     const ffiTrend = calculateTrend(ffiIndex, prevFfiIndex);
+
+    // Freedom GPS Calculation
+    const freedomData = calculateTimeToFreedom(d0);
+    const freedomYears = freedomData.years;
+    const freedomPct = Math.min(100, (freedomData.currentCapital / freedomData.targetCapital) * 100);
 
     // Safe-to-spend logic
     const recurringExpense = (state.records[getMonthKey(d0)]?.items || [])
@@ -284,53 +296,76 @@ export const renderStrategicDashboard = () => {
     // Render HTML
     container.innerHTML = `
         <div class="space-y-8">
-            <!-- Improvement 1: Rolling 3-Month Scorecard -->
-            <div id="dash-scorecard" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                    ${scorecard.map((m, idx) => {
-                        const isSelected = getMonthKey(m.date) === getMonthKey(d0);
-                        const isToday = getMonthKey(m.date) === getMonthKey(new Date());
-                        const mTrend = idx === 0 ? null : (idx === 1 ? trends.m1 : trends.m0);
-                        
-                        return `
-                            <div onclick="window.app.setViewDate('${m.date.toISOString()}')" 
-                                 class="p-6 flex flex-col justify-between transition-all cursor-pointer hover:bg-slate-50 group ${isSelected ? 'bg-indigo-50/50 ring-1 ring-inset ring-indigo-100' : 'opacity-60'}">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div class="flex flex-col gap-1">
-                                        <span class="text-[10px] font-black ${isSelected ? 'text-indigo-600' : 'text-slate-400'} uppercase tracking-widest">
-                                            ${m.label}
-                                        </span>
-                                        <div class="flex gap-1">
-                                            ${isToday ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 uppercase leading-none">Aujourd'hui</span>` : ''}
-                                            ${isSelected ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 uppercase leading-none">Sélection</span>` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="px-2 py-0.5 rounded-full text-[9px] font-bold ${m.savingsRate >= 20 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}">
-                                        SR: ${m.savingsRate.toFixed(0)}%
-                                    </div>
-                                </div>
-                                <div class="flex items-end justify-between">
-                                    <div>
-                                        <div class="flex items-center gap-1">
-                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Cash-Flow Net</p>
-                                            ${mTrend ? renderTrendBadge(mTrend.net) : ''}
-                                        </div>
-                                        <h3 class="text-xl font-black ${m.income - m.expense >= 0 ? 'text-slate-800' : 'text-rose-600'}">
-                                            ${formatCurrency(m.income - m.expense)}
-                                        </h3>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="flex items-center justify-end gap-1">
-                                            ${mTrend ? renderTrendBadge(mTrend.income) : ''}
-                                            <p class="text-[9px] font-bold text-slate-400 uppercase">${t('dashboard.income')}</p>
-                                        </div>
-                                        <p class="text-xs font-bold text-emerald-600">${formatCurrency(m.income)}</p>
-                                    </div>
+            <!-- Freedom GPS Card (Top Anchor) -->
+            <div id="freedom-gps" class="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
+                <!-- Background Decoration -->
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700"></div>
+                <div class="absolute -left-10 -top-10 w-48 h-48 bg-emerald-500/5 rounded-full blur-2xl"></div>
+
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                            <span class="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">${t('gps.title')}</span>
+                        </div>
+                        <h2 class="text-4xl md:text-5xl font-black text-white tracking-tight">
+                            ${freedomYears >= 99 ? '∞' : freedomYears.toFixed(1)} <span class="text-xl md:text-2xl text-indigo-200/60 ml-1">${t('gps.unit_years')}</span>
+                        </h2>
+                        <p class="text-indigo-200/40 text-xs font-bold uppercase tracking-widest mt-2">${t('gps.subtitle')}</p>
+                    </div>
+
+                    <div class="flex-1 max-w-md space-y-4">
+                        <!-- Progress Road -->
+                        <div class="relative pt-6">
+                            <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-[2000ms] ease-out" style="width: ${freedomPct}%"></div>
+                            </div>
+                            <!-- Markers -->
+                            <div class="absolute top-0 left-0 -translate-x-1/2 flex flex-col items-center">
+                                <i class="fa-solid fa-flag-checkered text-[10px] text-white/20 mb-1"></i>
+                                <span class="text-[8px] font-black text-white/10 uppercase">${t('gps.start')}</span>
+                            </div>
+                            <div class="absolute top-0 right-0 translate-x-1/2 flex flex-col items-center">
+                                <i class="fa-solid fa-crown text-[10px] text-emerald-400/40 mb-1"></i>
+                                <span class="text-[8px] font-black text-emerald-400/20 uppercase">${t('gps.fi')}</span>
+                            </div>
+                            <!-- Current Position Car -->
+                            <div class="absolute top-4 transition-all duration-[2000ms] ease-out flex flex-col items-center -translate-x-1/2" style="left: ${freedomPct}%">
+                                <div class="w-3 h-3 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] flex items-center justify-center">
+                                    <div class="w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
                                 </div>
                             </div>
-                        `;
-                    }).join('')}
+                        </div>
+
+                        <!-- Mini Metrics -->
+                        <div class="grid grid-cols-2 gap-4 pt-2">
+                            <div class="bg-white/5 rounded-xl p-3 border border-white/5 hover:bg-white/10 transition-colors">
+                                <p class="text-[8px] font-black text-indigo-300/50 uppercase tracking-widest mb-1">${t('gps.speed')}</p>
+                                <p class="text-sm font-black text-white">+${formatCurrency(freedomData.monthlySavings)} <span class="text-[10px] text-white/40 font-normal">${t('gps.per_month')}</span></p>
+                            </div>
+                            <div class="bg-white/5 rounded-xl p-3 border border-white/5 hover:bg-white/10 transition-colors">
+                                <p class="text-[8px] font-black text-indigo-300/50 uppercase tracking-widest mb-1">${t('gps.target')}</p>
+                                <p class="text-sm font-black text-white">${formatCurrency(Math.round(freedomData.targetCapital / 1000) * 1000)}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Legacy Month Selector (Pills but smaller for context) -->
+            <div id="dash-month-selector" class="grid grid-cols-3 gap-3">
+                ${scorecard.map((m, idx) => {
+                    const isSelected = getMonthKey(m.date) === getMonthKey(d0);
+                    const isToday = getMonthKey(m.date) === getMonthKey(new Date());
+                    return `
+                        <div onclick="window.app.setViewDate('${m.date.toISOString()}')" 
+                             class="p-3 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}">
+                            <span class="text-[8px] font-black uppercase tracking-widest">${m.label}</span>
+                            <span class="text-xs font-black">${formatCurrency(m.income - m.expense)}</span>
+                            ${isToday && !isSelected ? '<div class="w-1 h-1 rounded-full bg-indigo-500"></div>' : ''}
+                        </div>
+                    `;
+                }).join('')}
             </div>
 
             <!-- Improvement 2: Cash Drag Alert -->
@@ -343,13 +378,12 @@ export const renderStrategicDashboard = () => {
                         <div>
                             <h4 class="font-bold text-amber-900 text-sm italic underline decoration-amber-300">${t('dashboard.cash_drag')}</h4>
                             <p class="text-xs text-amber-800 mt-1 leading-relaxed">
-                                Vous avez <b>${formatCurrency(cashDrag)}</b> d'excédent stagnant sur vos comptes courants (au-delà de vos besoins de 1.5 mois). 
-                                Ce capital "dort" au lieu de travailler.
+                                ${t('dashboard.cash_drag_msg', { amount: formatCurrency(cashDrag) })}
                             </p>
                         </div>
                     </div>
                     <button onclick="window.app.handleCashDragAction()" class="flex-shrink-0 px-4 py-2 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-colors shadow-sm self-center">
-                        Optimiser
+                        ${t('dashboard.optimize')}
                     </button>
                 </div>
             ` : ''}
@@ -627,16 +661,22 @@ export const renderWealthEvolutionChart = () => {
 
     const dataRows = months.map(date => {
         const balances = state.months[getMonthKey(date)]?.balances || calculateBalances(date);
-        const liquidity = Object.values(balances).reduce((sum, b) => sum + b, 0);
+        
+        // Filter accounts, assets, and liabilities by selected entity
+        const filteredAccounts = state.accounts.filter(acc => state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId);
+        const filteredAssets = state.assets.filter(a => state.selectedEntityId === 'all' || a.entityId === state.selectedEntityId);
+        const filteredLiabilities = state.liabilities.filter(l => state.selectedEntityId === 'all' || l.entityId === state.selectedEntityId);
+
+        const liquidity = filteredAccounts.reduce((sum, a) => sum + (balances[a.id] || 0), 0);
 
         const lastDayStr = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
         
-        const assets = state.assets.reduce((sum, a) => {
+        const assets = filteredAssets.reduce((sum, a) => {
             const vals = state.assetValues.filter(v => v.asset_id === a.id && v.date <= lastDayStr);
             return sum + (vals.length > 0 ? vals.sort((x, y) => new Date(y.date) - new Date(x.date))[0].value : 0);
         }, 0);
 
-        const liabilities = state.liabilities.reduce((sum, l) => {
+        const liabilities = filteredLiabilities.reduce((sum, l) => {
             const vals = state.liabilityValues.filter(v => v.liability_id === l.id && v.date <= lastDayStr);
             return sum + (vals.length > 0 ? vals.sort((x, y) => new Date(y.date) - new Date(x.date))[0].value : 0);
         }, 0);
