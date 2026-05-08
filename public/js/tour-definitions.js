@@ -30,13 +30,20 @@ export const tutorials = {
         {
             // Step 2: The Action
             view: 'dashboard',
-            desktopTarget: '#mobile-fab', // Using the FAB for action
+            desktopTarget: '#nav-transactions',
             mobileTarget: '#mobile-fab',
             title: "Life Happens ☕",
-            message: "Alice just bought a €45 surprise gift. **Click the '+' button** to add this expense and see the magic happen.",
+            message: "Alice just bought a €45 surprise gift. **Click the '+' button** (on mobile) or head to **Cash-Flow** (on desktop) to add this expense.",
             placement: 'top',
-            autoAdvanceOn: '#mobile-fab',
-            nonBlocking: false // Lock this one to ensure they find the button
+            autoAdvanceOn: '#mobile-fab', 
+            simulation: {
+                label: "Cadeau Surprise Alice 🎁",
+                amount: -45,
+                Category: "cat_leisure",
+                source: "acc_joint",
+                entityId: "ent_family"
+            },
+            nonBlocking: false 
         },
         {
             // Step 3: Result

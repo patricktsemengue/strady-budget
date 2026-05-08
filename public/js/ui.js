@@ -7,7 +7,7 @@ export const updateSandboxUI = (isSandbox) => {
         if (!pill) {
             pill = document.createElement('div');
             pill.id = 'sandbox-pill';
-            pill.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[120] px-4 py-2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-amber-200 flex items-center gap-2 animate-bounce cursor-help';
+            pill.className = 'fixed top-4 md:top-4 bottom-24 md:bottom-auto left-1/2 -translate-x-1/2 z-[120] px-4 py-2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-amber-200 flex items-center gap-2 animate-bounce cursor-help';
             pill.title = "Peace ! relax! this is a tutorial. your real data are not modified. peace and relax!";
             pill.innerHTML = `
                 <i class="fa-solid fa-flask"></i>

@@ -4,7 +4,7 @@ import { t } from '../i18n.js';
 import { provisionStarterData } from '../firestore-service.js';
 import { currentUserId } from '../storage.js';
 import { tutorials } from '../tour-definitions.js';
-import { updateSandboxUI } from '../ui.js';
+import { showNotification, updateSandboxUI } from '../ui.js';
 
 class TourModule {
     constructor() {
@@ -12,6 +12,7 @@ class TourModule {
         this.hidden = true;
         this.observer = null;
         this._realStateBackup = null;
+        this._currentTrigger = null;
     }
 
     get steps() {
@@ -66,6 +67,37 @@ class TourModule {
                     mappedBalances[acc.id] = acc.initialBalance;
                 });
 
+                // Map past transactions to current month
+                const mappedTransactions = (data.pastTransactions || []).map(tx => {
+                    const date = new Date();
+                    date.setDate(date.getDate() - (tx.daysAgo || 0));
+                    return {
+                        ...tx,
+                        id: `sandbox_past_${Math.random().toString(36).substr(2, 9)}`,
+                        date: date.toISOString().split('T')[0],
+                        amount: parseFloat(tx.amount)
+                    };
+                });
+
+                // Expand templates for current month to provide a "live" dashboard
+                const expandedTemplates = (data.templates || []).map(tpl => {
+                    const date = new Date();
+                    date.setDate(tpl.day || 1);
+                    return {
+                        id: `sandbox_tpl_${tpl.id}_${currentMonthStr}`,
+                        label: tpl.label,
+                        amount: parseFloat(tpl.amount),
+                        date: date.toISOString().split('T')[0],
+                        Category: tpl.category,
+                        source: tpl.source,
+                        destination: tpl.destination,
+                        entityId: tpl.entityId,
+                        Model: tpl.id // Mark as recurring for Safe-to-Spend logic
+                    };
+                });
+
+                const allSandboxTx = [...mappedTransactions, ...expandedTemplates];
+
                 updateState({
                     isSandbox: true,
                     accounts: mappedAccounts,
@@ -75,11 +107,11 @@ class TourModule {
                     assets: data.assets || [],
                     liabilities: data.liabilities || [],
                     accountBalances: mappedBalances,
-                    transactions: [], // Start fresh or map pastTransactions if needed
-                    allTransactions: []
+                    transactions: allSandboxTx,
+                    allTransactions: allSandboxTx
                 });
 
-                rebuildRecords([], {});
+                rebuildRecords(allSandboxTx, {});
                 updateSandboxUI(true);
                 router.render();
             } catch (err) {
@@ -105,6 +137,74 @@ class TourModule {
         });
 
         this.renderStep();
+    }
+
+    renderStep() {
+        const onboarding = state.onboarding || {};
+        const stepIndex = onboarding.currentStep ?? 0;
+        const steps = this.steps;
+        const step = steps[stepIndex];
+
+        if (!step) {
+            this.finish();
+            return;
+        }
+
+        // Ensure we are on the right view
+        if (state.currentView !== step.view) {
+            router.setView(step.view);
+            return;
+        }
+
+        this.cleanup(true);
+        this.enableOverlay(step.nonBlocking); 
+
+        const isMobile = window.innerWidth <= 768;
+        const selector = isMobile ? step.mobileTarget : step.desktopTarget;
+
+        this.waitForAnyElement([selector]).then(el => {
+            if (el) {
+                this.highlightTarget(el);
+
+                // Simulation or Auto-advance logic
+                const triggerSelector = step.simulation ? selector : step.autoAdvanceOn;
+                
+                if (triggerSelector) {
+                    const triggerEl = document.querySelector(triggerSelector);
+                    if (triggerEl) {
+                        const triggerHandler = (e) => {
+                            // If it's a simulation, we intercept the click and add data
+                            if (step.simulation && state.isSandbox) {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const tx = {
+                                    ...step.simulation,
+                                    id: `sim_${Date.now()}`,
+                                    date: new Date().toISOString().split('T')[0]
+                                };
+
+                                const newAllTx = [tx, ...(state.allTransactions || [])];
+                                updateState({
+                                    transactions: [tx, ...(state.transactions || [])],
+                                    allTransactions: newAllTx
+                                });
+
+                                rebuildRecords(newAllTx, {});
+                                showNotification(t('notifications.transaction_added') || "Flux ajouté au scénario !");
+                                router.render();
+                            }
+
+                            triggerEl.removeEventListener('click', triggerHandler);
+                            this.next();
+                        };
+                        triggerEl.addEventListener('click', triggerHandler, { once: true });
+                        this._currentTrigger = { el: triggerEl, handler: triggerHandler };
+                    }
+                }
+            }
+            this.createAssistant(step, el);
+        });
     }
 
     enableOverlay(isNonBlocking = false) {
@@ -176,10 +276,16 @@ class TourModule {
     }
 
     cleanup(immediate = false) {
+        // Remove active triggers
+        if (this._currentTrigger) {
+            const { el, handler } = this._currentTrigger;
+            el.removeEventListener('click', handler);
+            this._currentTrigger = null;
+        }
+
         const assistant = document.getElementById('tour-assistant');
         if (assistant) {
             if (immediate) {
-                // Just hide it for immediate cleanup during step transitions
                 assistant.classList.add('opacity-0');
             } else {
                 assistant.classList.add('opacity-0');
@@ -201,84 +307,6 @@ class TourModule {
             el.classList.remove('tour-highlight', 'tour-highlight-pulse');
         });
     }
-renderStep() {
-    const onboarding = state.onboarding || {};
-    const stepIndex = onboarding.currentStep ?? 0;
-    const steps = this.steps;
-    const step = steps[stepIndex];
-
-    if (!step) {
-        this.finish();
-        return;
-    }
-
-    // Ensure we are on the right view
-    if (state.currentView !== step.view) {
-        router.setView(step.view);
-        return;
-    }
-
-    this.cleanup(true);
-    this.enableOverlay(step.nonBlocking); 
-
-    const isMobile = window.innerWidth <= 768;
-    const selector = isMobile ? step.mobileTarget : step.desktopTarget;
-
-    this.waitForAnyElement([selector]).then(el => {
-        if (el) {
-            this.highlightTarget(el);
-
-            // Auto-advance logic
-            if (step.autoAdvanceOn) {
-                const triggerEl = document.querySelector(step.autoAdvanceOn);
-                if (triggerEl) {
-                    const triggerHandler = () => {
-                        triggerEl.removeEventListener('click', triggerHandler);
-                        this.next();
-                    };
-                    triggerEl.addEventListener('click', triggerHandler, { once: true });
-                    // Store for cleanup if needed
-                    this._currentTrigger = { el: triggerEl, handler: triggerHandler };
-                }
-            }
-        }
-        this.createAssistant(step, el);
-    });
-}
-
-cleanup(immediate = false) {
-    // Remove active triggers
-    if (this._currentTrigger) {
-        const { el, handler } = this._currentTrigger;
-        el.removeEventListener('click', handler);
-        this._currentTrigger = null;
-    }
-
-    const assistant = document.getElementById('tour-assistant');
-    if (assistant) {
-        if (immediate) {
-            // Just hide it for immediate cleanup during step transitions
-            assistant.classList.add('opacity-0');
-        } else {
-            assistant.classList.add('opacity-0');
-            assistant.style.transform = 'scale(0.95) translateY(10px)';
-            setTimeout(() => {
-                const currentAssistant = document.getElementById('tour-assistant');
-                if (currentAssistant === assistant && !state.onboarding?.active) {
-                    assistant.remove();
-                }
-            }, 400);
-        }
-    }
-
-    if (!immediate) {
-        this.disableOverlay();
-    }
-
-    document.querySelectorAll('.tour-highlight').forEach(el => {
-        el.classList.remove('tour-highlight', 'tour-highlight-pulse');
-    });
-}
 
     waitForAnyElement(selectors, timeout = 3000) {
         return new Promise((resolve) => {
@@ -339,6 +367,8 @@ cleanup(immediate = false) {
         const label = t('tour.assistant_label', { current: currentStep, total: totalSteps }) || `Mission ${currentStep}/${totalSteps}`;   
         const nextBtnLabel = currentStep === totalSteps ? (t('tour.btn_finish') || 'FINISH') : (t('tour.btn_next') || 'NEXT');
 
+        const isMobile = window.innerWidth <= 768;
+
         assistant.innerHTML = `
             <div class="h-1 bg-slate-100 dark:bg-slate-800 w-full rounded-t-lg overflow-hidden">
                 <div class="h-full bg-indigo-600 transition-all duration-500" style="width: ${isNaN(progress) ? 0 : progress}%"></div>
@@ -363,14 +393,14 @@ cleanup(immediate = false) {
 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
-                        <button id="tour-stop" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors">
+                        <button id="tour-stop" class="${isMobile ? 'px-3 py-2' : ''} text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors">
                             ${t('tour.btn_stop') || 'STOP'}
                         </button>
-                        <button id="tour-skip" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-500 transition-colors">
+                        <button id="tour-skip" class="${isMobile ? 'px-3 py-2' : ''} text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-500 transition-colors">
                             ${t('tour.btn_skip') || 'SKIP'}
                         </button>
                     </div>
-                    <button id="tour-next" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-md shadow-indigo-200 flex items-center">
+                    <button id="tour-next" class="${isMobile ? 'px-6 py-3' : 'px-5 py-2'} bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-md shadow-indigo-200 flex items-center">
                         ${nextBtnLabel}
                         <i class="fa-solid ${currentStep === totalSteps ? 'fa-check' : 'fa-arrow-right'} ml-2"></i>
                     </button>
@@ -390,18 +420,15 @@ cleanup(immediate = false) {
         const assistant = document.getElementById('tour-assistant');
         if (!assistant) return;
 
-        // Bring to front
-        document.body.appendChild(assistant);
-
-        // Reset styles that might have been set by mobile or fallback
+        // Reset styles
         assistant.style.right = '';
         assistant.style.bottom = '';
         assistant.style.width = '20rem';
         
-        // On mobile, placement is ignored (fixed at top)
+        // Mobile Refinement: Clear the header
         if (window.innerWidth <= 768) {
             assistant.classList.remove('opacity-0', 'scale-95');
-            assistant.style.top = '20px';
+            assistant.style.top = '80px'; 
             assistant.style.left = '10px';
             assistant.style.right = '10px';
             assistant.style.width = 'calc(100% - 20px)';
@@ -414,7 +441,6 @@ cleanup(immediate = false) {
         const target = targetEl || document.querySelector(step?.desktopTarget);
 
         if (!target) {
-            // Fallback: center of the screen if target not found
             assistant.style.top = '50%';
             assistant.style.left = '50%';
             assistant.style.transform = 'translate(-50%, -50%) scale(1)';
@@ -422,11 +448,9 @@ cleanup(immediate = false) {
             return;
         }
 
-        // Ensure visible for measurement
         assistant.classList.remove('opacity-0', 'scale-95');
         assistant.style.transform = 'scale(1)';
         
-        // Use requestAnimationFrame to ensure layout is ready
         requestAnimationFrame(() => {
             const rect = target.getBoundingClientRect();
             const popoverRect = assistant.getBoundingClientRect();
@@ -436,7 +460,6 @@ cleanup(immediate = false) {
             let left = 0;
             let placement = preferredPlacement;
 
-            // Simple positioning logic
             if (placement === 'right') {
                 top = rect.top + (rect.height / 2) - (popoverRect.height / 2);
                 left = rect.right + offset;
@@ -451,7 +474,6 @@ cleanup(immediate = false) {
                 left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
             }
 
-            // Viewport collision safety
             if (left < 10) left = 10;
             if (left + popoverRect.width > window.innerWidth - 10) left = window.innerWidth - popoverRect.width - 10;
             if (top < 10) top = 10;
