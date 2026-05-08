@@ -145,6 +145,10 @@
         "definition": "The amount you actually have left for 'fun' spending this month, once all your fixed bills and recurring templates are deducted.",
         "usage": "If this number is positive, you can spend with peace of mind. If it's negative, you're dipping into your savings without knowing it."
       },
+      "sandbox": {
+        "definition": "A safe environment where you can practice and learn without any risk to your real financial data.",
+        "usage": "Peace! Relax! In this mode, we load a demo scenario (Alice & Bob). You can add, edit, or delete anything - it won't be saved to Firestore and won't touch your real budget."
+      },
       "balance_sheet": {
         "definition": "Visualizes the ratio between your Net Equity (what you truly own) and your Debts (what belongs to the bank).",
         "usage": "The goal is to increase the blue part (Owned) over the months by paying off your loans and accumulating assets without going into debt."
@@ -292,6 +296,11 @@
       "subtitle": "Let our assistant show you the key features in 1 minute.",
       "button": "Restart Interactive Guide"
     },
+    "sandbox": {
+      "title": "Scenario Training",
+      "desc": "Want a safe refresher? Launch the 2-minute \"Alice & Bob\" story in Sandbox Mode. Your real data remains untouched and perfectly safe.",
+      "btn": "LAUNCH SANDBOX REFRESHER"
+    },
     "concepts": {
       "pyf": {
         "title": "Pay Yourself First",
@@ -367,60 +376,44 @@
       "steps": {
         "budget": [
           {
-            "title": "Alice & Bob's Setup",
-            "message": "Alice and Bob use categories to segment their lives: 'Shared Bills' for their common expenses and personal categories for their own leisure."
+            "title": "Defining the Map",
+            "message": "This is where you define your budget categories. By setting your fixed and daily buckets, you allow Strady to calculate your safety margins."
           },
           {
-            "title": "Shared Treasury",
-            "message": "They use a Joint account for common bills, while Alice and Bob keep their own personal checking accounts for individual freedom."
+            "title": "The Source of Truth",
+            "message": "Add your bank accounts and savings here. Specifying which accounts are for 'Saving' is crucial for calculating your financial Runway."
           },
           {
-            "title": "Automated Flow",
-            "message": "Salaries come in, and recurring templates automatically handle their shared electricity, water, and insurance payments."
+            "title": "The Forecasting Engine",
+            "message": "Record your recurring flows (Salary, Rent, Subscriptions) here. Strady projects them over 36 months to show you your future balance today."
           },
           {
-            "title": "Shared Contributions",
-            "message": "Every month, Bob sends his share of the housing costs from his personal account to the Shared Joint account via an internal transfer."
-          },
-          {
-            "title": "Total Visibility",
-            "message": "The result? Their 36-month trajectory is crystal clear. They know exactly how much they can spend today while securing their future."
+            "title": "The Pilot's Compass",
+            "message": "Everything converges here. The 'Safe to Spend' indicator tells you exactly what's left for fun, once all your obligations are secured."
           }
         ],
         "wealth": [
           {
-            "title": "Tracking Assets",
-            "message": "Alice and Bob own their principal residency, valued at €350,000. It's their primary engine for long-term wealth."
+            "title": "Building your Engine",
+            "message": "Beyond daily cash, track your real estate, stocks, or gold. These assets are your real wealth engines for the long term."
           },
           {
-            "title": "Managing Debt",
-            "message": "They also track their car loan and mortgage. Reducing these liabilities is their path to financial independence."
+            "title": "The True Value",
+            "message": "You can update the value of an asset at any time. This allows Strady to track the real appreciation of your heritage."
           },
           {
-            "title": "Net Worth Vision",
-            "message": "Their Dashboard shows their true Net Worth: the sum of their house and savings minus what they still owe to the bank."
+            "title": "The Wealth Vision",
+            "message": "Your Net Worth is the ultimate KPI. It's the sum of everything you own minus your debts. This is your true financial weight."
           }
         ],
         "entities": [
           {
-            "title": "Structuring Worlds",
-            "message": "Alice and Bob start in **Settings** to define their financial worlds: 'Alice', 'Bob', and their 'Shared' household."
+            "title": "Commanding Worlds",
+            "message": "Create 'Entities' to isolate different parts of your life: Personal, Shared, or Business. Each world has its own accounts and KPIs."
           },
           {
-            "title": "The Master Filter",
-            "message": "Once created, the **Entity Switcher** in the sidebar becomes their command center. Changing it filters the entire application instantly."
-          },
-          {
-            "title": "Segmented Treasury",
-            "message": "In the **Accounts** tab, they only see the wallets belonging to the selected world. Bob's personal savings stay out of the Shared view."
-          },
-          {
-            "title": "Clean Cash-Flow",
-            "message": "Transactions are also isolated. Alice can review her personal 'Leisure' spending without the noise of the family mortgage."
-          },
-          {
-            "title": "Distributed Assets",
-            "message": "Even **Wealth** is segmented. The principal residency is 'Shared', while Bob's car loan is his own personal liability."
+            "title": "The Master View",
+            "message": "Use the switcher to filter your entire dashboard. Monitor your personal health or your family household's performance in one click."
           }
         ],
         "interactive_setup": [

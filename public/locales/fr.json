@@ -144,6 +144,10 @@
         "definition": "Le montant qu'il vous reste réellement pour vos dépenses 'plaisir' ce mois-ci, une fois que toutes vos factures fixes et modèles récurrents sont déduits.",
         "usage": "Si ce chiffre est positif, vous dépensez l'esprit tranquille. S'il est négatif, vous piochez dans votre épargne sans le savoir."
       },
+      "sandbox": {
+        "definition": "Un environnement sécurisé où vous pouvez pratiquer et apprendre sans aucun risque pour vos données financières réelles.",
+        "usage": "Peace ! Relax ! Dans ce mode, nous chargeons un scénario de démonstration (Alice & Bob). Vous pouvez tout ajouter, modifier ou supprimer - rien ne sera enregistré dans Firestore et votre vrai budget ne sera pas impacté."
+      },
       "balance_sheet": {
         "definition": "Visualise le ratio entre votre Capital Net (ce qui vous appartient vraiment) et vos Dettes (ce qui appartient à la banque).",
         "usage": "L'objectif est d'augmenter la part bleue (Possédé) au fil des mois en remboursant vos crédits et en accumulant des actifs sans s'endetter."
@@ -291,6 +295,11 @@
       "subtitle": "Laissez notre assistant vous faire découvrir les fonctionnalités clés en 1 minute.",
       "button": "Relancer le Guide Interactif"
     },
+    "sandbox": {
+      "title": "Entraînement sur Scénario",
+      "desc": "Besoin d'un rappel en toute sécurité ? Lancez l'histoire de 2 minutes d'Alice & Bob en mode Sandbox. Vos données réelles restent intactes et parfaitement protégées.",
+      "btn": "LANCER LE RAPPEL SANDBOX"
+    },
     "concepts": {
       "pyf": {
         "title": "Pay Yourself First",
@@ -367,60 +376,44 @@
       "steps": {
         "budget": [
           {
-            "title": "Config de Alice & Bob",
-            "message": "Alice et Bob utilisent les catégories pour segmenter leur vie : 'Charges Communes' pour le foyer et des catégories personnelles pour leurs propres loisirs."
+            "title": "Définir la Carte",
+            "message": "C'est ici que vous définissez vos catégories budgétaires. En paramétrant vos seaux fixes et quotidiens, vous permettez à Strady de calculer vos marges de sécurité."
           },
           {
-            "title": "Trésorerie Partagée",
-            "message": "Ils utilisent un compte Joint pour les factures communes, tandis qu'Alice et Bob gardent chacun leur compte courant personnel pour leur liberté individuelle."
+            "title": "La Source de Vérité",
+            "message": "Ajoutez vos comptes bancaires et votre épargne ici. Préciser quels comptes sont de l'épargne est crucial pour calculer votre Autonomie (Runway)."
           },
           {
-            "title": "Flux Automatisés",
-            "message": "Les salaires tombent, et des modèles récurrents gèrent automatiquement leurs paiements d'électricité, d'eau et d'assurances."
+            "title": "Le Moteur de Prévision",
+            "message": "Enregistrez vos flux récurrents (Salaire, Loyer, Abonnements) ici. Strady les projette sur 36 mois pour vous montrer votre solde futur dès aujourd'hui."
           },
           {
-            "title": "Contributions Communes",
-            "message": "Chaque mois, Bob envoie sa part des frais de logement depuis son compte personnel vers le compte Joint via un virement interne."
-          },
-          {
-            "title": "Visibilité Totale",
-            "message": "Le résultat ? Leur trajectoire sur 36 mois est limpide. Ils savent exactement ce qu'ils peuvent dépenser aujourd'hui tout en sécurisant leur avenir."
+            "title": "La Boussole du Pilote",
+            "message": "Tout converge ici. L'indicateur 'Safe to Spend' vous dit exactement ce qu'il reste pour le plaisir, une fois toutes vos obligations sécurisées."
           }
         ],
         "wealth": [
           {
-            "title": "Suivi des Actifs",
-            "message": "Alice et Bob possèdent leur résidence principale, estimée à 350 000 €. C'est leur principal moteur de richesse à long terme."
+            "title": "Bâtir votre Moteur",
+            "message": "Au-delà du cash quotidien, suivez votre immobilier, vos actions ou votre or. Ces actifs sont vos vrais moteurs de richesse sur le long terme."
           },
           {
-            "title": "Gestion des Dettes",
-            "message": "Ils suivent également leur prêt auto et leur hypothèque. Réduire ces passifs est leur chemin vers l'indépendance financière."
+            "title": "La Valeur Réelle",
+            "message": "Vous pouvez mettre à jour la valeur d'un actif à tout moment. Cela permet à Strady de suivre l'appréciation réelle de votre patrimoine."
           },
           {
-            "title": "Le Bilan Net",
-            "message": "Leur tableau de bord affiche leur Patrimoine Net réel : la somme de leur maison et de leur épargne, moins ce qu'ils doivent encore à la banque."
+            "title": "La Vision Patrimoniale",
+            "message": "Votre Patrimoine Net est le KPI ultime. C'est la somme de tout ce que vous possédez moins vos dettes. C'est votre vrai poids financier."
           }
         ],
         "entities": [
           {
-            "title": "Structurer les Mondes",
-            "message": "Alice et Bob commencent dans les **Paramètres** pour définir leurs mondes financiers : 'Alice', 'Bob', et leur foyer 'Commun'."
+            "title": "Commander les Mondes",
+            "message": "Créez des 'Entités' pour isoler les différentes parties de votre vie : Perso, Commun, ou Business. Chaque monde a ses propres comptes et KPIs."
           },
           {
-            "title": "Le Filtre Maître",
-            "message": "Une fois créées, le **Sélecteur d'Entité** dans la barre latérale devient leur tour de contrôle. Le changer filtre toute l'application instantanément."
-          },
-          {
-            "title": "Trésorerie Segmentée",
-            "message": "Dans l'onglet **Comptes**, ils ne voient que les portefeuilles appartenant au monde sélectionné. L'épargne perso de Bob reste hors de la vue Commune."
-          },
-          {
-            "title": "Flux de Trésorerie Propres",
-            "message": "Les transactions sont également isolées. Alice peut revoir ses dépenses perso 'Loisirs' sans le bruit de l'hypothèque familiale."
-          },
-          {
-            "title": "Patrimoine Réparti",
-            "message": "Même le **Patrimoine** est segmenté. La résidence principale est 'Commune', tandis que le prêt auto de Bob est son propre passif personnel."
+            "title": "La Vue Maître",
+            "message": "Utilisez le sélecteur pour filtrer tout votre tableau de bord. Surveillez votre santé perso ou la performance du foyer familial en un clic."
           }
         ],
         "interactive_setup": [

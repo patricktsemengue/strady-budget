@@ -1,108 +1,21 @@
-import { state, updateState } from '../state.js';
+import { state, updateState, rebuildRecords } from '../state.js';
 import { router } from '../app-router.js';
 import { t } from '../i18n.js';
 import { provisionStarterData } from '../firestore-service.js';
 import { currentUserId } from '../storage.js';
+import { tutorials } from '../tour-definitions.js';
+import { updateSandboxUI } from '../ui.js';
 
 class TourModule {
     constructor() {
         this.id = 'tour';
         this.hidden = true;
         this.observer = null;
-    }
-
-    getTutorialSteps(type) {
-        const tutorials = {
-            budget: [
-                {
-                    view: 'categories',
-                    target: '#nav-categories',
-                    title: t('tour.steps.budget.0.title'),
-                    message: t('tour.steps.budget.0.message')
-                },
-                {
-                    view: 'accounts',
-                    target: '#nav-accounts',
-                    title: t('tour.steps.budget.1.title'),
-                    message: t('tour.steps.budget.1.message')
-                },
-                {
-                    view: 'transactions',
-                    target: '#nav-transactions',
-                    title: t('tour.steps.budget.2.title'),
-                    message: t('tour.steps.budget.2.message')
-                },
-                {
-                    view: 'accounts',
-                    target: '#btn-transfer-desktop',
-                    title: t('tour.steps.budget.3.title'),
-                    message: t('tour.steps.budget.3.message')
-                },
-                {
-                    view: 'dashboard',
-                    target: '#nav-dashboard',
-                    title: t('tour.steps.budget.4.title'),
-                    message: t('tour.steps.budget.4.message')
-                }
-            ],
-            wealth: [
-                {
-                    view: 'wealth',
-                    target: '#nav-wealth',
-                    title: t('tour.steps.wealth.0.title'),
-                    message: t('tour.steps.wealth.0.message')
-                },
-                {
-                    view: 'wealth',
-                    target: '#wealth-liabilities-list',
-                    title: t('tour.steps.wealth.1.title'),
-                    message: t('tour.steps.wealth.1.message')
-                },
-                {
-                    view: 'dashboard',
-                    target: '#nav-dashboard',
-                    title: t('tour.steps.wealth.2.title'),
-                    message: t('tour.steps.wealth.2.message')
-                }
-            ],
-            entities: [
-                {
-                    view: 'settings',
-                    target: '#nav-settings',
-                    title: t('tour.steps.entities.0.title'),
-                    message: t('tour.steps.entities.0.message')
-                },
-                {
-                    view: 'dashboard',
-                    target: '#desktop-switcher',
-                    title: t('tour.steps.entities.1.title'),
-                    message: t('tour.steps.entities.1.message')
-                },
-                {
-                    view: 'accounts',
-                    target: '#nav-accounts',
-                    title: t('tour.steps.entities.2.title'),
-                    message: t('tour.steps.entities.2.message')
-                },
-                {
-                    view: 'transactions',
-                    target: '#nav-transactions',
-                    title: t('tour.steps.entities.3.title'),
-                    message: t('tour.steps.entities.3.message')
-                },
-                {
-                    view: 'wealth',
-                    target: '#nav-wealth',
-                    title: t('tour.steps.entities.4.title'),
-                    message: t('tour.steps.entities.4.message')
-                }
-            ],
-        };
-        return tutorials[type] || [];
+        this._realStateBackup = null;
     }
 
     get steps() {
-        return this.getTutorialSteps(state.onboarding?.type || 'budget');
+        return tutorials[state.onboarding?.type || 'budget'] || [];
     }
 
     init() {
@@ -121,11 +34,60 @@ class TourModule {
             overlay.className = 'fixed inset-0 z-[115] bg-transparent pointer-events-none transition-all duration-300';
             document.body.appendChild(overlay);
         }
+
+        window.addEventListener('resize', () => {
+            if (state.onboarding?.active) {
+                this.repositionAssistant();
+            }
+        });
     }
 
-    async start(type = 'budget') {
-        // Provision Alice & Bob scenario if user is empty
-        if (state.accounts.length === 0 && currentUserId) {
+    async start(type = 'story', useSandbox = false) {
+        // If sandbox, backup real data and load Alice & Bob locally
+        if (useSandbox) {
+            this._realStateBackup = { ...state };
+            try {
+                const response = await fetch('/data/starter-data.json');
+                if (!response.ok) throw new Error('Failed to load starter data');
+                const data = await response.json();
+                
+                // Map starter data to local state structure (Simplified for Sandbox)
+                const now = new Date();
+                const currentMonthStr = now.toISOString().split('T')[0].substring(0, 7);
+                
+                const mappedAccounts = data.accounts.map(acc => ({
+                    ...acc,
+                    createDate: `${currentMonthStr}-01`,
+                    balanceDirty: false
+                }));
+
+                const mappedBalances = {};
+                data.accounts.forEach(acc => {
+                    mappedBalances[acc.id] = acc.initialBalance;
+                });
+
+                updateState({
+                    isSandbox: true,
+                    accounts: mappedAccounts,
+                    entities: data.entities || [],
+                    categories: data.categories || [],
+                    recurringTemplates: data.templates || [],
+                    assets: data.assets || [],
+                    liabilities: data.liabilities || [],
+                    accountBalances: mappedBalances,
+                    transactions: [], // Start fresh or map pastTransactions if needed
+                    allTransactions: []
+                });
+
+                rebuildRecords([], {});
+                updateSandboxUI(true);
+                router.render();
+            } catch (err) {
+                console.error("[Tour] Sandbox initialization failed:", err);
+                return;
+            }
+        } else if (state.accounts.length === 0 && currentUserId) {
+            // Regular provisioning for new users
             try {
                 await provisionStarterData(currentUserId);
             } catch (err) {
@@ -142,15 +104,22 @@ class TourModule {
             }
         });
 
-        this.enableOverlay();
         this.renderStep();
     }
 
-    enableOverlay() {
+    enableOverlay(isNonBlocking = false) {
         const overlay = document.getElementById('tour-overlay');
         if (overlay) {
-            overlay.classList.remove('pointer-events-none', 'bg-transparent');
-            overlay.classList.add('pointer-events-auto');
+            const isDark = document.documentElement.classList.contains('dark');
+            overlay.classList.remove('pointer-events-none', 'bg-transparent', 'pointer-events-auto');
+            
+            if (isNonBlocking) {
+                overlay.classList.add('pointer-events-none');
+                overlay.style.backgroundColor = 'transparent';
+            } else {
+                overlay.classList.add('pointer-events-auto');
+                overlay.style.backgroundColor = isDark ? 'rgba(2, 6, 23, 0.8)' : 'rgba(15, 23, 42, 0.7)';
+            }
         }
     }
 
@@ -159,6 +128,7 @@ class TourModule {
         if (overlay) {
             overlay.classList.add('pointer-events-none', 'bg-transparent');
             overlay.classList.remove('pointer-events-auto');
+            overlay.style.backgroundColor = 'transparent';
         }
     }
 
@@ -189,65 +159,132 @@ class TourModule {
                 completed: true
             }
         });
+        
+        // Restore real data if we were in sandbox
+        if (state.isSandbox && this._realStateBackup) {
+            updateState({
+                ...this._realStateBackup,
+                isSandbox: false
+            });
+            this._realStateBackup = null;
+            updateSandboxUI(false);
+            rebuildRecords(state.allTransactions, state.months);
+            router.render();
+        }
+
         this.cleanup();
     }
 
-    cleanup() {
+    cleanup(immediate = false) {
         const assistant = document.getElementById('tour-assistant');
         if (assistant) {
-            assistant.classList.add('translate-y-20', 'opacity-0');
-            setTimeout(() => assistant.remove(), 500);
+            if (immediate) {
+                // Just hide it for immediate cleanup during step transitions
+                assistant.classList.add('opacity-0');
+            } else {
+                assistant.classList.add('opacity-0');
+                assistant.style.transform = 'scale(0.95) translateY(10px)';
+                setTimeout(() => {
+                    const currentAssistant = document.getElementById('tour-assistant');
+                    if (currentAssistant === assistant && !state.onboarding?.active) {
+                        assistant.remove();
+                    }
+                }, 400);
+            }
+        }
+
+        if (!immediate) {
+            this.disableOverlay();
         }
 
         document.querySelectorAll('.tour-highlight').forEach(el => {
             el.classList.remove('tour-highlight', 'tour-highlight-pulse');
         });
+    }
+renderStep() {
+    const onboarding = state.onboarding || {};
+    const stepIndex = onboarding.currentStep ?? 0;
+    const steps = this.steps;
+    const step = steps[stepIndex];
 
-        this.disableOverlay();
-
-        if (this.observer) {
-            this.observer.disconnect();
-            this.observer = null;
-        }
+    if (!step) {
+        this.finish();
+        return;
     }
 
-    renderStep() {
-        const onboarding = state.onboarding || {};
-        const stepIndex = onboarding.currentStep ?? 0;
-        const steps = this.steps;
-        const step = steps[stepIndex];
+    // Ensure we are on the right view
+    if (state.currentView !== step.view) {
+        router.setView(step.view);
+        return;
+    }
 
-        if (!step) {
-            this.finish();
-            return;
-        }
+    this.cleanup(true);
+    this.enableOverlay(step.nonBlocking); 
 
-        // Ensure we are on the right view
-        if (state.currentView !== step.view) {
-            router.setView(step.view);
-            return;
-        }
+    const isMobile = window.innerWidth <= 768;
+    const selector = isMobile ? step.mobileTarget : step.desktopTarget;
 
-        this.cleanup();
-        this.enableOverlay(); // Re-enable after cleanup
+    this.waitForAnyElement([selector]).then(el => {
+        if (el) {
+            this.highlightTarget(el);
 
-        // Target detection
-        const mobileSelector = `${step.target}-mobile`;
-
-        this.waitForAnyElement([step.target, mobileSelector]).then(el => {
-            if (!el) {
-                console.warn(`[Tour] Target not found: ${step.target}`);
-            } else {
-                this.highlightTarget(el);
+            // Auto-advance logic
+            if (step.autoAdvanceOn) {
+                const triggerEl = document.querySelector(step.autoAdvanceOn);
+                if (triggerEl) {
+                    const triggerHandler = () => {
+                        triggerEl.removeEventListener('click', triggerHandler);
+                        this.next();
+                    };
+                    triggerEl.addEventListener('click', triggerHandler, { once: true });
+                    // Store for cleanup if needed
+                    this._currentTrigger = { el: triggerEl, handler: triggerHandler };
+                }
             }
-            this.createAssistant(step);
-        });
+        }
+        this.createAssistant(step, el);
+    });
+}
+
+cleanup(immediate = false) {
+    // Remove active triggers
+    if (this._currentTrigger) {
+        const { el, handler } = this._currentTrigger;
+        el.removeEventListener('click', handler);
+        this._currentTrigger = null;
     }
+
+    const assistant = document.getElementById('tour-assistant');
+    if (assistant) {
+        if (immediate) {
+            // Just hide it for immediate cleanup during step transitions
+            assistant.classList.add('opacity-0');
+        } else {
+            assistant.classList.add('opacity-0');
+            assistant.style.transform = 'scale(0.95) translateY(10px)';
+            setTimeout(() => {
+                const currentAssistant = document.getElementById('tour-assistant');
+                if (currentAssistant === assistant && !state.onboarding?.active) {
+                    assistant.remove();
+                }
+            }, 400);
+        }
+    }
+
+    if (!immediate) {
+        this.disableOverlay();
+    }
+
+    document.querySelectorAll('.tour-highlight').forEach(el => {
+        el.classList.remove('tour-highlight', 'tour-highlight-pulse');
+    });
+}
 
     waitForAnyElement(selectors, timeout = 3000) {
         return new Promise((resolve) => {
             const check = () => {
                 for (const selector of selectors) {
+                    if (!selector) continue;
                     const el = document.querySelector(selector);
                     if (el) return el;
                 }
@@ -287,27 +324,23 @@ class TourModule {
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    createAssistant(step) {
+    createAssistant(step, targetEl) {
         let assistant = document.getElementById('tour-assistant');
         if (!assistant) {
             assistant = document.createElement('div');
             assistant.id = 'tour-assistant';
-            assistant.className = 'fixed bottom-6 right-6 z-[130] w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-indigo-100 dark:border-slate-800 overflow-hidden transform transition-all duration-500 translate-y-20 opacity-0'; 
+            assistant.className = 'opacity-0 scale-95';
             document.body.appendChild(assistant);
         }
-
-        setTimeout(() => {
-            assistant.classList.remove('translate-y-20', 'opacity-0');
-        }, 50);
 
         const currentStep = (state.onboarding?.currentStep ?? 0) + 1;
         const totalSteps = this.steps.length;
         const progress = (currentStep / totalSteps) * 100;
-        const label = t('tour.assistant_label', { current: currentStep, total: totalSteps });   
-        const nextBtnLabel = currentStep === totalSteps ? t('tour.btn_finish') : t('tour.btn_next');
+        const label = t('tour.assistant_label', { current: currentStep, total: totalSteps }) || `Mission ${currentStep}/${totalSteps}`;   
+        const nextBtnLabel = currentStep === totalSteps ? (t('tour.btn_finish') || 'FINISH') : (t('tour.btn_next') || 'NEXT');
 
         assistant.innerHTML = `
-            <div class="h-1 bg-slate-100 dark:bg-slate-800 w-full">
+            <div class="h-1 bg-slate-100 dark:bg-slate-800 w-full rounded-t-lg overflow-hidden">
                 <div class="h-full bg-indigo-600 transition-all duration-500" style="width: ${isNaN(progress) ? 0 : progress}%"></div>
             </div>
             <div class="p-5">
@@ -316,7 +349,7 @@ class TourModule {
                         <i class="fa-solid fa-robot"></i>
                     </div>
                     <div>
-                        <h4 class="text-sm font-black uppercase tracking-tight text-slate-800 dark:text-slate-100">${step.title || t('tour.ui.mission')}</h4>
+                        <h4 class="text-xs font-black uppercase tracking-tight text-slate-800 dark:text-slate-100">${step.title || t('tour.ui.mission') || 'MISSION'}</h4>
                         <p class="text-[10px] text-slate-400 font-bold">${label}</p>
                     </div>
                     <button id="tour-close-icon" class="ml-auto text-slate-300 hover:text-slate-500 transition-colors">
@@ -324,15 +357,20 @@ class TourModule {
                     </button>
                 </div>
 
-                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
                     ${step.message || ''}
                 </p>
 
                 <div class="flex items-center justify-between">
-                    <button id="tour-stop" class="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors">
-                        ${t('tour.btn_stop')}
-                    </button>
-                    <button id="tour-next" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg transition-all shadow-md shadow-indigo-200 flex items-center">
+                    <div class="flex items-center gap-4">
+                        <button id="tour-stop" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors">
+                            ${t('tour.btn_stop') || 'STOP'}
+                        </button>
+                        <button id="tour-skip" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-500 transition-colors">
+                            ${t('tour.btn_skip') || 'SKIP'}
+                        </button>
+                    </div>
+                    <button id="tour-next" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-md shadow-indigo-200 flex items-center">
                         ${nextBtnLabel}
                         <i class="fa-solid ${currentStep === totalSteps ? 'fa-check' : 'fa-arrow-right'} ml-2"></i>
                     </button>
@@ -343,6 +381,86 @@ class TourModule {
         document.getElementById('tour-next').onclick = () => this.next();
         document.getElementById('tour-close-icon').onclick = () => this.stop();
         document.getElementById('tour-stop').onclick = () => this.stop();
+        document.getElementById('tour-skip').onclick = () => this.stop();
+
+        this.repositionAssistant(targetEl, step.placement);
+    }
+
+    repositionAssistant(targetEl, preferredPlacement = 'right') {
+        const assistant = document.getElementById('tour-assistant');
+        if (!assistant) return;
+
+        // Bring to front
+        document.body.appendChild(assistant);
+
+        // Reset styles that might have been set by mobile or fallback
+        assistant.style.right = '';
+        assistant.style.bottom = '';
+        assistant.style.width = '20rem';
+        
+        // On mobile, placement is ignored (fixed at top)
+        if (window.innerWidth <= 768) {
+            assistant.classList.remove('opacity-0', 'scale-95');
+            assistant.style.top = '20px';
+            assistant.style.left = '10px';
+            assistant.style.right = '10px';
+            assistant.style.width = 'calc(100% - 20px)';
+            assistant.style.transform = 'none';
+            return;
+        }
+
+        const currentStep = state.onboarding?.currentStep ?? 0;
+        const step = this.steps[currentStep];
+        const target = targetEl || document.querySelector(step?.desktopTarget);
+
+        if (!target) {
+            // Fallback: center of the screen if target not found
+            assistant.style.top = '50%';
+            assistant.style.left = '50%';
+            assistant.style.transform = 'translate(-50%, -50%) scale(1)';
+            assistant.classList.remove('opacity-0', 'scale-95');
+            return;
+        }
+
+        // Ensure visible for measurement
+        assistant.classList.remove('opacity-0', 'scale-95');
+        assistant.style.transform = 'scale(1)';
+        
+        // Use requestAnimationFrame to ensure layout is ready
+        requestAnimationFrame(() => {
+            const rect = target.getBoundingClientRect();
+            const popoverRect = assistant.getBoundingClientRect();
+            const offset = 20;
+
+            let top = 0;
+            let left = 0;
+            let placement = preferredPlacement;
+
+            // Simple positioning logic
+            if (placement === 'right') {
+                top = rect.top + (rect.height / 2) - (popoverRect.height / 2);
+                left = rect.right + offset;
+            } else if (placement === 'left') {
+                top = rect.top + (rect.height / 2) - (popoverRect.height / 2);
+                left = rect.left - popoverRect.width - offset;
+            } else if (placement === 'top') {
+                top = rect.top - popoverRect.height - offset;
+                left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+            } else if (placement === 'bottom') {
+                top = rect.bottom + offset;
+                left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+            }
+
+            // Viewport collision safety
+            if (left < 10) left = 10;
+            if (left + popoverRect.width > window.innerWidth - 10) left = window.innerWidth - popoverRect.width - 10;
+            if (top < 10) top = 10;
+            if (top + popoverRect.height > window.innerHeight - 10) top = window.innerHeight - popoverRect.height - 10;
+
+            assistant.style.top = `${top}px`;
+            assistant.style.left = `${left}px`;
+            assistant.setAttribute('data-placement', placement);
+        });
     }
 }
 

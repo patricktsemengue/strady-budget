@@ -55,7 +55,8 @@ export let state = {
         endDate: getFunctionalBoundaryDate(),
         step: 'month'
     },
-    monthSelectorPosition: 'top'
+    monthSelectorPosition: 'top',
+    isSandbox: false
 };
 
 export const updateState = (newState) => {

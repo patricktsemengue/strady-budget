@@ -434,35 +434,89 @@ body {
     50% { transform: translateY(-5px); }
 }
 
+/* --- Tour Popover & Arrows --- */
 #tour-assistant {
-    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.25);
+    position: fixed;
+    z-index: 130;
+    width: 20rem; /* 320px */
+    background-color: white;
+    border-radius: 1rem;
+    box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.3);
+    border: 1px solid #eef2ff;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+.dark #tour-assistant {
+    background-color: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* Arrow Base */
+#tour-assistant::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    transform: rotate(45deg);
+    border: 1px solid #eef2ff;
+    z-index: -1;
+}
+
+.dark #tour-assistant::after {
+    background-color: #0f172a;
+    border-color: #1e293b;
+}
+
+/* Arrow Placements */
+#tour-assistant[data-placement="right"]::after {
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    border-right: none;
+    border-top: none;
+}
+
+#tour-assistant[data-placement="left"]::after {
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    border-left: none;
+    border-bottom: none;
+}
+
+#tour-assistant[data-placement="bottom"]::after {
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    border-right: none;
+    border-bottom: none;
+}
+
+#tour-assistant[data-placement="top"]::after {
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    border-left: none;
+    border-top: none;
 }
 
 @media (max-width: 768px) {
     #tour-assistant {
-        bottom: auto !important;
-        top: 1rem !important;
-        right: 1rem !important;
         left: 1rem !important;
+        right: 1rem !important;
+        top: 1rem !important;
+        bottom: auto !important;
         width: calc(100% - 2rem) !important;
-        transform: translateY(-20px) !important;
+        transform: translateY(-10px);
     }
-    
-    #tour-assistant.opacity-0 {
-        transform: translateY(-40px) !important;
-    }
-
-    #tour-assistant:not(.opacity-0) {
-        transform: translateY(0) !important;
-    }
+    #tour-assistant::after { display: none; }
 }
 
 #tour-overlay {
-    background-color: rgba(15, 23, 42, 0.7);
-}
-
-.dark #tour-overlay {
-    background-color: rgba(2, 6, 23, 0.8);
+    /* Background and pointer events controlled via JS classes */
 }
 
 /* --- Help Cards --- */

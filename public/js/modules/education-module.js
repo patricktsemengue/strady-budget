@@ -39,63 +39,37 @@ export default {
                 </div>
             </div>
 
-            <!-- Mastery Center -->
+            <!-- Sandbox Training Section -->
             <div class="mb-12">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                        <i class="fa-solid fa-trophy"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-black text-slate-800">${t('mastery.title')}</h2>
-                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">${t('mastery.subtitle')}</p>
+                <div class="bg-amber-50 rounded-3xl p-8 border border-amber-100 shadow-sm relative overflow-hidden mb-4">
+                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-200/30 rounded-full blur-2xl"></div>
+                    <div class="relative flex flex-col md:flex-row items-center gap-8">
+                        <div class="w-20 h-20 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-amber-200 flex-shrink-0 animate-pulse">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <div class="flex-1 text-center md:text-left">
+                            <div class="flex items-center justify-center md:justify-start gap-3 mb-2">
+                                <h2 class="text-xl font-black text-amber-900">${t('education.sandbox.title') || 'Scenario Training'}</h2>
+                                <button onclick="window.app.openKPIInfo('sandbox')" class="text-amber-300 hover:text-amber-600 transition-colors p-1">
+                                    <i class="fa-solid fa-circle-info text-lg"></i>
+                                </button>
+                            </div>
+                            <p class="text-sm text-amber-800/70 leading-relaxed mb-6 font-medium">
+                                ${t('education.sandbox.desc') || 'Want a safe refresher? Launch the 2-minute "Alice & Bob" story in Sandbox Mode. Your real data remains untouched and perfectly safe.'}
+                            </p>
+                            <button onclick="window.app.startTour('story', true)" class="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black transition-all shadow-lg shadow-amber-900/20 text-xs uppercase tracking-widest">
+                                ${t('education.sandbox.btn') || 'LAUNCH SANDBOX REFRESHER'}
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Mission 1: Trajectory -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group relative overflow-hidden">
-                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-emerald-50 rounded-full group-hover:scale-150 transition-transform"></div>
-                        <div class="relative">
-                            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-inner">
-                                <i class="fa-solid fa-rocket"></i>
-                            </div>
-                            <h3 class="font-black text-slate-800 mb-2">${t('mastery.mission1_title')}</h3>
-                            <p class="text-xs text-slate-500 leading-relaxed mb-6">${t('mastery.mission1_desc')}</p>
-                            <button onclick="window.app.startTour('budget')" class="w-full py-2.5 bg-slate-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-emerald-100">
-                                ${t('mastery.btn_launch')}
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Mission 2: Wealth -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group relative overflow-hidden">
-                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-50 rounded-full group-hover:scale-150 transition-transform"></div>
-                        <div class="relative">
-                            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-inner">
-                                <i class="fa-solid fa-gem"></i>
-                            </div>
-                            <h3 class="font-black text-slate-800 mb-2">${t('mastery.mission2_title')}</h3>
-                            <p class="text-xs text-slate-500 leading-relaxed mb-6">${t('mastery.mission2_desc')}</p>
-                            <button onclick="window.app.startTour('wealth')" class="w-full py-2.5 bg-slate-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-indigo-100">
-                                ${t('mastery.btn_launch')}
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Mission 3: Entities -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group relative overflow-hidden">
-                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-violet-50 rounded-full group-hover:scale-150 transition-transform"></div>
-                        <div class="relative">
-                            <div class="w-12 h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center mb-4 text-xl shadow-inner">
-                                <i class="fa-solid fa-building-user"></i>
-                            </div>
-                            <h3 class="font-black text-slate-800 mb-2">${t('mastery.mission3_title')}</h3>
-                            <p class="text-xs text-slate-500 leading-relaxed mb-6">${t('mastery.mission3_desc')}</p>
-                            <button onclick="window.app.startTour('entities')" class="w-full py-2.5 bg-slate-50 hover:bg-violet-600 hover:text-white text-violet-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-violet-100">
-                                ${t('mastery.btn_launch')}
-                            </button>
-                        </div>
-                    </div>
+                
+                <!-- Advanced link -->
+                <div class="text-center">
+                    <button onclick="window.app.showTourSelection()" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2 mx-auto group">
+                        <span>Advanced: Explore specialized missions</span>
+                        <i class="fa-solid fa-chevron-right text-[8px] group-hover:translate-x-1 transition-transform"></i>
+                    </button>
                 </div>
             </div>
 

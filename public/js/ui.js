@@ -1,5 +1,25 @@
 import { updateState } from './state.js';
 
+export const updateSandboxUI = (isSandbox) => {
+    let pill = document.getElementById('sandbox-pill');
+    
+    if (isSandbox) {
+        if (!pill) {
+            pill = document.createElement('div');
+            pill.id = 'sandbox-pill';
+            pill.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[120] px-4 py-2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-amber-200 flex items-center gap-2 animate-bounce cursor-help';
+            pill.title = "Peace ! relax! this is a tutorial. your real data are not modified. peace and relax!";
+            pill.innerHTML = `
+                <i class="fa-solid fa-flask"></i>
+                <span>Sandbox Mode</span>
+            `;
+            document.body.appendChild(pill);
+        }
+    } else if (pill) {
+        pill.remove();
+    }
+};
+
 export const showNotification = (message, type = 'success') => {
     const container = document.getElementById('notification-container');
     if (!container) return;

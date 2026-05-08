@@ -145,6 +145,12 @@ export const openKPIInfo = (kpiKey) => {
             icon: 'fa-scale-balanced',
             definition: t('dashboard.kpi.balance_sheet.definition'),
             usage: t('dashboard.kpi.balance_sheet.usage')
+        },
+        sandbox: {
+            title: t('education.sandbox.title'),
+            icon: 'fa-flask',
+            definition: t('dashboard.kpi.sandbox.definition'),
+            usage: t('dashboard.kpi.sandbox.usage')
         }
     };
 
@@ -391,7 +397,7 @@ export const renderStrategicDashboard = () => {
             <!-- Strategic KPI Grid -->
             <div id="dash-kpis" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Net Worth Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden hover:border-indigo-300 transition-all hover:shadow-lg group">
+                <div id="kpi-net-worth" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden hover:border-indigo-300 transition-all hover:shadow-lg group">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
@@ -440,7 +446,7 @@ export const renderStrategicDashboard = () => {
                 </div>
 
                 <!-- Santé Budgétaire (70/20/10) -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div id="kpi-budget-health" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('dashboard.budget_health')} (70/20/10)</p>
@@ -523,7 +529,7 @@ export const renderStrategicDashboard = () => {
             <!-- Detailed Analysis Widgets -->
             <div id="dash-analysis" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Restant à Vivre -->
-                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                <div id="kpi-safe-to-spend" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
                     <div class="flex justify-between items-start mb-8">
                         <div>
                             <div class="flex items-center gap-2">

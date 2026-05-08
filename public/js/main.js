@@ -203,6 +203,9 @@ const init = async () => {
         router.register(categoriesModule);
         router.register(settingsModule);
 
+        // Initialize Tour System
+        tourModule.init();
+
         if (sessionStorage.getItem('strady_trigger_tour') === 'true') {
             sessionStorage.removeItem('strady_trigger_tour');
             setTimeout(() => tourModule.start(), 500);
@@ -242,6 +245,7 @@ const init = async () => {
             router.render();
         }, 50);
 
+        let lastUid = null;
         onUserChanged(async (user) => {
             const userInfo = document.getElementById('user-info');
             const userName = document.getElementById('user-name');
@@ -254,7 +258,24 @@ const init = async () => {
             const overlay = document.getElementById('loading-overlay');
 
             if (user) {
+                const photoUrl = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+                
+                // Update UI regardless of UID check
+                if (userInfo) userInfo.classList.remove('hidden');
+                if (userName) userName.textContent = user.displayName;
+                if (userPhoto && userPhoto.src !== photoUrl) userPhoto.src = photoUrl;
+                
+                if (userInfoMobile) userInfoMobile.classList.remove('hidden');
+                if (userNameMobile) userNameMobile.textContent = user.displayName;
+                if (userEmailMobile) userEmailMobile.textContent = user.email;
+                if (userPhotoMobile && userPhotoMobile.src !== photoUrl) userPhotoMobile.src = photoUrl;
+
+                // Only proceed with subscription if UID changed
+                if (user.uid === lastUid) return;
+                lastUid = user.uid;
+
                 setStorageUser(user.uid);
+                
                 const syncSWAuth = async (u) => {
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.ready.then(reg => {
@@ -263,18 +284,11 @@ const init = async () => {
                     }
                 };
                 syncSWAuth(user);
-                auth.onIdTokenChanged(async (u) => { if (u) syncSWAuth(u); });
-
-                if (userInfo) userInfo.classList.remove('hidden');
-                if (userName) userName.textContent = user.displayName;
                 
-                const photoUrl = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-                if (userPhoto && userPhoto.getAttribute('src') !== photoUrl) userPhoto.src = photoUrl;
-                
-                if (userInfoMobile) userInfoMobile.classList.remove('hidden');
-                if (userNameMobile) userNameMobile.textContent = user.displayName;
-                if (userEmailMobile) userEmailMobile.textContent = user.email;
-                if (userPhotoMobile && userPhotoMobile.getAttribute('src') !== photoUrl) userPhotoMobile.src = photoUrl;
+                // One-time listener for token changes
+                const unsubToken = auth.onIdTokenChanged(async (u) => { 
+                    if (u && u.uid === user.uid) syncSWAuth(u); 
+                });
 
                 let isFirstFirestoreUpdate = true;
                 subscribeToAppData(user.uid, (newData) => {
@@ -284,28 +298,14 @@ const init = async () => {
                         if (hasDirtyAccounts || (hasNoBalances && (newData.accounts || []).length > 0)) markAccountsBalanceDirty(user.uid);
                         const isNewUserSession = sessionStorage.getItem('strady_is_new_user_session') === 'true';
                         if ((newData.accounts || []).length === 0 && (isNewUserSession || !newData.onboarding)) {
-                            showOnboardingModal(async (choice) => {
-                                if (choice === 'starter') {
-                                    try { 
-                                        // 1. Mark onboarding for Interactive Setup
-                                        await updateSettingsInFirestore(user.uid, 'onboarding', { 
-                                            starterPackApplied: false, 
-                                            onboardingComplete: false,
-                                            type: 'interactive_setup',
-                                            updated_at: serverTimestamp() 
-                                        });
-                                        tourModule.start('interactive_setup');
-                                    }
-                                    catch (err) { console.error(err); showNotification("Erreur Setup", "error"); }
-                                } else {
-                                    try { 
-                                        await updateSettingsInFirestore(user.uid, 'onboarding', { starterPackApplied: false, onboardingComplete: true, updated_at: serverTimestamp() }); 
-                                        window.app.showTourSelection();
-                                    }
-                                    catch (err) { console.error(err); }
-                                }
+                            // Automatically start the story-driven tutorial for new users
+                            // This uses the "Alice & Bob" starter pack to provide immediate value
+                            try {
+                                tourModule.start('story');
                                 sessionStorage.removeItem('strady_is_new_user_session');
-                            });
+                            } catch (err) {
+                                console.error("[Main] Failed to auto-start story tour:", err);
+                            }
                         }
                         isFirstFirestoreUpdate = false;
                     }
@@ -313,12 +313,13 @@ const init = async () => {
                     if (newData.monthSelectorPosition) {
                         import('./settings.js').then(m => m.applyMonthSelectorPosition(newData.monthSelectorPosition));
                     }
-                    });
+                });
                 const initialView = window.location.hash.substring(1) || 'education';
                 router.setView(initialView);
                 if (mainContent) mainContent.classList.remove('hidden');
                 if (overlay) overlay.classList.add('hidden');
             } else {
+                lastUid = null;
                 setStorageUser(null);
                 if (mainContent) mainContent.classList.add('hidden');
                 window.location.href = 'login.html';
@@ -526,7 +527,7 @@ const setupEventListeners = () => {
 
 window.app = {
     init, changeLanguage, toggleTheme, toggleSidebar, changeEntity, 
-    startTour: (type) => tourModule.start(type),
+    startTour: (type, useSandbox = false) => tourModule.start(type, useSandbox),
     showTourSelection: () => import('./ui.js').then(m => m.showTourSelectionModal()),
     updateCurrencySettings: (updates) => import('./settings.js').then(m => m.updateCurrencySettings(updates)),
     addExchangeRate: (code) => import('./settings.js').then(m => m.addExchangeRate(code)),
