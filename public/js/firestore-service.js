@@ -17,7 +17,7 @@ import {
     limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth } from "./auth.js";
-import { generateId, getMonthKey, generateDeterministicTransactionId, generateDeterministicTemplateId } from "./utils.js";
+import { generateId, getMonthKey, generateDeterministicTransactionId, generateDeterministicTemplateId, get36MonthBoundary } from "./utils.js";
 import { getFunctionalBoundaryDate } from './state.js';
 
 export const db = getFirestore();
@@ -450,15 +450,18 @@ const batchGenerateAndSaveTransactions = (batch, userId, template) => {
 export const addRecurringTemplate = async (userId, template) => {
     const batch = writeBatch(db);
 
-    const boundaryDateStr = getFunctionalBoundaryDate();
+    const functionalBoundaryStr = getFunctionalBoundaryDate();
+    const capBoundaryStr = get36MonthBoundary(template.date);
+    // The actual generation boundary is the EARLIEST of the functional boundary and the 36-month cap
+    const generationBoundaryStr = capBoundaryStr < functionalBoundaryStr ? capBoundaryStr : functionalBoundaryStr;
 
     const generationTemplate = { ...template };
 
     if (!template.endDate) {
-        generationTemplate.endDate = boundaryDateStr;
+        generationTemplate.endDate = generationBoundaryStr;
         template.endDate = null;
     } else {
-        generationTemplate.endDate = template.endDate > boundaryDateStr ? boundaryDateStr : template.endDate;
+        generationTemplate.endDate = template.endDate > generationBoundaryStr ? generationBoundaryStr : template.endDate;
     }
     
     const templateRef = doc(db, `users/${userId}/recurringTemplates`, template.id);
@@ -531,14 +534,16 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
     };
     
     const boundaryDateStr = getFunctionalBoundaryDate();
+    const capBoundaryStr = get36MonthBoundary(newTemplate.date);
+    const generationBoundaryStr = capBoundaryStr < boundaryDateStr ? capBoundaryStr : boundaryDateStr;
 
     const generationTemplate = { ...newTemplate };
 
     if (!newTemplate.endDate) {
-        generationTemplate.endDate = boundaryDateStr;
+        generationTemplate.endDate = generationBoundaryStr;
         newTemplate.endDate = null;
     } else {
-        generationTemplate.endDate = newTemplate.endDate > boundaryDateStr ? boundaryDateStr : newTemplate.endDate;
+        generationTemplate.endDate = newTemplate.endDate > generationBoundaryStr ? generationBoundaryStr : newTemplate.endDate;
     }
 
     const newTemplateRef = doc(db, `users/${userId}/recurringTemplates`, newTemplateId);
@@ -628,9 +633,19 @@ export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransac
     }
 };
 
-export const importDataToFirestore = async (userId, accounts, transactions, templates, categories, assets, assetValues, liabilities, liabilityValues) => {
+export const importDataToFirestore = async (userId, accounts, transactions, templates, categories, assets, assetValues, liabilities, liabilityValues, entities) => {
     const CHUNK_SIZE = 500;
     const allOperations = [];
+
+    if (entities) {
+        entities.forEach(ent => {
+            allOperations.push({
+                type: 'set',
+                ref: doc(db, `users/${userId}/entities`, ent.id),
+                data: { ...ent, updated_at: serverTimestamp() }
+            });
+        });
+    }
 
     if (accounts) {
         accounts.forEach(acc => {
@@ -639,6 +654,7 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
                 type: 'set',
                 ref: doc(db, `users/${userId}/accounts`, acc.id),
                 data: { 
+                    ...acc,
                     id: acc.id,
                     name: acc.name,
                     createDate: createDate,
@@ -684,7 +700,7 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
     }
 
     if (templates) {
-        const boundaryDateStr = getFunctionalBoundaryDate();
+        const functionalBoundaryStr = getFunctionalBoundaryDate();
         templates.forEach(rec => {
             allOperations.push({
                 type: 'set',
@@ -694,9 +710,12 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
 
             // Generate child transactions for the imported template
             const generationTemplate = { ...rec };
+            const capBoundaryStr = get36MonthBoundary(rec.date);
+            const generationBoundaryStr = capBoundaryStr < functionalBoundaryStr ? capBoundaryStr : functionalBoundaryStr;
+
             // Ensure we don't generate past the boundary
-            if (!generationTemplate.endDate || generationTemplate.endDate > boundaryDateStr) {
-                generationTemplate.endDate = boundaryDateStr;
+            if (!generationTemplate.endDate || generationTemplate.endDate > generationBoundaryStr) {
+                generationTemplate.endDate = generationBoundaryStr;
             }
 
             const dates = calculateAllOccurrences(generationTemplate);
@@ -925,7 +944,10 @@ export const provisionStarterData = async (userId) => {
             batch.set(ref, { ...tplData, updated_at: serverTimestamp() });
 
             const generationTemplate = { ...tplData };
-            generationTemplate.endDate = boundaryDateStr;
+            const capBoundaryStr = get36MonthBoundary(tplData.date);
+            const generationBoundaryStr = capBoundaryStr < boundaryDateStr ? capBoundaryStr : boundaryDateStr;
+            
+            generationTemplate.endDate = generationBoundaryStr;
 
             const dates = calculateAllOccurrences(generationTemplate);
             for (const d of dates) {

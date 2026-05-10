@@ -49,6 +49,17 @@ export const getMonthFromDate = (dateStr) => {
     return dateStr.substring(0, 7);
 };
 
+/**
+ * Calculates the 36-month boundary date from a given start date.
+ * Capped at 36 months as per application mandates.
+ */
+export const get36MonthBoundary = (startDateStr) => {
+    if (!startDateStr) return '';
+    const date = new Date(startDateStr + 'T00:00:00Z');
+    date.setUTCMonth(date.getUTCMonth() + 36);
+    return date.toISOString().split('T')[0];
+};
+
 export const generateId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();

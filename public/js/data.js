@@ -66,11 +66,11 @@ export const handleFactoryReset = async (mode = 'starter') => {
             await resetDataInFirestore(currentUserId, true, true);
 
             if (isStarter) {
-                // 2. Mark onboarding for Interactive Setup
+                // 2. Mark onboarding for Story Mode (Alice & Bob)
                 await updateSettingsInFirestore(currentUserId, 'onboarding', { 
                     starterPackApplied: false, 
                     onboardingComplete: false,
-                    type: 'interactive_setup',
+                    type: 'story',
                     updated_at: serverTimestamp() 
                 });
             } else {
@@ -85,7 +85,7 @@ export const handleFactoryReset = async (mode = 'starter') => {
             showNotification(isStarter ? "Espace prêt pour votre configuration !" : "Espace vidé avec succès !");
             
             if (isStarter) {
-                sessionStorage.setItem('strady_trigger_interactive_setup', 'true');
+                sessionStorage.setItem('strady_trigger_tour', 'true');
             }
 
             window.location.hash = '#dashboard';
@@ -102,16 +102,22 @@ export const handleFactoryReset = async (mode = 'starter') => {
 
 export const exportFullBackupCSV = () => {
     // Universal CSV Header
-    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive\n";
+    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive,Entity\n";
     
+    // 0. Entities
+    (state.entities || []).forEach(ent => {
+        csv += `ENTITY,,"${ent.name}",,,,,,,,,,,,"${ent.type || 'PRIVATE'}",,\n`;
+    });
+
     // 1. Accounts
     (state.accounts || []).forEach(acc => {
-        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},,\n`;
+        const entName = state.entities.find(e => e.id === acc.entityId)?.name || '';
+        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},,,,"${entName}"\n`;
     });
 
     // 2. Categories
     (state.categories || []).forEach(cat => {
-        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}",${cat.isPassive ? 1 : 0}\n`;
+        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}",${cat.isPassive ? 1 : 0},\n`;
     });
 
     // 3. Recurring Templates
@@ -119,8 +125,9 @@ export const exportFullBackupCSV = () => {
         const sourceName = tpl.source === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.source)?.name || 'external');
         const destName = tpl.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.destination)?.name || 'external');
         const catName = state.categories.find(c => c.id === tpl.category)?.label || '';
+        const entName = state.entities.find(e => e.id === tpl.entityId)?.name || '';
         
-        csv += `RECURRING_TEMPLATE,${tpl.date},"${tpl.label}",${tpl.amount},"${sourceName}","${destName}","${catName}",,,${tpl.periodicity},${tpl.endDate || ''},,,\n`;
+        csv += `RECURRING_TEMPLATE,${tpl.date},"${tpl.label}",${tpl.amount},"${sourceName}","${destName}","${catName}",,,${tpl.periodicity},${tpl.endDate || ''},,,,"${entName}"\n`;
     });
 
     // 4. Standalone Transactions
@@ -129,26 +136,29 @@ export const exportFullBackupCSV = () => {
             const sourceName = tx.source === 'external' ? 'external' : (state.accounts.find(a => a.id === tx.source)?.name || 'external');
             const destName = tx.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tx.destination)?.name || 'external');
             const catName = state.categories.find(c => c.id === (tx.Category || tx.category))?.label || '';
+            const entName = state.entities.find(e => e.id === tx.entityId)?.name || '';
             
-            csv += `TRANSACTION,${tx.date},"${tx.label}",${tx.amount},"${sourceName}","${destName}","${catName}",,,,,,\n`;
+            csv += `TRANSACTION,${tx.date},"${tx.label}",${tx.amount},"${sourceName}","${destName}","${catName}",,,,,,,,"${entName}"\n`;
         }
     });
 
     // 5. Assets & Values
     (state.assets || []).forEach(ast => {
-        csv += `ASSET,,"${ast.name}",,,,,,,,,,\n`;
+        const entName = state.entities.find(e => e.id === ast.entityId)?.name || '';
+        csv += `ASSET,,"${ast.name}",,,,,,,,,,,,"${entName}"\n`;
         const values = (state.assetValues || []).filter(v => v.asset_id === ast.id);
         values.forEach(v => {
-            csv += `ASSET_VALUE,${v.date},"${v.quantity}",${v.value},,,${ast.name},,,,,,\n`;
+            csv += `ASSET_VALUE,${v.date},"${v.quantity}",${v.value},,,${ast.name},,,,,,,,\n`;
         });
     });
 
     // 6. Liabilities & Values
     (state.liabilities || []).forEach(lia => {
-        csv += `LIABILITY,,"${lia.name}",,,,,,,,,,\n`;
+        const entName = state.entities.find(e => e.id === lia.entityId)?.name || '';
+        csv += `LIABILITY,,"${lia.name}",,,,,,,,,,,,"${entName}"\n`;
         const values = (state.liabilityValues || []).filter(v => v.liability_id === lia.id);
         values.forEach(v => {
-            csv += `LIABILITY_VALUE,${v.date},,${v.value},,,${lia.name},,,,,,\n`;
+            csv += `LIABILITY_VALUE,${v.date},,${v.value},,,${lia.name},,,,,,,,\n`;
         });
     });
 
@@ -188,7 +198,8 @@ export const importFullBackupCSV = (event) => {
             assetValues: [],
             liabilities: [],
             liabilityValues: [],
-            duplicates: { accounts: 0, categories: 0, transactions: 0, templates: 0, assets: 0, liabilities: 0 }
+            entities: [],
+            duplicates: { accounts: 0, categories: 0, transactions: 0, templates: 0, assets: 0, liabilities: 0, entities: 0 }
         };
 
         // Maps for resolution
@@ -203,6 +214,9 @@ export const importFullBackupCSV = (event) => {
 
         const liabilityMap = {};
         state.liabilities.forEach(lia => liabilityMap[lia.name.toLowerCase()] = lia.id);
+
+        const entityMap = {};
+        state.entities.forEach(ent => entityMap[ent.name.toLowerCase()] = ent.id);
 
         const existingTxIds = new Set(state.transactions.map(t => t.id));
         const existingTplIds = new Set(state.recurringTemplates.map(t => t.id));
@@ -219,20 +233,49 @@ export const importFullBackupCSV = (event) => {
             const label = getValue("Label");
             const rawValue = getValue("Value");
             const value = isNaN(parseFloat(rawValue)) ? 0 : parseFloat(rawValue);
+            const entityNameFromCsv = getValue("Entity");
 
-            if (type === 'ACCOUNT') {
+            const getOrCreateEntity = async (name) => {
+                if (!name) return null;
+                const lower = name.toLowerCase();
+                if (entityMap[lower]) return entityMap[lower];
+                
+                const id = `ent_${await generateDeterministicUUID(name)}`;
+                const newEnt = { id, name, type: 'PRIVATE' };
+                results.entities.push(newEnt);
+                entityMap[lower] = id;
+                return id;
+            };
+
+            if (type === 'ENTITY') {
+                const lowerName = label.toLowerCase();
+                const deterministicId = `ent_${await generateDeterministicUUID(label)}`;
+                if (entityMap[lowerName]) {
+                    results.duplicates.entities++;
+                } else {
+                    const ent = {
+                        id: deterministicId,
+                        name: label,
+                        type: getValue("Nature") || 'PRIVATE'
+                    };
+                    results.entities.push(ent);
+                    entityMap[lowerName] = deterministicId;
+                }
+            } else if (type === 'ACCOUNT') {
                 const lowerName = label.toLowerCase();
                 const deterministicId = `acc_${await generateDeterministicUUID(label)}`;
                 if (accountMap[lowerName]) {
                     results.duplicates.accounts++;
                 } else {
+                    const entId = await getOrCreateEntity(entityNameFromCsv);
                     const acc = {
                         id: deterministicId,
                         name: label,
                         createDate: date || new Date().toISOString().split('T')[0],
                         initialBalance: value,
                         isSaving: getValue("IsSaving") === '1',
-                        isInvestmentAccount: getValue("IsInvestment") === '1' || getValue("isInvestmentAccount") === '1'
+                        isInvestmentAccount: getValue("IsInvestment") === '1' || getValue("isInvestmentAccount") === '1',
+                        entityId: entId
                     };
                     results.accounts.push(acc);
                     accountMap[lowerName] = deterministicId;
@@ -260,7 +303,8 @@ export const importFullBackupCSV = (event) => {
                 if (assetMap[lowerName]) {
                     results.duplicates.assets++;
                 } else {
-                    results.assets.push({ id, name: label });
+                    const entId = await getOrCreateEntity(entityNameFromCsv);
+                    results.assets.push({ id, name: label, entityId: entId });
                     assetMap[lowerName] = id;
                 }
             } else if (type === 'LIABILITY') {
@@ -269,7 +313,8 @@ export const importFullBackupCSV = (event) => {
                 if (liabilityMap[lowerName]) {
                     results.duplicates.liabilities++;
                 } else {
-                    results.liabilities.push({ id, name: label });
+                    const entId = await getOrCreateEntity(entityNameFromCsv);
+                    results.liabilities.push({ id, name: label, entityId: entId });
                     liabilityMap[lowerName] = id;
                 }
             } else if (type === 'ASSET_VALUE') {
@@ -323,9 +368,10 @@ export const importFullBackupCSV = (event) => {
                 const sourceId = await getOrCreateAcc(sourceName);
                 const destId = await getOrCreateAcc(destName);
                 const catId = await getOrCreateCat(categoryName);
+                const entId = await getOrCreateEntity(entityNameFromCsv);
 
                 if (type === 'TRANSACTION') {
-                    const txData = { date, label, amount: value, source: sourceId, destination: destId, Category: catId, Model: null };
+                    const txData = { date, label, amount: value, source: sourceId, destination: destId, Category: catId, Model: null, entityId: entId };
                     const id = generateDeterministicTransactionId(txData);
                     if (existingTxIds.has(id)) {
                         results.duplicates.transactions++;
@@ -336,7 +382,8 @@ export const importFullBackupCSV = (event) => {
                     const tplData = { 
                         date, label, amount: value, source: sourceId, destination: destId, 
                         category: catId, periodicity: getValue("Periodicity") || 'M', 
-                        endDate: getValue("EndDate") || null 
+                        endDate: getValue("EndDate") || null,
+                        entityId: entId
                     };
                     const id = generateDeterministicTemplateId(tplData);
                     if (existingTplIds.has(id)) {
@@ -354,8 +401,8 @@ export const importFullBackupCSV = (event) => {
 };
 
 const showImportSummaryModal = (results) => {
-    const totalNew = results.accounts.length + results.categories.length + results.transactions.length + results.templates.length + results.assets.length + results.liabilities.length;
-    const totalDups = results.duplicates.accounts + results.duplicates.categories + results.duplicates.transactions + results.duplicates.templates + results.duplicates.assets + results.duplicates.liabilities;
+    const totalNew = results.accounts.length + results.categories.length + results.transactions.length + results.templates.length + results.assets.length + results.liabilities.length + results.entities.length;
+    const totalDups = results.duplicates.accounts + results.duplicates.categories + results.duplicates.transactions + results.duplicates.templates + results.duplicates.assets + results.duplicates.liabilities + results.duplicates.entities;
 
     const modalHtml = `
         <div id="import-summary-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -385,6 +432,10 @@ const showImportSummaryModal = (results) => {
                     <div class="space-y-3">
                         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Détails des nouveaux éléments</h4>
                         <div class="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+                            <div class="p-3 flex justify-between items-center text-sm">
+                                <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-building-user text-slate-400"></i> Entités</span>
+                                <span class="font-bold text-slate-800">${results.entities.length}</span>
+                            </div>
                             <div class="p-3 flex justify-between items-center text-sm">
                                 <span class="text-slate-600 flex items-center gap-2"><i class="fa-solid fa-wallet text-slate-400"></i> Trésorerie</span>
                                 <span class="font-bold text-slate-800">${results.accounts.length}</span>
@@ -447,7 +498,8 @@ const showImportSummaryModal = (results) => {
                 results.assets,
                 results.assetValues,
                 results.liabilities,
-                results.liabilityValues
+                results.liabilityValues,
+                results.entities
             );
             
             showNotification(`Importation réussie : ${totalNew} nouveaux éléments ajoutés.`);
