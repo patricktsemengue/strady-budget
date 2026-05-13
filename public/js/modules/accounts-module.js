@@ -4,6 +4,7 @@ import { t } from '../i18n.js';
 
 export default {
     id: 'accounts',
+    appId: 'ledger',
     accentColor: 'emerald',
     get label() { return t('nav.accounts'); },
     get group() { return t('nav.groups.operations'); },

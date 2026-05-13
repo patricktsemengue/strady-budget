@@ -9,6 +9,7 @@ import { showNotification, updateSandboxUI } from '../ui.js';
 class TourModule {
     constructor() {
         this.id = 'tour';
+        this.appId = 'settings';
         this.hidden = true;
         this.observer = null;
         this._realStateBackup = null;

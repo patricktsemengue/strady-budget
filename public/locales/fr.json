@@ -13,6 +13,24 @@
       "config": "CONFIGURATION"
     }
   },
+  "apps": {
+    "ledger": {
+      "name": "Le Grand Livre",
+      "desc": "Suivi quotidien de vos revenus et dépenses. Gérez vos comptes et catégories en temps réel."
+    },
+    "wealth": {
+      "name": "Le Coffre-Fort",
+      "desc": "Visualisez votre patrimoine net. Suivez vos actifs, dettes et l'évolution de votre richesse."
+    },
+    "compass": {
+      "name": "La Boussole",
+      "desc": "Analysez vos habitudes et optimisez votre stratégie financière avec la méthode 70/20/10."
+    }
+  },
+  "hub": {
+    "welcome": "Bienvenue sur Strady",
+    "subtitle": "Choisissez votre outil pour commencer votre gestion financière."
+  },
   "common": {
     "loading": "Chargement...",
     "error": "Erreur",

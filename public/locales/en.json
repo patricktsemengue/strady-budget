@@ -13,6 +13,24 @@
       "config": "CONFIGURATION"
     }
   },
+  "apps": {
+    "ledger": {
+      "name": "The Daily Ledger",
+      "desc": "Daily tracking of your income and expenses. Manage your accounts and categories in real time."
+    },
+    "wealth": {
+      "name": "The Wealth Vault",
+      "desc": "Visualize your net worth. Track your assets, debts, and the evolution of your wealth."
+    },
+    "compass": {
+      "name": "The Strategic Compass",
+      "desc": "Analyze your habits and optimize your financial strategy with the 70/20/10 method."
+    }
+  },
+  "hub": {
+    "welcome": "Welcome to Strady",
+    "subtitle": "Choose your tool to start your financial management."
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",

@@ -5,6 +5,7 @@ import { formatCurrency } from '../utils.js';
 
 export default {
     id: 'settings',
+    appId: 'settings',
     accentColor: 'slate',
     get label() { return t('nav.settings'); },
     get group() { return t('nav.groups.config'); },

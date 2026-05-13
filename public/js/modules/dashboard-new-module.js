@@ -3,7 +3,8 @@ import { renderTimeline } from '../dashboard.js';
 import { t } from '../i18n.js';
 
 export default {
-    id: 'dashboard',
+    id: 'dashboard-new',
+    appId: 'compass',
     accentColor: 'indigo',
     get label() { return t('nav.dashboard'); },
     get group() { return t('nav.groups.strategy'); },

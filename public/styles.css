@@ -637,3 +637,61 @@ body {
     opacity: 1;
     color: var(--accent-indigo);
 }
+
+/* --- Tri-App Ecosystem Styles --- */
+header.fixed {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+#current-app-title {
+    font-family: sans-serif;
+    font-weight: 900;
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.group\/profile:hover .group-hover\/profile\:block {
+    display: block;
+    animation: slideInDown 0.2s ease-out;
+}
+
+@keyframes slideInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+#sidebar.collapsed {
+    width: 0;
+    overflow: hidden;
+    padding: 0;
+    border: none;
+}
+
+#main-wrapper.sidebar-collapsed {
+    margin-left: 0;
+}

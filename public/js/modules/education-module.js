@@ -3,6 +3,7 @@ import { t } from '../i18n.js';
 
 export default {
     id: 'education',
+    appId: 'compass',
     accentColor: 'violet',
     get label() { return t('nav.education'); },
     get group() { return t('nav.groups.strategy'); },

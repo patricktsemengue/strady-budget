@@ -17,6 +17,7 @@ import wealthModule from './modules/wealth-module.js';
 import educationModule from './modules/education-module.js';
 import categoriesModule from './modules/categories-module.js';
 import settingsModule from './modules/settings-module.js';
+import hubModule from './modules/hub-module.js';
 import { tourModule } from './modules/tour-module.js';
 
 import { 
@@ -195,6 +196,7 @@ const init = async () => {
         router.setNavContainers('nav-desktop', 'nav-mobile');
         
         // Register Modules
+        router.register(hubModule);
         router.register(dashboardNewModule);
         router.register(wealthModule);
         router.register(educationModule);
@@ -202,6 +204,17 @@ const init = async () => {
         router.register(accountsModule);
         router.register(categoriesModule);
         router.register(settingsModule);
+        router.register(tourModule);
+
+        // Initial Route
+        const initialView = window.location.hash.substring(1) || 'hub';
+        const targetModule = router.modules[initialView];
+        if (targetModule) {
+            router.currentAppId = targetModule.appId;
+            router.setView(initialView);
+        } else {
+            router.switchApp('hub');
+        }
 
         // Initialize Tour System
         tourModule.init();
@@ -254,6 +267,12 @@ const init = async () => {
             const userNameMobile = document.getElementById('user-name-mobile');
             const userEmailMobile = document.getElementById('user-email-mobile');
             const userPhotoMobile = document.getElementById('user-photo-mobile');
+            
+            // New Platform Shell Elements
+            const userNameGlobal = document.getElementById('user-name-global');
+            const userEmailGlobal = document.getElementById('user-email-global');
+            const userPhotoGlobal = document.getElementById('user-photo-global');
+
             const mainContent = document.querySelector('main');
             const overlay = document.getElementById('loading-overlay');
 
@@ -269,6 +288,11 @@ const init = async () => {
                 if (userNameMobile) userNameMobile.textContent = user.displayName;
                 if (userEmailMobile) userEmailMobile.textContent = user.email;
                 if (userPhotoMobile && userPhotoMobile.src !== photoUrl) userPhotoMobile.src = photoUrl;
+
+                // Update Global Platform Shell
+                if (userNameGlobal) userNameGlobal.textContent = user.displayName;
+                if (userEmailGlobal) userEmailGlobal.textContent = user.email;
+                if (userPhotoGlobal && userPhotoGlobal.src !== photoUrl) userPhotoGlobal.src = photoUrl;
 
                 // Only proceed with subscription if UID changed
                 if (user.uid === lastUid) return;
@@ -314,7 +338,7 @@ const init = async () => {
                         import('./settings.js').then(m => m.applyMonthSelectorPosition(newData.monthSelectorPosition));
                     }
                 });
-                const initialView = window.location.hash.substring(1) || 'education';
+                const initialView = window.location.hash.substring(1) || 'hub';
                 router.setView(initialView);
                 if (mainContent) mainContent.classList.remove('hidden');
                 if (overlay) overlay.classList.add('hidden');
@@ -327,7 +351,7 @@ const init = async () => {
         });
 
         window.addEventListener('hashchange', () => {
-            const view = window.location.hash.substring(1) || 'education';
+            const view = window.location.hash.substring(1) || 'hub';
             router.setView(view);
         });
 
@@ -378,11 +402,14 @@ const changeLanguage = async (lng) => {
 const changeEntity = (entityId) => {
     state.selectedEntityId = entityId;
     
-    // Update both selectors if they exist
-    const ds = document.getElementById('entity-switcher-desktop');
-    const ms = document.getElementById('entity-switcher-mobile');
-    if (ds) ds.value = entityId;
-    if (ms) ms.value = entityId;
+    // Update selectors if they exist
+    const selectors = [
+        document.getElementById('entity-switcher-desktop'),
+        document.getElementById('entity-switcher-mobile'),
+        document.getElementById('entity-switcher-global')
+    ].filter(s => s !== null);
+
+    selectors.forEach(s => s.value = entityId);
 
     rebuildRecords(state.allTransactions || [], state.months);
     router.render();
@@ -391,12 +418,47 @@ const changeEntity = (entityId) => {
 const updateEntitySelectors = () => {
     const desktopSelector = document.getElementById('entity-switcher-desktop');
     const mobileSelector = document.getElementById('entity-switcher-mobile');
+    const globalSelector = document.getElementById('entity-switcher-global');
     const transactionSelector = document.getElementById('transaction-entity');
     const wealthSelector = document.getElementById('wealth-entity-id');
 
-    const selectors = [desktopSelector, mobileSelector, transactionSelector, wealthSelector].filter(s => s !== null);
+    const selectors = [desktopSelector, mobileSelector, globalSelector, transactionSelector, wealthSelector].filter(s => s !== null);
     
     selectors.forEach(selector => {
+        const currentValue = selector.value;
+        selector.innerHTML = '';
+        
+        // Global view option for switchers
+        if (selector === desktopSelector || selector === mobileSelector || selector === globalSelector) {
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = t ? t('common.all_family') : 'TOUT LE MÉNAGE';
+            selector.appendChild(allOption);
+        } else {
+            // Placeholder for form selectors
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Sélectionner une entité...';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            selector.appendChild(placeholder);
+        }
+
+        state.entities.forEach(ent => {
+            const option = document.createElement('option');
+            option.value = ent.id;
+            option.textContent = ent.name.toUpperCase();
+            selector.appendChild(option);
+        });
+
+        // Restore value if it still exists
+        if (currentValue && [...selector.options].some(o => o.value === currentValue)) {
+            selector.value = currentValue;
+        } else if (selector === desktopSelector || selector === mobileSelector || selector === globalSelector) {
+            selector.value = state.selectedEntityId;
+        }
+    });
+};
         const currentValue = selector.value;
         selector.innerHTML = '';
         

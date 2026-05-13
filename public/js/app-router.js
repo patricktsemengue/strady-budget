@@ -7,6 +7,7 @@ class AppRouter {
     constructor() {
         this.modules = {};
         this.currentModule = null;
+        this.currentAppId = null; // New: track the active mini-app
         this.navContainer = null;
         this.mobileNavContainer = null;
     }
@@ -18,26 +19,45 @@ class AppRouter {
 
     register(module) {
         this.modules[module.id] = module;
-        this.updateNav();
         if (module.init) {
             module.init();
+        }
+    }
+
+    switchApp(appId) {
+        this.currentAppId = appId;
+        this.updateNav();
+        
+        // Find default module for this app
+        const defaultModule = Object.values(this.modules)
+            .filter(m => m.appId === appId)
+            .sort((a, b) => (a.order || 0) - (b.order || 0))[0];
+            
+        if (defaultModule) {
+            this.setView(defaultModule.id);
+        } else if (appId === 'hub') {
+            this.setView('hub');
         }
     }
 
     updateNav() {
         if (!this.navContainer) return;
 
+        // Only show modules belonging to the current app
+        const currentAppModules = Object.values(this.modules)
+            .filter(m => !m.hidden && (m.appId === this.currentAppId || m.id === 'settings'))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
         const modulesByGroup = {};
-        Object.values(this.modules)
-            .filter(m => !m.hidden)
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .forEach(m => {
-                const group = m.group || 'AUTRES';
-                if (!modulesByGroup[group]) modulesByGroup[group] = [];
-                modulesByGroup[group].push(m);
-            });
+        currentAppModules.forEach(m => {
+            const group = m.group || 'AUTRES';
+            if (!modulesByGroup[group]) modulesByGroup[group] = [];
+            modulesByGroup[group].push(m);
+        });
 
         const buildDesktopNav = () => {
+            if (this.currentAppId === 'hub') return ''; // No nav on hub
+
             let html = '';
             Object.entries(modulesByGroup).forEach(([groupName, items]) => {
                 const displayItems = items.filter(m => m.id !== 'settings');
@@ -69,7 +89,7 @@ class AppRouter {
 
             // Specific Settings Link if not in list
             const settingsModule = this.modules['settings'];
-            if (settingsModule) {
+            if (settingsModule && this.currentAppId !== 'hub') {
                 html += `
                     <div class="mt-auto px-3 py-4 border-t border-slate-100 dark:border-slate-800">
                         <button id="nav-settings" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
@@ -84,6 +104,8 @@ class AppRouter {
         };
 
         const buildMobileNav = () => {
+            if (this.currentAppId === 'hub') return '';
+
             let html = '';
             Object.entries(modulesByGroup).forEach(([groupName, items]) => {
                 // Section Header for Mobile
@@ -124,6 +146,17 @@ class AppRouter {
             return;
         }
 
+        const targetModule = this.modules[viewId];
+        
+        // If switching to a view in a different app, update currentAppId
+        if (targetModule.appId && targetModule.appId !== this.currentAppId) {
+            this.currentAppId = targetModule.appId;
+            this.updateNav();
+        } else if (viewId === 'hub') {
+            this.currentAppId = 'hub';
+            this.updateNav();
+        }
+
         // Trigger balance refresh when navigating to the accounts view if any are dirty
         if (viewId === 'accounts' && currentUserId) {
             const hasDirtyAccounts = state.accounts.some(acc => acc.balanceDirty !== false);
@@ -132,7 +165,7 @@ class AppRouter {
             }
         }
 
-        this.currentModule = this.modules[viewId];
+        this.currentModule = targetModule;
         updateState({ currentView: viewId });
         window.location.hash = viewId;
         
@@ -148,6 +181,9 @@ class AppRouter {
 
         const appContent = document.getElementById('app-content');
         if (!appContent) return;
+
+        // Update Global Branding/Shell based on current app
+        this.updateGlobalShell();
 
         // Show/Hide Shared Month Selection (Mobile Puck Only)
         const sharedMonthSelection = document.getElementById('shared-month-selection');
@@ -274,6 +310,26 @@ class AppRouter {
             }
         } catch (renderErr) {
             console.error(`[Router] Render failed for ${this.currentModule.id}:`, renderErr);
+        }
+    }
+
+    updateGlobalShell() {
+        const header = document.querySelector('nav.sticky'); // Assuming we'll add 'sticky' to the top bar
+        const appTitle = document.getElementById('current-app-title');
+        const sidebar = document.getElementById('sidebar');
+
+        if (this.currentAppId === 'hub') {
+            if (sidebar) sidebar.classList.add('hidden');
+            if (appTitle) appTitle.textContent = 'Strady Platform';
+        } else {
+            if (sidebar && window.innerWidth >= 768) sidebar.classList.remove('hidden');
+            
+            const appNames = {
+                'ledger': t('apps.ledger.name') || 'The Daily Ledger',
+                'wealth': t('apps.wealth.name') || 'The Wealth Vault',
+                'compass': t('apps.compass.name') || 'The Strategic Compass'
+            };
+            if (appTitle) appTitle.textContent = appNames[this.currentAppId] || 'Strady';
         }
     }
 
