@@ -355,6 +355,10 @@ const init = async () => {
             router.setView(view);
         });
 
+        window.addEventListener('resize', () => {
+            import('./dashboard.js').then(m => m.renderTimeline());
+        });
+
     } catch (err) {
         console.error('[Main] Initialization failed:', err);
         const mainContent = document.querySelector('main');
@@ -459,40 +463,6 @@ const updateEntitySelectors = () => {
         }
     });
 };
-        const currentValue = selector.value;
-        selector.innerHTML = '';
-        
-        // Global view option for switchers
-        if (selector === desktopSelector || selector === mobileSelector) {
-            const allOption = document.createElement('option');
-            allOption.value = 'all';
-            allOption.textContent = t ? t('common.all_family') : 'TOUT LE MÉNAGE';
-            selector.appendChild(allOption);
-        } else {
-            // Placeholder for form selectors
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = 'Sélectionner une entité...';
-            placeholder.disabled = true;
-            placeholder.selected = true;
-            selector.appendChild(placeholder);
-        }
-
-        state.entities.forEach(ent => {
-            const option = document.createElement('option');
-            option.value = ent.id;
-            option.textContent = ent.name.toUpperCase();
-            selector.appendChild(option);
-        });
-
-        // Restore value if it still exists
-        if (currentValue && [...selector.options].some(o => o.value === currentValue)) {
-            selector.value = currentValue;
-        } else if (selector === desktopSelector || selector === mobileSelector) {
-            selector.value = state.selectedEntityId;
-        }
-    });
-};
 
 const updateThemeToggleIcons = (isDark) => {
     const icons = document.querySelectorAll('#theme-toggle i, .theme-toggle-mobile i');
@@ -505,24 +475,6 @@ const toggleTheme = () => {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('strady_theme', isDark ? 'dark' : 'light');
     updateThemeToggleIcons(isDark);
-};
-
-const toggleSidebar = () => {
-    const sidebar = document.getElementById('sidebar');
-    const mainWrapper = document.getElementById('main-wrapper');
-    const icon = document.getElementById('sidebar-toggle-icon');
-    
-    const isCollapsed = sidebar.classList.toggle('collapsed');
-    mainWrapper.classList.toggle('sidebar-collapsed', isCollapsed);
-    
-    if (icon) {
-        icon.className = isCollapsed ? 'fa-solid fa-chevron-right text-[10px]' : 'fa-solid fa-chevron-left text-[10px]';
-    }
-    
-    localStorage.setItem('strady_sidebar_collapsed', isCollapsed);
-    
-    // Re-render timeline to switch between 3x4 and 1x3 views
-    import('./dashboard.js').then(m => m.renderTimeline());
 };
 
 const setupEventListeners = () => {
@@ -558,6 +510,92 @@ const setupEventListeners = () => {
         setViewDate(d);
     });
 
+    // Global Top Bar Month Selector
+    addSafeListener('prev-year-global', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setFullYear(d.getFullYear() - 1);
+        setViewDate(d);
+    });
+    addSafeListener('next-year-global', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setFullYear(d.getFullYear() + 1);
+        setViewDate(d);
+    });
+    addSafeListener('prev-month-global', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setMonth(d.getMonth() - 1);
+        setViewDate(d);
+    });
+    addSafeListener('next-month-global', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setMonth(d.getMonth() + 1);
+        setViewDate(d);
+    });
+
+    // Mobile Navigation Puck Listeners
+    addSafeListener('puck-prev-year', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setFullYear(d.getFullYear() - 1);
+        setViewDate(d);
+    });
+    addSafeListener('puck-next-year', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setFullYear(d.getFullYear() + 1);
+        setViewDate(d);
+    });
+    addSafeListener('puck-today', 'click', () => {
+        setViewDate(new Date());
+    });
+    addSafeListener('puck-prev', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setMonth(d.getMonth() - 1);
+        setViewDate(d);
+    });
+    addSafeListener('puck-next', 'click', () => {
+        const d = new Date(state.viewDate);
+        d.setMonth(d.getMonth() + 1);
+        setViewDate(d);
+    });
+
+    // Swipe-to-Navigate for Mobile Puck
+    const puck = document.getElementById('mobile-nav-puck');
+    if (puck) {
+        let touchStartX = 0;
+        puck.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        puck.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].screenX;
+            const diff = touchEndX - touchStartX;
+            if (Math.abs(diff) > 50) { // Threshold for swipe
+                const d = new Date(state.viewDate);
+                if (diff > 0) d.setMonth(d.getMonth() - 1); // Swipe Right -> Prev
+                else d.setMonth(d.getMonth() + 1); // Swipe Left -> Next
+                setViewDate(d);
+            }
+        }, { passive: true });
+    }
+
+    addSafeListener('go-to-today', 'click', () => {
+        setViewDate(new Date());
+    });
+
+    addSafeListener('current-year-display', 'click', () => {
+        window.app.openMatrixCalendar();
+    });
+
+    addSafeListener('matrix-prev-year', 'click', () => {
+        const grid = document.getElementById('matrix-calendar-grid');
+        const year = parseInt(grid.dataset.viewYear) - 1;
+        window.app.openMatrixCalendar(year);
+    });
+
+    addSafeListener('matrix-next-year', 'click', () => {
+        const grid = document.getElementById('matrix-calendar-grid');
+        const year = parseInt(grid.dataset.viewYear) + 1;
+        window.app.openMatrixCalendar(year);
+    });
+
     addSafeListener('add-category-form', 'submit', handleAddCategory);
     addSafeListener('btn-close-add-cat-drawer', 'click', closeAddCategoryDrawer);
     addSafeListener('btn-cancel-add-cat', 'click', closeAddCategoryDrawer);
@@ -585,10 +623,28 @@ const setupEventListeners = () => {
     addSafeListener('wealth-snapshot-form', 'submit', handleAddValueSnapshot);
     addSafeListener('adjustment-form', 'submit', (e) => import('./accounts.js').then(m => m.handleAdjustmentSubmit(e)));
     addSafeListener('transfer-form', 'submit', (e) => import('./accounts.js').then(m => m.handleTransferSubmit(e)));
+
+    // Profile Dropdown Toggle
+    addSafeListener('profile-trigger', 'click', (e) => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('profile-dropdown');
+        if (dropdown) dropdown.classList.toggle('hidden');
+    });
+
+    // Close profile dropdown when clicking outside
+    window.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('profile-dropdown');
+        const trigger = document.getElementById('profile-trigger');
+        if (dropdown && !dropdown.classList.contains('hidden')) {
+            if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        }
+    });
 };
 
 window.app = {
-    init, changeLanguage, toggleTheme, toggleSidebar, changeEntity, 
+    init, changeLanguage, toggleTheme, changeEntity, router,
     startTour: (type, useSandbox = false) => tourModule.start(type, useSandbox),
     showTourSelection: () => import('./ui.js').then(m => m.showTourSelectionModal()),
     updateCurrencySettings: (updates) => import('./settings.js').then(m => m.updateCurrencySettings(updates)),
@@ -619,6 +675,17 @@ window.app = {
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),
     openKPIInfo: (key) => import('./dashboard-new.js').then(m => m.openKPIInfo(key)),
     closeInfoModal: () => import('./dashboard-new.js').then(m => m.closeInfoModal()),
+    openMatrixCalendar: (year = null) => {
+        const modal = document.getElementById('matrix-calendar-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            import('./dashboard.js').then(m => m.renderMatrixCalendar(year));
+        }
+    },
+    closeMatrixCalendar: () => {
+        const modal = document.getElementById('matrix-calendar-modal');
+        if (modal) modal.classList.add('hidden');
+    },
     jumpToSection: (id) => import('./dashboard-new.js').then(m => m.jumpToSection(id))
 };
 

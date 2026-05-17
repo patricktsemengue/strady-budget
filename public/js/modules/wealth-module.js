@@ -5,7 +5,7 @@ import { t } from '../i18n.js';
 export default {
     id: 'wealth',
     appId: 'wealth',
-    accentColor: 'rose',
+    accentColor: 'amber',
     get label() { return t('nav.wealth'); },
     get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gem',
@@ -22,7 +22,7 @@ export default {
     }),
     getFabConfig: () => ({
         icon: 'fa-gem',
-        color: 'bg-rose-600',
+        color: 'bg-amber-600',
         action: () => window.app.openWealthDrawer()
     }),
     getTemplate: () => `

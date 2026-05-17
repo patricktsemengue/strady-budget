@@ -15,49 +15,40 @@ export default {
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="flex flex-wrap justify-center gap-12 md:gap-20">
                 <!-- The Daily Ledger -->
-                <button onclick="window.app.router.switchApp('ledger')" class="group relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all text-left overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-16 -mt-16 group-hover:scale-150 transition-transform"></div>
-                    <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl mb-8 shadow-lg group-hover:rotate-12 transition-transform">
-                        <i class="fa-solid fa-list-check"></i>
+                <button onclick="window.app.router.switchApp('ledger')" class="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95">
+                    <div class="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-[2rem] md:rounded-[2.5rem] shadow-xl group-hover:shadow-indigo-500/20 flex items-center justify-center text-white text-4xl md:text-5xl transition-all relative overflow-hidden ring-4 ring-white dark:ring-slate-900 ring-offset-4 ring-offset-transparent">
+                        <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <i class="fa-solid fa-list-check drop-shadow-lg"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-slate-800 dark:text-white mb-3">${t('apps.ledger.name') || 'Le Grand Livre'}</h2>
-                    <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-                        ${t('apps.ledger.desc') || 'Suivi quotidien de vos revenus et dépenses. Gérez vos comptes et catégories en temps réel.'}
-                    </p>
-                    <div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-widest">
-                        Lancer l'App <i class="fa-solid fa-arrow-right group-hover:translate-x-2 transition-transform"></i>
+                    <div class="text-center">
+                        <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.ledger.name') || 'Le Grand Livre'}</h2>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Opérations</p>
                     </div>
                 </button>
 
                 <!-- The Wealth Vault -->
-                <button onclick="window.app.router.switchApp('wealth')" class="group relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all text-left overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-amber-50 dark:bg-amber-900/20 rounded-bl-full -mr-16 -mt-16 group-hover:scale-150 transition-transform"></div>
-                    <div class="w-16 h-16 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-3xl mb-8 shadow-lg group-hover:rotate-12 transition-transform">
-                        <i class="fa-solid fa-vault"></i>
+                <button onclick="window.app.router.switchApp('wealth')" class="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95">
+                    <div class="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-amber-400 to-amber-600 rounded-[2rem] md:rounded-[2.5rem] shadow-xl group-hover:shadow-amber-500/20 flex items-center justify-center text-white text-4xl md:text-5xl transition-all relative overflow-hidden ring-4 ring-white dark:ring-slate-900 ring-offset-4 ring-offset-transparent">
+                        <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <i class="fa-solid fa-vault drop-shadow-lg"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-slate-800 dark:text-white mb-3">${t('apps.wealth.name') || 'Le Coffre-Fort'}</h2>
-                    <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-                        ${t('apps.wealth.desc') || 'Visualisez votre patrimoine net. Suivez vos actifs, dettes et l\'évolution de votre richesse.'}
-                    </p>
-                    <div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-widest">
-                        Lancer l'App <i class="fa-solid fa-arrow-right group-hover:translate-x-2 transition-transform"></i>
+                    <div class="text-center">
+                        <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.wealth.name') || 'Le Coffre-Fort'}</h2>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Patrimoine</p>
                     </div>
                 </button>
 
                 <!-- The Strategic Compass -->
-                <button onclick="window.app.router.switchApp('compass')" class="group relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all text-left overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-900/20 rounded-bl-full -mr-16 -mt-16 group-hover:scale-150 transition-transform"></div>
-                    <div class="w-16 h-16 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-3xl mb-8 shadow-lg group-hover:rotate-12 transition-transform">
-                        <i class="fa-solid fa-compass"></i>
+                <button onclick="window.app.router.switchApp('compass')" class="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95">
+                    <div class="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[2rem] md:rounded-[2.5rem] shadow-xl group-hover:shadow-emerald-500/20 flex items-center justify-center text-white text-4xl md:text-5xl transition-all relative overflow-hidden ring-4 ring-white dark:ring-slate-900 ring-offset-4 ring-offset-transparent">
+                        <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <i class="fa-solid fa-compass drop-shadow-lg"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-slate-800 dark:text-white mb-3">${t('apps.compass.name') || 'La Boussole'}</h2>
-                    <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-                        ${t('apps.compass.desc') || 'Analysez vos habitudes et optimisez votre stratégie financière avec la méthode 70/20/10.'}
-                    </p>
-                    <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
-                        Lancer l'App <i class="fa-solid fa-arrow-right group-hover:translate-x-2 transition-transform"></i>
+                    <div class="text-center">
+                        <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.compass.name') || 'La Boussole'}</h2>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Stratégie</p>
                     </div>
                 </button>
             </div>

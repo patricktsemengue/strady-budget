@@ -5,7 +5,7 @@ import { t } from '../i18n.js';
 export default {
     id: 'dashboard-new',
     appId: 'compass',
-    accentColor: 'indigo',
+    accentColor: 'emerald',
     get label() { return t('nav.dashboard'); },
     get group() { return t('nav.groups.strategy'); },
     icon: 'fa-gauge-high',

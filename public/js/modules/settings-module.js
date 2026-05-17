@@ -286,33 +286,6 @@ export default {
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.strategy')}</h4>
                         </div>
 
-                        <!-- Card: Horizon -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            ${renderCardHeader(t('settings.horizon.title'), t('settings.horizon.subtitle'), t('settings.horizon.why'), 'calc', 'fa-calendar-days', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
-                            <div class="px-6 pb-6 pt-2 space-y-6">
-                                <div class="flex flex-wrap gap-3">
-                                    <button onclick="window.app.setSettingPreset('cfo')" class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800">${t('settings.horizon.preset_cfo')}</button>
-                                    <button onclick="window.app.setSettingPreset('history')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_history')}</button>
-                                    <button onclick="window.app.setSettingPreset('year')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">${t('settings.horizon.preset_year')}</button>
-                                </div>
-                                <form id="month-selector-config-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.start_date')}</label>
-                                        <input type="date" id="config-month-start" required class="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl p-3 text-sm">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.horizon.end_date')}</label>
-                                        <input type="date" id="config-month-end" required class="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl p-3 text-sm">
-                                    </div>
-                                    <div class="md:col-span-2 flex justify-end">
-                                        <button type="submit" class="bg-slate-800 dark:bg-indigo-600 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-95 transition-all">
-                                            ${t('settings.horizon.save')}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-
                         <!-- Card: EF Multiplier -->
                         <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
                             ${renderCardHeader(t('settings.strategy.title'), t('settings.strategy.subtitle'), t('settings.strategy.why'), 'calc', 'fa-bullseye', 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600')}

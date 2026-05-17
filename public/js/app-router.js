@@ -48,58 +48,21 @@ class AppRouter {
             .filter(m => !m.hidden && (m.appId === this.currentAppId || m.id === 'settings'))
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        const modulesByGroup = {};
-        currentAppModules.forEach(m => {
-            const group = m.group || 'AUTRES';
-            if (!modulesByGroup[group]) modulesByGroup[group] = [];
-            modulesByGroup[group].push(m);
-        });
-
         const buildDesktopNav = () => {
             if (this.currentAppId === 'hub') return ''; // No nav on hub
 
             let html = '';
-            Object.entries(modulesByGroup).forEach(([groupName, items]) => {
-                const displayItems = items.filter(m => m.id !== 'settings');
-                if (displayItems.length === 0) return;
-
-                // Group Section
-                html += `<div class="mb-6">`;
-                
-                // Group Header
+            currentAppModules.filter(m => m.id !== 'settings').forEach(m => {
+                const id = `nav-${m.id}`;
+                const accent = m.accentColor || 'indigo';
                 html += `
-                    <div class="px-6 mb-2 group-header">
-                        <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">${groupName}</span>
-                    </div>
+                    <button id="${id}" class="nav-tab group flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-widest transition-all relative">
+                        <i class="fa-solid ${m.icon} text-slate-400 group-hover:text-${accent}-500 transition-colors"></i>
+                        <span class="text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors">${m.label}</span>
+                        <div class="nav-tab-indicator absolute bottom-0 left-0 right-0 h-1 bg-${accent}-500 scale-x-0 transition-transform origin-center"></div>
+                    </button>
                 `;
-
-                // Nav Items
-                html += `<div class="space-y-1 px-3">`;
-                displayItems.forEach(m => {
-                    const id = `nav-${m.id}`;
-                    html += `
-                        <button id="${id}" title="${m.label}" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
-                            <i class="fa-solid ${m.icon} w-5 text-center text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
-                            <span class="nav-label truncate">${m.label}</span>
-                        </button>
-                    `;
-                });
-                html += `</div></div>`;
             });
-
-            // Specific Settings Link if not in list
-            const settingsModule = this.modules['settings'];
-            if (settingsModule && this.currentAppId !== 'hub') {
-                html += `
-                    <div class="mt-auto px-3 py-4 border-t border-slate-100 dark:border-slate-800">
-                        <button id="nav-settings" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
-                            <i class="fa-solid fa-cog w-5 text-center text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
-                            <span class="nav-label truncate">${settingsModule.label}</span>
-                        </button>
-                    </div>
-                `;
-            }
-
             return html;
         };
 
@@ -107,6 +70,13 @@ class AppRouter {
             if (this.currentAppId === 'hub') return '';
 
             let html = '';
+            const modulesByGroup = {};
+            currentAppModules.forEach(m => {
+                const group = m.group || 'AUTRES';
+                if (!modulesByGroup[group]) modulesByGroup[group] = [];
+                modulesByGroup[group].push(m);
+            });
+
             Object.entries(modulesByGroup).forEach(([groupName, items]) => {
                 // Section Header for Mobile
                 html += `<div class="px-4 pt-4 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">${groupName}</div>`;
@@ -175,23 +145,19 @@ class AppRouter {
     render() {
         if (!this.currentModule) return;
 
-        // Global UI resets for mobile
-        const mobileNetHeader = document.getElementById('mobile-net-header-strip');
-        if (mobileNetHeader) mobileNetHeader.classList.add('hidden');
-
         const appContent = document.getElementById('app-content');
         if (!appContent) return;
 
         // Update Global Branding/Shell based on current app
         this.updateGlobalShell();
 
-        // Show/Hide Shared Month Selection (Mobile Puck Only)
-        const sharedMonthSelection = document.getElementById('shared-month-selection');
-        if (sharedMonthSelection) {
-            if (this.currentModule.showMonthSelection && window.innerWidth < 768) {
-                sharedMonthSelection.classList.remove('hidden');
+        // Sub-Header Visibility (Desktop Only)
+        const subHeader = document.getElementById('sub-header');
+        if (subHeader) {
+            if (this.currentAppId === 'hub' || this.currentModule.id === 'settings') {
+                subHeader.classList.add('hidden');
             } else {
-                sharedMonthSelection.classList.add('hidden');
+                subHeader.classList.remove('hidden');
             }
         }
 
@@ -216,6 +182,7 @@ class AppRouter {
                 if (!btn) return;
                 const isActive = m.id === this.currentModule.id;
                 const isMobile = btn.id.endsWith('-mobile');
+                const isTab = btn.classList.contains('nav-tab');
                 
                 // Reset common classes
                 const colors = ['indigo', 'emerald', 'rose', 'amber', 'slate', 'violet', 'blue'];
@@ -227,16 +194,28 @@ class AppRouter {
                     );
                 });
 
-                if (isActive) {
+                if (isTab) {
+                    const indicator = btn.querySelector('.nav-tab-indicator');
+                    const text = btn.querySelector('span');
+                    const icon = btn.querySelector('i');
+                    if (isActive) {
+                        if (indicator) indicator.classList.remove('scale-x-0');
+                        if (indicator) indicator.classList.add('scale-x-100');
+                        if (text) text.className = `font-black text-slate-900 dark:text-white transition-colors`;
+                        if (icon) icon.className = `fa-solid ${m.icon} text-${accent}-500 transition-colors`;
+                    } else {
+                        if (indicator) indicator.classList.add('scale-x-0');
+                        if (indicator) indicator.classList.remove('scale-x-100');
+                        if (text) text.className = `text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors`;
+                        if (icon) icon.className = `fa-solid ${m.icon} text-slate-400 group-hover:text-${accent}-500 transition-colors`;
+                    }
+                } else if (isActive) {
                     if (isMobile) {
                         btn.classList.add(`text-${accent}-600`, `bg-${accent}-50/50`, `dark:text-${accent}-400`, `dark:bg-${accent}-400/10`);
                     } else {
-                        // Desktop Sidebar: Left border highlight
+                        // Desktop Sidebar (Deprecated/Fallback): Left border highlight
                         btn.classList.add(`text-${accent}-600`, `bg-${accent}-50/50`, `border-l-4`, `border-${accent}-600`, `dark:text-${accent}-400`, `dark:bg-${accent}-400/10`);
                     }
-                    btn.classList.remove('border-transparent');
-                } else {
-                    btn.classList.add('border-transparent');
                 }
             });
         });
@@ -264,7 +243,7 @@ class AppRouter {
             }
         }
 
-        // Help Card Logic
+        // Help Card Modal Logic
         const helpId = `help_dismissed_${this.currentModule.id}`;
         const isDismissed = localStorage.getItem(helpId) === 'true';
         const helpContent = this.currentModule.getHelpContent ? this.currentModule.getHelpContent() : null;
@@ -273,26 +252,44 @@ class AppRouter {
         let helpHtml = '';
         if (helpContent && !isDismissed) {
             helpHtml = `
-                <div class="max-w-6xl mx-auto px-4 mt-4">
-                    <div id="screen-help-card" class="help-card animate-fadeIn border-l-4 border-${currentAccent}-600">
-                        <button onclick="window.app.dismissHelp('${this.currentModule.id}')" class="help-card-close">
-                            <i class="fa-solid fa-xmark"></i>
+                <div id="help-modal-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4 animate-fadeIn">
+                    <div id="screen-help-card" class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border-l-8 border-${currentAccent}-600 relative overflow-hidden animate-slideUp">
+                        <button onclick="window.app.dismissHelp('${this.currentModule.id}')" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all z-20">
+                            <i class="fa-solid fa-xmark text-xl"></i>
                         </button>
-                        <div class="help-badge bg-${currentAccent}-50 text-${currentAccent}-700">${t('help_cards.badge')}</div>
-                        <h2 class="text-lg font-black text-slate-800 mb-2">${helpContent.title}</h2>
-                        <p class="text-sm text-slate-600 leading-relaxed mb-4">${helpContent.purpose}</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 border-t border-slate-100 pt-4">
-                            ${helpContent.actions.map(action => `
-                                <div class="flex items-start gap-3">
-                                    <div class="mt-1 w-5 h-5 rounded-full bg-${currentAccent}-50 text-${currentAccent}-600 flex items-center justify-center shrink-0">
-                                        <i class="fa-solid ${action.icon} text-[10px]"></i>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs font-bold text-slate-700">${action.label}</p>
-                                        <p class="text-[10px] text-slate-400 font-medium">${action.desc}</p>
-                                    </div>
+
+                        <div class="p-8">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-2xl bg-${currentAccent}-50 dark:bg-${currentAccent}-900/20 text-${currentAccent}-600 flex items-center justify-center text-xl shrink-0">
+                                    <i class="fa-solid fa-circle-question"></i>
                                 </div>
-                            `).join('')}
+                                <div>
+                                    <div class="help-badge bg-${currentAccent}-50 text-${currentAccent}-700 !mb-0">${t('help_cards.badge')}</div>
+                                    <h2 class="text-2xl font-black text-slate-800 dark:text-white">${helpContent.title}</h2>
+                                </div>
+                            </div>
+
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed mb-8 text-lg">${helpContent.purpose}</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 dark:border-slate-800 pt-8">
+                                ${helpContent.actions.map(action => `
+                                    <div class="flex items-start gap-4">
+                                        <div class="mt-1 w-8 h-8 rounded-xl bg-${currentAccent}-50 dark:bg-${currentAccent}-900/20 text-${currentAccent}-600 flex items-center justify-center shrink-0">
+                                            <i class="fa-solid ${action.icon} text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-700 dark:text-slate-200">${action.label}</p>
+                                            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium leading-relaxed">${action.desc}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="mt-10 flex justify-center">
+                                <button onclick="window.app.dismissHelp('${this.currentModule.id}')" class="px-10 py-4 bg-slate-800 dark:bg-slate-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-slate-900 transition-all active:scale-95">
+                                    ${t('common.understood') || 'J\'ai compris'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -314,22 +311,42 @@ class AppRouter {
     }
 
     updateGlobalShell() {
-        const header = document.querySelector('nav.sticky'); // Assuming we'll add 'sticky' to the top bar
+        const header = document.querySelector('header');
         const appTitle = document.getElementById('current-app-title');
-        const sidebar = document.getElementById('sidebar');
+        const breadcrumbContainer = document.getElementById('current-app-breadcrumb');
+        const breadcrumbSeparator = document.getElementById('breadcrumb-separator');
 
         if (this.currentAppId === 'hub') {
-            if (sidebar) sidebar.classList.add('hidden');
-            if (appTitle) appTitle.textContent = 'Strady Platform';
+            if (breadcrumbContainer) breadcrumbContainer.classList.add('hidden');
+            if (breadcrumbSeparator) breadcrumbSeparator.classList.add('hidden');
+            if (header) {
+                header.classList.remove('border-indigo-500', 'border-amber-500', 'border-emerald-500');
+                header.classList.add('border-slate-200', 'dark:border-slate-800');
+            }
         } else {
-            if (sidebar && window.innerWidth >= 768) sidebar.classList.remove('hidden');
+            if (breadcrumbContainer) breadcrumbContainer.classList.remove('hidden');
+            if (breadcrumbSeparator) breadcrumbSeparator.classList.remove('hidden', 'md:flex');
+            if (breadcrumbSeparator) breadcrumbSeparator.style.display = 'flex'; // Ensure it shows
             
             const appNames = {
                 'ledger': t('apps.ledger.name') || 'The Daily Ledger',
                 'wealth': t('apps.wealth.name') || 'The Wealth Vault',
                 'compass': t('apps.compass.name') || 'The Strategic Compass'
             };
+
+            const appColors = {
+                'ledger': 'indigo-500',
+                'wealth': 'amber-500',
+                'compass': 'emerald-500'
+            };
+
             if (appTitle) appTitle.textContent = appNames[this.currentAppId] || 'Strady';
+            
+            if (header) {
+                header.classList.remove('border-slate-200', 'dark:border-slate-800', 'border-indigo-500', 'border-amber-500', 'border-emerald-500');
+                const color = appColors[this.currentAppId] || 'slate-200';
+                header.classList.add(`border-${color}`);
+            }
         }
     }
 

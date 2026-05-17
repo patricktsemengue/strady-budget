@@ -6,7 +6,7 @@ import { t } from '../i18n.js';
 export default {
     id: 'transactions',
     appId: 'ledger',
-    accentColor: 'blue',
+    accentColor: 'indigo',
     get label() { return t('nav.transactions'); },
     get group() { return t('nav.groups.operations'); },
     icon: 'fa-list-check',
@@ -159,10 +159,6 @@ export default {
         </div>
     `,
     render: () => {
-        // Show mobile net strip
-        const mobileNetHeader = document.getElementById('mobile-net-header-strip');
-        if (mobileNetHeader) mobileNetHeader.classList.remove('hidden');
-
         renderTimeline();
         renderTransactions();
     },

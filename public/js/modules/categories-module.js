@@ -21,7 +21,7 @@ export default {
     }),
     getFabConfig: () => ({
         icon: 'fa-tag',
-        color: 'bg-amber-600',
+        color: 'bg-indigo-600',
         action: () => window.app.openAddCategoryDrawer()
     }),
     getTemplate: () => `

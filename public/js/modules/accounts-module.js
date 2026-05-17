@@ -5,7 +5,7 @@ import { t } from '../i18n.js';
 export default {
     id: 'accounts',
     appId: 'ledger',
-    accentColor: 'emerald',
+    accentColor: 'indigo',
     get label() { return t('nav.accounts'); },
     get group() { return t('nav.groups.operations'); },
     icon: 'fa-building-columns',
@@ -22,7 +22,7 @@ export default {
     }),
     getFabConfig: () => ({
         icon: 'fa-university',
-        color: 'bg-emerald-600',
+        color: 'bg-indigo-600',
         action: () => window.app.openAddAccountDrawer()
     }),
     getTemplate: () => `
