@@ -304,7 +304,13 @@
     "success_recurring_deleted": "Series deleted.",
     "success_tx_deleted": "Transaction deleted.",
     "error_delete": "Error during deletion",
-    "error_save": "Error during save"
+    "error_save": "Error during save",
+    "is_recurring": "Make this flow recurring (Template)",
+    "periodicity": "Periodicity",
+    "end_date": "End Date (Optional)",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "yearly": "Yearly"
   },
   "education": {
     "badge": "Knowledge is power",
@@ -544,7 +550,9 @@
       "action2_label": "Reconcile Balances",
       "action2_desc": "Adjust the app balance to exactly match your bank.",
       "action3_label": "Internal Transfer",
-      "action3_desc": "Record a money transfer between two of your accounts without affecting your overall budget."
+      "action3_desc": "Record a money transfer between two of your accounts without affecting your overall budget.",
+      "is_savings": "Consider as precautionary savings",
+      "is_investment": "Consider as investment account"
     },
     "categories": {
       "title": "Analysis & Categories",

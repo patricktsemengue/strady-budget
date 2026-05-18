@@ -303,7 +303,13 @@
     "success_recurring_deleted": "Série supprimée.",
     "success_tx_deleted": "Transaction supprimée.",
     "error_delete": "Erreur de suppression",
-    "error_save": "Erreur de sauvegarde"
+    "error_save": "Erreur de sauvegarde",
+    "is_recurring": "Rendre ce flux récurrent (Modèle)",
+    "periodicity": "Périodicité",
+    "end_date": "Date de fin (Optionnel)",
+    "monthly": "Mensuel",
+    "quarterly": "Trimestriel",
+    "yearly": "Annuel"
   },
   "education": {
     "badge": "Savoir, c'est pouvoir",
@@ -576,14 +582,6 @@
       "action3_label": "Changer la Langue",
       "action3_desc": "Basculez entre le fran\u00e7ais et l'anglais pour l'ensemble de l'interface."
     }
-  },
-  "nature": {
-    "ALL": "TOUT",
-    "REVENU": "REVENUS",
-    "FIXE": "CHARGES FIXES",
-    "QUOTIDIEN": "VIE COURANTE",
-    "LOISIR": "LOISIRS",
-    "EPARGNE": "ÉPARGNE & INVEST."
   },
   "confirm": {
     "delete_record": "Supprimer cet enregistrement ?",

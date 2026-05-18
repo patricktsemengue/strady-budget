@@ -42,23 +42,28 @@ export default {
 
             <!-- Sandbox Training Section -->
             <div class="mb-12">
-                <div class="bg-amber-50 rounded-3xl p-8 border border-amber-100 shadow-sm relative overflow-hidden mb-4">
+                <div class="bg-amber-50 dark:bg-amber-900/10 rounded-3xl p-8 border border-amber-100 dark:border-amber-800/50 shadow-sm relative overflow-hidden mb-4">
+                    <!-- Coming Soon Sticker Badge -->
+                    <div class="absolute top-4 right-[-35px] bg-indigo-600 text-white text-[10px] font-black py-1 px-10 rotate-[35deg] shadow-lg z-10 uppercase tracking-tighter">
+                        Coming Soon
+                    </div>
+                    
                     <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-200/30 rounded-full blur-2xl"></div>
                     <div class="relative flex flex-col md:flex-row items-center gap-8">
-                        <div class="w-20 h-20 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-amber-200 flex-shrink-0 animate-pulse">
+                        <div class="w-20 h-20 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-amber-200 dark:shadow-none flex-shrink-0 opacity-50">
                             <i class="fa-solid fa-flask"></i>
                         </div>
                         <div class="flex-1 text-center md:text-left">
                             <div class="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                <h2 class="text-xl font-black text-amber-900">${t('education.sandbox.title') || 'Scenario Training'}</h2>
+                                <h2 class="text-xl font-black text-amber-900 dark:text-amber-100">${t('education.sandbox.title') || 'Scenario Training'}</h2>
                                 <button onclick="window.app.openKPIInfo('sandbox')" class="text-amber-300 hover:text-amber-600 transition-colors p-1">
                                     <i class="fa-solid fa-circle-info text-lg"></i>
                                 </button>
                             </div>
-                            <p class="text-sm text-amber-800/70 leading-relaxed mb-6 font-medium">
+                            <p class="text-sm text-amber-800/70 dark:text-amber-200/50 leading-relaxed mb-6 font-medium">
                                 ${t('education.sandbox.desc') || 'Want a safe refresher? Launch the 2-minute "Alice & Bob" story in Sandbox Mode. Your real data remains untouched and perfectly safe.'}
                             </p>
-                            <button onclick="window.app.startTour('story', true)" class="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black transition-all shadow-lg shadow-amber-900/20 text-xs uppercase tracking-widest">
+                            <button disabled class="px-8 py-3 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed rounded-xl font-black transition-all text-xs uppercase tracking-widest border border-slate-300 dark:border-slate-700">
                                 ${t('education.sandbox.btn') || 'LAUNCH SANDBOX REFRESHER'}
                             </button>
                         </div>

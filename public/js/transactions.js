@@ -182,9 +182,14 @@ export const handleSaveTransaction = async (e) => {
     const destination = document.getElementById('transaction-destination').value;
     const entityId = document.getElementById('transaction-entity').value;
     
-    const isRecurring = document.getElementById('transaction-is-recurring').checked;
-    const periodicity = document.getElementById('transaction-periodicity').value;
-    const endDate = document.getElementById('transaction-end-date').value || null;
+    const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
+    const isRecurring = isRecurringCheckbox ? isRecurringCheckbox.checked : false;
+    
+    const periodicityEl = document.getElementById('transaction-periodicity');
+    const periodicity = periodicityEl ? periodicityEl.value : 'M';
+    
+    const endDateEl = document.getElementById('transaction-end-date');
+    const endDate = (endDateEl && endDateEl.value) ? endDateEl.value : null;
 
     // Validation from TODO.litcoffee
     if (!label || isNaN(amount) || !date || !Category) {

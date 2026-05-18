@@ -197,6 +197,27 @@
                         <label for="transaction-destination" class="block text-sm font-medium text-slate-600" data-i18n="common.destination">Compte Destination</label>
                         <select id="transaction-destination" class="mt-1 w-full border-slate-300 rounded-lg shadow-sm border p-3"></select>
                     </div>
+
+                    <!-- Recurring Fields -->
+                    <div class="md:col-span-2 flex items-center gap-2 py-2 border-t border-slate-100 dark:border-slate-800 mt-2">
+                        <input type="checkbox" id="transaction-is-recurring" class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                        <label for="transaction-is-recurring" class="text-sm font-bold text-slate-700 dark:text-slate-300" data-i18n="transactions.is_recurring">Rendre ce flux récurrent (Modèle)</label>
+                    </div>
+
+                    <div id="recurring-fields" class="md:col-span-2 grid grid-cols-2 gap-4 hidden bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div>
+                            <label for="transaction-periodicity" class="block text-sm font-medium text-slate-600 dark:text-slate-400" data-i18n="transactions.periodicity">Périodicité</label>
+                            <select id="transaction-periodicity" class="mt-1 w-full border-slate-300 dark:border-slate-700 rounded-lg shadow-sm border p-3 text-sm dark:bg-slate-900">
+                                <option value="M" data-i18n="transactions.monthly">Mensuel</option>
+                                <option value="Q" data-i18n="transactions.quarterly">Trimestriel</option>
+                                <option value="Y" data-i18n="transactions.yearly">Annuel</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transaction-end-date" class="block text-sm font-medium text-slate-600 dark:text-slate-400" data-i18n="transactions.end_date">Date de fin (Optionnel)</label>
+                            <input type="date" id="transaction-end-date" class="mt-1 w-full border-slate-300 dark:border-slate-700 rounded-lg shadow-sm border p-3 text-sm dark:bg-slate-900">
+                        </div>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-3 mt-6">
                     <button type="button" id="btn-cancel-transaction" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-medium" data-i18n="common.cancel">Annuler</button>
@@ -449,11 +470,11 @@
                 <div class="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg">
                     <div class="flex items-center gap-3">
                         <input type="checkbox" id="edit-acc-is-savings" class="h-5 w-5 text-blue-600 border-slate-300 rounded">
-                        <label for="edit-acc-is-savings" class="text-sm font-medium text-slate-700" data-i18n="tour.steps.accounts.is_savings">Considérer comme épargne de précaution</label>
+                        <label for="edit-acc-is-savings" class="text-sm font-medium text-slate-700" data-i18n="accounts.is_savings">Considérer comme épargne de précaution</label>
                     </div>
                     <div class="flex items-center gap-3">
                         <input type="checkbox" id="edit-acc-is-investment" class="h-5 w-5 text-indigo-600 border-slate-300 rounded">
-                        <label for="edit-acc-is-investment" class="text-sm font-medium text-slate-700" data-i18n="tour.steps.accounts.is_investment">Considérer comme compte d'investissement</label>
+                        <label for="edit-acc-is-investment" class="text-sm font-medium text-slate-700" data-i18n="accounts.is_investment">Considérer comme compte d'investissement</label>
                     </div>
                 </div>
                 <div class="pt-4 flex gap-3">

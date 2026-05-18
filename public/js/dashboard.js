@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { currentUserId } from './storage.js';
 import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './utils.js';
 import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate } from './calculations.js';
 import { showNotification } from './ui.js';
@@ -12,8 +13,50 @@ export const renderTransactions = () => {
     const monthKey = getMonthKey(state.viewDate);
     const monthData = state.records[monthKey] || { items: [] };
     
+    // Nature Filtering
+    const natureFilter = localStorage.getItem('strady_nature_filter') || 'ALL';
+    let filteredItems = [...monthData.items];
+    
+    if (natureFilter !== 'ALL') {
+        filteredItems = filteredItems.filter(tx => {
+            const cat = state.categories.find(c => c.id === tx.Category);
+            return cat && cat.nature === natureFilter;
+        });
+    }
+
     // Sort transactions by date (desc)
-    const sortedTx = [...monthData.items].sort((a, b) => new Date(b.Date) - new Date(a.Date));
+    const sortedTx = filteredItems.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+    // Calculate Totals for Stats Cards
+    const inflows = sortedTx.reduce((sum, tx) => tx.Amount > 0 ? sum + tx.Amount : sum, 0);
+    const outflows = sortedTx.reduce((sum, tx) => tx.Amount < 0 ? sum + Math.abs(tx.Amount) : sum, 0);
+    const net = inflows - outflows;
+
+    // Update Desktop/Mobile Stats Cards
+    const inEl = document.getElementById('desktop-stats-in');
+    const outEl = document.getElementById('desktop-stats-out');
+    const netEl = document.getElementById('desktop-stats-net');
+    const stickyNetVal = document.getElementById('mobile-sticky-net-val');
+
+    if (inEl) inEl.textContent = formatCurrency(inflows);
+    if (outEl) outEl.textContent = formatCurrency(outflows);
+    if (netEl) netEl.textContent = formatCurrency(net);
+    if (stickyNetVal) stickyNetVal.textContent = formatCurrency(net);
+
+    // Hybrid Sticky Observer: Show net pill when summary cards scroll out of view
+    const observer = new IntersectionObserver(([entry]) => {
+        const stickyNet = document.getElementById('mobile-sticky-net');
+        if (stickyNet) {
+            if (!entry.isIntersecting) {
+                stickyNet.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+            } else {
+                stickyNet.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+            }
+        }
+    }, { threshold: 0.1 });
+
+    const summaryCards = document.getElementById('financial-summary-cards');
+    if (summaryCards) observer.observe(summaryCards);
 
     if (sortedTx.length === 0) {
         container.innerHTML = `
@@ -123,6 +166,24 @@ export const toggleAllCategoryGroups = (expand) => {
     });
 
     localStorage.setItem('strady_expanded_categories', JSON.stringify(groups));
+    renderTransactions();
+};
+
+export const setNatureFilter = (nature) => {
+    localStorage.setItem('strady_nature_filter', nature);
+    
+    // Update active UI state for pills
+    document.querySelectorAll('.nature-pill').forEach(btn => {
+        const isMatch = btn.dataset.nature === nature;
+        btn.classList.toggle('active', isMatch);
+        btn.classList.toggle('bg-slate-800', isMatch);
+        btn.classList.toggle('text-white', isMatch);
+        btn.classList.toggle('bg-white', !isMatch);
+        btn.classList.toggle('border', !isMatch);
+        btn.classList.toggle('border-slate-200', !isMatch);
+        btn.classList.toggle('text-slate-500', !isMatch);
+    });
+
     renderTransactions();
 };
 
@@ -384,7 +445,7 @@ export const closeMonth = async () => {
             const nextMonth = new Date(Date.UTC(state.viewDate.getUTCFullYear(), state.viewDate.getUTCMonth() + 1, 1));
             const updates = state.accounts.map(acc => {
                 const balance = state.accountBalances[acc.id] || 0;
-                const accRef = doc(db, `users/${state.user.uid}/accounts`, acc.id);
+                const accRef = doc(db, `users/${currentUserId}/accounts`, acc.id);
                 return updateDoc(accRef, {
                     [`monthly_initial_balances.${getMonthKey(nextMonth)}`]: balance
                 });

@@ -230,7 +230,12 @@ body {
 /* Animations */
 .transition-all { transition: all 0.2s ease-in-out; }
 
+header {
+    transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.4s ease;
+}
+
 #mobile-nav-puck {
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.15));
 }
 

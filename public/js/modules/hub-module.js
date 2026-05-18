@@ -5,8 +5,36 @@ export default {
     hidden: true, // Don't show in regular nav
     appId: 'hub',
     getTemplate: () => `
-        <div class="max-w-6xl mx-auto px-4 py-12 animate-fadeIn">
+        <div class="max-w-6xl mx-auto px-4 py-12 animate-fadeIn relative">
+            <!-- Subtle Hub Utilities (Corner System Door) -->
+            <div class="absolute top-0 right-4 flex items-center gap-2">
+                <button onclick="window.app.setView('settings')" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" title="Paramètres">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <button id="btn-backup-json-hub-ghost" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" title="Sauvegarde">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                </button>
+            </div>
+
             <div class="text-center mb-16">
+                <!-- Status Pill (Quick Snapshot) -->
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-8 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                    <i class="fa-solid fa-calendar-check text-indigo-500"></i>
+                    <span id="hub-status-date">...</span>
+                    <span class="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+                    <span id="hub-status-wealth">Strady Portal</span>
+                </div>
+
+                <!-- Branding Displacement -->
+                <div class="flex flex-col items-center gap-2 mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center text-3xl shadow-xl shadow-indigo-500/20">
+                        <span class="font-black">S</span>
+                    </div>
+                    <div class="logo dark:text-white !gap-1 scale-110">
+                        <span class="logo-trady !text-2xl font-black tracking-tighter">trady</span>
+                    </div>
+                </div>
+
                 <h1 class="text-4xl font-black text-slate-800 dark:text-white mb-4 tracking-tight">
                     ${t('hub.welcome') || 'Bienvenue sur Strady'}
                 </h1>
@@ -52,22 +80,23 @@ export default {
                     </div>
                 </button>
             </div>
-            
-            <!-- Quick Platform Tools -->
-            <div class="mt-20 border-t border-slate-200 dark:border-slate-800 pt-12">
-                <h3 class="text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Outils Plateforme</h3>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <button onclick="window.app.setView('settings')" class="flex items-center gap-3 px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-200 transition-all">
-                        <i class="fa-solid fa-gear"></i> Paramètres
-                    </button>
-                    <button id="btn-backup-json" class="flex items-center gap-3 px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-200 transition-all">
-                        <i class="fa-solid fa-download"></i> Sauvegarde Cloud
-                    </button>
-                </div>
-            </div>
         </div>
     `,
     render: () => {
-        // Any specific hub rendering logic
+        // Update Status Pill with current date
+        const dateEl = document.getElementById('hub-status-date');
+        if (dateEl) {
+            const now = new Date();
+            const month = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+            dateEl.textContent = month.charAt(0).toUpperCase() + month.slice(1);
+        }
+
+        // Attach Backup Listener
+        const backupBtn = document.getElementById('btn-backup-json-hub-ghost');
+        if (backupBtn) {
+            backupBtn.onclick = () => {
+                if (window.app.exportDataToJSON) window.app.exportDataToJSON();
+            };
+        }
     }
 };

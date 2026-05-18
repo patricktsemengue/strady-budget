@@ -312,6 +312,7 @@ class AppRouter {
 
     updateGlobalShell() {
         const header = document.querySelector('header');
+        const puck = document.getElementById('mobile-nav-puck');
         const appTitle = document.getElementById('current-app-title');
         const breadcrumbContainer = document.getElementById('current-app-breadcrumb');
         const breadcrumbSeparator = document.getElementById('breadcrumb-separator');
@@ -320,14 +321,26 @@ class AppRouter {
             if (breadcrumbContainer) breadcrumbContainer.classList.add('hidden');
             if (breadcrumbSeparator) breadcrumbSeparator.classList.add('hidden');
             if (header) {
+                // Professional Mitigation: Make header transparent instead of hiding to prevent layout jump
+                header.classList.add('opacity-0', 'pointer-events-none');
                 header.classList.remove('border-indigo-500', 'border-amber-500', 'border-emerald-500');
-                header.classList.add('border-slate-200', 'dark:border-slate-800');
+            }
+            if (puck) {
+                puck.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+                puck.classList.remove('animate-puck-entry');
             }
         } else {
             if (breadcrumbContainer) breadcrumbContainer.classList.remove('hidden');
             if (breadcrumbSeparator) breadcrumbSeparator.classList.remove('hidden', 'md:flex');
             if (breadcrumbSeparator) breadcrumbSeparator.style.display = 'flex'; // Ensure it shows
             
+            if (header) {
+                header.classList.remove('opacity-0', 'pointer-events-none');
+            }
+            if (puck) {
+                puck.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+            }
+
             const appNames = {
                 'ledger': t('apps.ledger.name') || 'The Daily Ledger',
                 'wealth': t('apps.wealth.name') || 'The Wealth Vault',

@@ -36,8 +36,14 @@ export default {
             <!-- Sticky Header -->
             <div class="page-header-sticky space-y-4">
                 <div class="flex justify-between items-center">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
                         <h1 class="text-2xl font-bold text-slate-800">${t('transactions.title')}</h1>
+                        <!-- Mobile Net Result Pill (Hybrid Sticky) -->
+                        <div id="mobile-sticky-net" class="md:hidden opacity-0 translate-y-2 pointer-events-none transition-all duration-300">
+                            <span class="px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black italic shadow-lg shadow-indigo-100">
+                                NET: <span id="mobile-sticky-net-val">€0,00</span>
+                            </span>
+                        </div>
                         <button onclick="window.app.showHelp('transactions')" class="p-2 text-slate-300 hover:text-indigo-600 transition-colors" title="${t('help_cards.btn_help')}">
                             <i class="fa-solid fa-circle-question text-lg"></i>
                         </button>
@@ -66,38 +72,38 @@ export default {
                 </div>
             </div>
 
-            <!-- Desktop Stats Dashboard (Below sticky to allow scrolling) -->
-            <div class="hidden md:grid grid-cols-3 gap-6">
+            <!-- Financial Summary Cards (Responsive) -->
+            <div id="financial-summary-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <!-- Inflows Card -->
-                <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-emerald-200 transition-all">
-                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 md:gap-5 group hover:border-emerald-200 transition-all">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center text-xl md:text-2xl shadow-inner group-hover:scale-110 transition-transform">
                         <i class="fa-solid fa-arrow-trend-up"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('transactions.inflows')}</p>
-                        <p id="desktop-stats-in" class="text-2xl font-black text-slate-900">€0,00</p>
+                        <p class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('transactions.inflows')}</p>
+                        <p id="desktop-stats-in" class="text-xl md:text-2xl font-black text-slate-900 dark:text-white">€0,00</p>
                     </div>
                 </div>
 
                 <!-- Outflows Card -->
-                <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-rose-200 transition-all">
-                    <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 md:gap-5 group hover:border-rose-200 transition-all">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 flex items-center justify-center text-xl md:text-2xl shadow-inner group-hover:scale-110 transition-transform">
                         <i class="fa-solid fa-arrow-trend-down"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('transactions.outflows')}</p>
-                        <p id="desktop-stats-out" class="text-2xl font-black text-slate-900">€0,00</p>
+                        <p class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${t('transactions.outflows')}</p>
+                        <p id="desktop-stats-out" class="text-xl md:text-2xl font-black text-slate-900 dark:text-white">€0,00</p>
                     </div>
                 </div>
 
                 <!-- Net Card -->
-                <div class="bg-indigo-600 rounded-2xl p-6 shadow-lg shadow-indigo-100 flex items-center gap-5 group hover:bg-indigo-700 transition-all">
-                    <div class="w-14 h-14 rounded-2xl bg-white/20 text-white flex items-center justify-center text-2xl shadow-inner group-hover:rotate-12 transition-transform">
+                <div class="bg-indigo-600 rounded-2xl p-4 md:p-6 shadow-lg shadow-indigo-100 dark:shadow-none flex items-center gap-4 md:gap-5 group hover:bg-indigo-700 transition-all">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/20 text-white flex items-center justify-center text-xl md:text-2xl shadow-inner group-hover:rotate-12 transition-transform">
                         <i class="fa-solid fa-wallet"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">${t('transactions.monthly_net')}</p>
-                        <p id="desktop-stats-net" class="text-2xl font-black text-white italic">€0,00</p>
+                        <p class="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">${t('transactions.monthly_net')}</p>
+                        <p id="desktop-stats-net" class="text-xl md:text-2xl font-black text-white italic">€0,00</p>
                     </div>
                 </div>
             </div>

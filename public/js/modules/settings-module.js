@@ -1,5 +1,6 @@
 import { t, getCurrentLanguage } from '../i18n.js';
 import { state, updateState } from '../state.js';
+import { currentUserId } from '../storage.js';
 import { currencyMap } from '../currencies.js';
 import { formatCurrency } from '../utils.js';
 
@@ -286,20 +287,18 @@ export default {
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.strategy')}</h4>
                         </div>
 
-                        <!-- Card: EF Multiplier -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                        <!-- Card: EF Multiplier (Mirror/Read-Only) -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden opacity-80">
                             ${renderCardHeader(t('settings.strategy.title'), t('settings.strategy.subtitle'), t('settings.strategy.why'), 'calc', 'fa-bullseye', 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600')}
                             <div class="px-6 pb-6 pt-2">
-                                <div class="max-w-md">
-                                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">${t('settings.strategy.ef_goal')}</label>
-                                    <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                        <button onclick="window.app.updateEFMultiplier(3)" id="btn-ef-3" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.emergencyFundMultiplier === 3 ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">3 mois</button>
-                                        <button onclick="window.app.updateEFMultiplier(6)" id="btn-ef-6" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.emergencyFundMultiplier === 6 ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">6 mois</button>
-                                        <button onclick="window.app.updateEFMultiplier(12)" id="btn-ef-12" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all ${state.emergencyFundMultiplier === 12 ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}">12 mois</button>
+                                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                                    <div>
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Objectif Actuel</p>
+                                        <p class="text-sm font-bold text-slate-700 dark:text-slate-300">${state.emergencyFundMultiplier || 3} mois de sécurité</p>
                                     </div>
-                                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-4 leading-relaxed italic">
-                                        ${t('settings.strategy.ef_help')}
-                                    </p>
+                                    <button onclick="window.app.router.switchApp('compass'); setTimeout(() => window.app.jumpToSection('dash-kpis'), 100)" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">
+                                        Changer sur le Dashboard
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -461,7 +460,7 @@ export default {
 
             try {
                 import('../firestore-service.js').then(async m => {
-                    await m.updateEntityInFirestore(state.user?.uid || '', id, { name, type });
+                    await m.updateEntityInFirestore(currentUserId, id, { name, type });
                     window.app.closeEditEntity();
                     import('../ui.js').then(ui => ui.showNotification(t('common.success')));
                 });
