@@ -7,8 +7,9 @@ import { db } from './firestore-service.js';
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 export const renderTransactions = () => {
-    const container = document.getElementById('transactions-list');
-    if (!container) return;
+    const desktopContainer = document.getElementById('transactions-table-body');
+    const mobileContainer = document.getElementById('transactions-container');
+    if (!desktopContainer && !mobileContainer) return;
 
     const monthKey = getMonthKey(state.viewDate);
     const monthData = state.records[monthKey] || { items: [] };
@@ -19,17 +20,26 @@ export const renderTransactions = () => {
     
     if (natureFilter !== 'ALL') {
         filteredItems = filteredItems.filter(tx => {
-            const cat = state.categories.find(c => c.id === tx.Category);
+            const catId = tx.category || tx.Category;
+            const cat = state.categories.find(c => c.id === catId);
             return cat && cat.nature === natureFilter;
         });
     }
 
     // Sort transactions by date (desc)
-    const sortedTx = filteredItems.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+    const sortedTx = filteredItems.sort((a, b) => new Date(b.date || b.Date) - new Date(a.date || a.Date));
 
     // Calculate Totals for Stats Cards
-    const inflows = sortedTx.reduce((sum, tx) => tx.Amount > 0 ? sum + tx.Amount : sum, 0);
-    const outflows = sortedTx.reduce((sum, tx) => tx.Amount < 0 ? sum + Math.abs(tx.Amount) : sum, 0);
+    const inflows = sortedTx.reduce((sum, tx) => {
+        const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
+        return txInfo.isIncome ? sum + amount : sum;
+    }, 0);
+    const outflows = sortedTx.reduce((sum, tx) => {
+        const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
+        return txInfo.isExpense ? sum + Math.abs(amount) : sum;
+    }, 0);
     const net = inflows - outflows;
 
     // Update Desktop/Mobile Stats Cards
@@ -43,7 +53,7 @@ export const renderTransactions = () => {
     if (netEl) netEl.textContent = formatCurrency(net);
     if (stickyNetVal) stickyNetVal.textContent = formatCurrency(net);
 
-    // Hybrid Sticky Observer: Show net pill when summary cards scroll out of view
+    // Hybrid Sticky Observer
     const observer = new IntersectionObserver(([entry]) => {
         const stickyNet = document.getElementById('mobile-sticky-net');
         if (stickyNet) {
@@ -58,13 +68,16 @@ export const renderTransactions = () => {
     const summaryCards = document.getElementById('financial-summary-cards');
     if (summaryCards) observer.observe(summaryCards);
 
+    const noDataHtml = `
+        <div class="flex flex-col items-center justify-center py-20 opacity-40">
+            <i class="fa-solid fa-folder-open text-5xl mb-4"></i>
+            <p class="font-black uppercase tracking-widest text-xs">Aucun flux ce mois-ci</p>
+        </div>
+    `;
+
     if (sortedTx.length === 0) {
-        container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-20 opacity-40">
-                <i class="fa-solid fa-folder-open text-5xl mb-4"></i>
-                <p class="font-black uppercase tracking-widest text-xs">Aucun flux ce mois-ci</p>
-            </div>
-        `;
+        if (desktopContainer) desktopContainer.innerHTML = '<tr><td colspan="5">' + noDataHtml + '</td></tr>';
+        if (mobileContainer) mobileContainer.innerHTML = noDataHtml;
         return;
     }
 
@@ -72,80 +85,114 @@ export const renderTransactions = () => {
 
     // Group by category
     const grouped = sortedTx.reduce((acc, tx) => {
-        const catId = tx.Category || 'uncategorized';
+        const catId = tx.category || tx.Category || 'uncategorized';
         if (!acc[catId]) acc[catId] = [];
         acc[catId].push(tx);
         return acc;
     }, {});
 
-    let html = '';
-    
-    // Sort categories by volume (total absolute amount)
+    // Sort categories by volume
     const sortedCats = Object.entries(grouped).sort((a, b) => {
-        const sumA = a[1].reduce((s, tx) => s + Math.abs(tx.Amount), 0);
-        const sumB = b[1].reduce((s, tx) => s + Math.abs(tx.Amount), 0);
+        const sumA = a[1].reduce((s, tx) => s + Math.abs(tx.amount || tx.Amount || 0), 0);
+        const sumB = b[1].reduce((s, tx) => s + Math.abs(tx.amount || tx.Amount || 0), 0);
         return sumB - sumA;
     });
 
-    sortedCats.forEach(([catId, txs]) => {
-        const category = state.categories.find(c => c.id === catId) || { name: 'Autre', icon: 'tag', color: 'slate' };
-        const isExpanded = expandedStates[catId] !== false;
-        const total = txs.reduce((s, tx) => s + tx.Amount, 0);
+    // Render Desktop Table
+    if (desktopContainer) {
+        let dHtml = '';
+        sortedTx.forEach(tx => {
+            const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+            const date = tx.date || tx.Date;
+            const label = tx.label || tx.Label;
+            const catId = tx.category || tx.Category;
+            const category = state.categories.find(c => c.id === catId) || { label: 'Autre', icon: 'tag', color: 'slate' };
+            const { ui } = getTxDisplayInfo(tx.source, tx.destination);
 
-        html += `
-            <div class="mb-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
-                <!-- Category Header -->
-                <button onclick="window.app.toggleCategoryGroup('${catId}')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-2xl bg-${category.color}-50 dark:bg-${category.color}-900/20 text-${category.color}-600 flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-${category.icon}"></i>
-                        </div>
-                        <div class="text-left">
-                            <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px]">${category.name}</h3>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase">${txs.length} flux</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span class="font-black text-sm ${total >= 0 ? 'text-emerald-500' : 'text-slate-700 dark:text-slate-300'}">${formatCurrency(total)}</span>
-                        <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px] text-slate-300"></i>
-                    </div>
-                </button>
-
-                <!-- Transactions List -->
-                <div class="${isExpanded ? '' : 'hidden'} border-t border-slate-50 dark:border-slate-800/50">
-                    ${txs.map(tx => {
-                        const { icon, color, label } = getTxDisplayInfo(tx);
-                        return `
-                            <div class="px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 group transition-colors border-b last:border-b-0 border-slate-50 dark:border-slate-800/30">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-xs group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
-                                        <i class="fa-solid fa-${icon}"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-slate-700 dark:text-slate-200 text-xs">${tx.Label}</p>
-                                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">${formatDateStr(tx.Date)}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <span class="font-bold text-xs ${tx.Amount >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${formatCurrency(tx.Amount)}</span>
-                                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onclick="window.app.editTransaction('${tx.id}')" class="p-2 text-slate-400 hover:text-indigo-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all">
-                                            <i class="fa-solid fa-pen text-[10px]"></i>
-                                        </button>
-                                        <button onclick="window.app.deleteTransaction('${tx.id}')" class="p-2 text-slate-400 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all">
-                                            <i class="fa-solid fa-trash-can text-[10px]"></i>
-                                        </button>
-                                    </div>
-                                </div>
+            dHtml += `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                    <td class="py-4 px-6 text-xs font-medium text-slate-500">${formatDateStr(date)}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                                <i class="fa-solid ${ui.icon}"></i>
                             </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    });
+                            <span class="font-bold text-slate-700">${label}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="px-2 py-1 rounded-md bg-${category.color}-50 text-${category.color}-600 text-[10px] font-bold uppercase">${category.label || category.name}</span>
+                    </td>
+                    <td class="py-4 px-6 text-right font-black text-sm ${amount >= 0 ? 'text-emerald-600' : 'text-slate-900'}">
+                        ${formatCurrency(amount)}
+                    </td>
+                    <td class="py-4 px-6 text-right">
+                        <div class="flex justify-end gap-2">
+                            <button onclick="window.app.editTransaction('${tx.id}')" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="window.app.deleteTransaction('${tx.id}')" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        desktopContainer.innerHTML = dHtml;
+    }
 
-    container.innerHTML = html;
+    // Render Mobile Cards
+    if (mobileContainer) {
+        let mHtml = '';
+        sortedCats.forEach(([catId, txs]) => {
+            const category = state.categories.find(c => c.id === catId) || { label: 'Autre', icon: 'tag', color: 'slate' };
+            const isExpanded = expandedStates[catId] !== false;
+            const total = txs.reduce((s, tx) => s + (tx.amount || tx.Amount || 0), 0);
+
+            mHtml += `
+                <div class="mb-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                    <button onclick="window.app.toggleCategoryGroup('${catId}')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-2xl bg-${category.color}-50 text-${category.color}-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-${category.icon}"></i>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px]">${category.label || category.name}</h3>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">${txs.length} flux</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="font-black text-sm ${total >= 0 ? 'text-emerald-500' : 'text-slate-700'}">${formatCurrency(total)}</span>
+                            <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px] text-slate-300"></i>
+                        </div>
+                    </button>
+                    <div class="${isExpanded ? '' : 'hidden'} border-t border-slate-50">
+                        ${txs.map(tx => {
+                            const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+                            const date = tx.date || tx.Date;
+                            const label = tx.label || tx.Label;
+                            const { ui } = getTxDisplayInfo(tx.source, tx.destination);
+                            return `
+                                <div class="px-6 py-4 flex items-center justify-between border-b last:border-b-0 border-slate-50 group">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center text-xs">
+                                            <i class="fa-solid ${ui.icon}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-700 text-xs">${label}</p>
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">${formatDateStr(date)}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span class="font-bold text-xs ${amount >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${formatCurrency(amount)}</span>
+                                        <button onclick="window.app.editTransaction('${tx.id}')" class="p-2 text-slate-400"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        mobileContainer.innerHTML = mHtml;
+    }
 };
 
 export const toggleCategoryGroup = (catId) => {
@@ -161,7 +208,7 @@ export const toggleAllCategoryGroups = (expand) => {
     const monthData = state.records[monthKey] || { items: [] };
     
     monthData.items.forEach(item => {
-        const catId = item.Category || 'uncategorized';
+        const catId = item.category || item.Category || 'uncategorized';
         groups[catId] = expand;
     });
 

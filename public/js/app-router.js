@@ -227,7 +227,7 @@ class AppRouter {
                 const config = this.currentModule.getFabConfig();
                 if (config) {
                     mobileFab.classList.remove('hidden');
-                    mobileFab.className = `md:hidden fixed bottom-4 right-4 w-14 h-14 ${config.color || 'bg-slate-800'} text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
+                    mobileFab.className = `md:hidden fixed bottom-24 right-4 w-14 h-14 ${config.color || 'bg-slate-800'} text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
                     mobileFab.innerHTML = `<i class="fa-solid ${config.icon || 'fa-plus'} text-xl"></i>`;
                     mobileFab.onclick = config.action;
                 } else {
@@ -235,7 +235,7 @@ class AppRouter {
                 }
             } else if (this.currentModule.showMobileFab && this.currentModule.showMobileFab()) {
                 mobileFab.classList.remove('hidden');
-                mobileFab.className = `md:hidden fixed bottom-4 right-4 bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
+                mobileFab.className = `md:hidden fixed bottom-24 right-4 bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center z-40 transition-all active:scale-95`;
                 mobileFab.innerHTML = `<i class="fa-solid fa-plus text-xl"></i>`;
                 mobileFab.onclick = () => window.app.openTransactionModal();
             } else {
@@ -344,13 +344,15 @@ class AppRouter {
             const appNames = {
                 'ledger': t('apps.ledger.name') || 'The Daily Ledger',
                 'wealth': t('apps.wealth.name') || 'The Wealth Vault',
-                'compass': t('apps.compass.name') || 'The Strategic Compass'
+                'dashboard': t('apps.dashboard.name') || 'Dashboard',
+                'philosophy': t('apps.philosophy.name') || 'Philosophy & Guide'
             };
 
             const appColors = {
                 'ledger': 'indigo-500',
                 'wealth': 'amber-500',
-                'compass': 'emerald-500'
+                'dashboard': 'emerald-500',
+                'philosophy': 'violet-500'
             };
 
             if (appTitle) appTitle.textContent = appNames[this.currentAppId] || 'Strady';

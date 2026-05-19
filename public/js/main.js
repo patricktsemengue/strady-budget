@@ -671,6 +671,7 @@ window.app = {
     setSettingPreset: (type) => import('./settings.js').then(m => m.setSettingPreset(type)),
     updateMonthSelectorPosition: (pos) => import('./settings.js').then(m => m.updateMonthSelectorPosition(pos)),
     updateEFMultiplier: (multiplier) => import('./settings.js').then(m => m.updateEFMultiplier(multiplier)),
+    exportFullBackupCSV: () => import('./data.js').then(m => m.exportFullBackupCSV()),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),
     openKPIInfo: (key) => import('./dashboard-new.js').then(m => m.openKPIInfo(key)),

@@ -219,8 +219,8 @@ body {
 
 /* FAB */
 #mobile-fab {
-    bottom: 1rem !important;
-    right: 1rem !important;
+    bottom: 6.5rem !important; /* Positioned above the navigation puck */
+    right: 1.5rem !important;
     width: 3.5rem !important;
     height: 3.5rem !important;
     z-index: 46;
@@ -235,12 +235,13 @@ header {
 }
 
 #mobile-nav-puck {
+    bottom: 0.75rem !important; /* Just above the system navigation bar */
     transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.15));
 }
 
 #app-content {
-    padding-bottom: 8rem; /* Space for the floating puck + FAB */
+    padding-bottom: 11rem; /* Space for the floating puck + high-positioned FAB */
 }
 
 @media (min-width: 768px) {

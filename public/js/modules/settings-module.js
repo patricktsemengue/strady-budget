@@ -128,10 +128,8 @@ export default {
         `;
 
         const sidebarItems = [
-            { id: 'group-display', label: t('settings.groups_settings.display'), icon: 'fa-desktop' },
+            { id: 'group-display', label: t('settings.groups_settings.display'), icon: 'fa-coins' },
             { id: 'group-entities', label: 'Entités & Famille', icon: 'fa-people-roof' },
-            { id: 'group-strategy', label: t('settings.groups_settings.strategy'), icon: 'fa-bullseye' },
-            { id: 'group-connectivity', label: t('settings.groups_settings.connectivity'), icon: 'fa-link' },
             { id: 'group-security', label: t('settings.groups_settings.security'), icon: 'fa-shield-halved' }
         ];
 
@@ -149,7 +147,7 @@ export default {
                     <!-- Action Layers (Mobile Swipe Only) -->
                     <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white md:hidden">
                         <button onclick="window.app.deleteEntity('${ent.id}')" class="flex flex-col items-center gap-1">
-                            <i class="fa-solid fa-trash-can text-lg"></i>
+                            <i class="fa-trash-can text-lg"></i>
                             <span class="text-[8px] font-bold uppercase tracking-tighter">${t('common.delete')}</span>
                         </button>
                     </div>
@@ -170,18 +168,18 @@ export default {
                         <!-- Desktop Actions (Hidden on Mobile) -->
                         <div class="hidden md:flex items-center gap-1">
                             <button onclick="window.app.openEditEntity('${ent.id}')" class="p-2 text-slate-300 hover:text-indigo-600 transition-all" title="${t('common.edit')}">
-                                <i class="fa-solid fa-pen text-xs"></i>
+                                <i class="fa-pen text-xs"></i>
                             </button>
                             <button onclick="window.app.deleteEntity('${ent.id}')" 
                                     class="p-2 text-slate-300 hover:text-rose-500 transition-all ${!isDeletable ? 'opacity-10 cursor-not-allowed' : ''}" 
                                     ${!isDeletable ? `title="${t('entities.error_linked')}"` : `title="${t('common.delete')}"`}>
-                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                <i class="fa-trash-can text-xs"></i>
                             </button>
                         </div>
 
                         <!-- Mobile Indicator (Hidden on Desktop) -->
                         <div class="md:hidden text-slate-200">
-                             <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                             <i class="fa-chevron-left text-[10px]"></i>
                         </div>
                     </div>
                 </div>
@@ -207,7 +205,7 @@ export default {
                         </div>
                     </div>
                     
-                    <!-- Horizontal Jump Bar (Pill Buttons - Responsive Wrap) -->
+                    <!-- Horizontal Jump Bar -->
                     <div class="flex flex-wrap items-center gap-2 pb-1" id="settings-jump-bar">
                         ${sidebarItems.map(item => `
                             <button onclick="window.app.scrollToSettingsGroup('${item.id}')" class="settings-sidebar-link whitespace-nowrap flex items-center gap-2.5 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-white dark:bg-slate-900 shadow-sm text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
@@ -219,54 +217,96 @@ export default {
                 </div>
             </div>
 
-            <div class="w-full space-y-12">
-                <!-- 1. GROUP: DISPLAY -->
-                <div id="group-display" class="space-y-4">
-                        <div class="flex items-center gap-2 mb-2 ml-1">
-                            <div class="w-1 h-4 bg-indigo-500 rounded-full"></div>
-                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.display')}</h4>
-                        </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                
+                <!-- COLUMN 1: CURRENCY & GLOBAL CONFIG -->
+                <div class="space-y-12">
+                    <!-- 1. GROUP: DISPLAY & CURRENCIES -->
+                    <div id="group-display" class="space-y-4">
+                            <div class="flex items-center gap-2 mb-2 ml-1">
+                                <div class="w-1 h-4 bg-amber-500 rounded-full"></div>
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.display')}</h4>
+                            </div>
 
-                        <!-- Card: Master Currency -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            ${renderCardHeader(t('settings.currency.title_master'), t('settings.currency.subtitle_master'), t('settings.currency.why_master'), 'data', 'fa-coins', 'bg-amber-50 dark:bg-amber-900/20 text-amber-600')}
-                            <div class="px-6 pb-6 pt-2">
-                                <div class="flex flex-col md:flex-row gap-6 items-center">
-                                    <div class="flex-1 w-full">
-                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.currency.label_app')}</label>
-                                        <select onchange="window.app.updateCurrencySettings({ displayCurrency: this.value })" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200">
-                                            ${displayOptions}
-                                        </select>
-                                    </div>
-                                    <div class="w-full md:w-auto p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 text-center">
-                                        <p class="text-[10px] font-black text-indigo-400 uppercase mb-1">Aperçu</p>
-                                        <p class="text-xl font-black text-indigo-600 dark:text-indigo-400">${formatCurrency(1250.50)}</p>
+                            <!-- Card: Master Currency -->
+                            <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                                ${renderCardHeader(t('settings.currency.title_master'), t('settings.currency.subtitle_master'), t('settings.currency.why_master'), 'data', 'fa-coins', 'bg-amber-50 dark:bg-amber-900/20 text-amber-600')}
+                                <div class="px-6 pb-6 pt-2">
+                                    <div class="flex flex-col gap-6 items-center">
+                                        <div class="flex-1 w-full">
+                                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">${t('settings.currency.label_app')}</label>
+                                            <select onchange="window.app.updateCurrencySettings({ displayCurrency: this.value })" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200">
+                                                ${displayOptions}
+                                            </select>
+                                        </div>
+                                        <div class="w-full p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 text-center">
+                                            <p class="text-[10px] font-black text-indigo-400 uppercase mb-1">Aperçu</p>
+                                            <p class="text-xl font-black text-indigo-600 dark:text-indigo-400">${formatCurrency(1250.50)}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        </div>
 
-                        <!-- 2. GROUP: ENTITIES -->
-                        <div id="group-entities" class="space-y-4 pt-4">
-                            <div class="flex items-center gap-2 mb-2 ml-1">
-                                <div class="w-1 h-4 bg-indigo-500 rounded-full"></div>
-                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('entities.title')}</h4>
-                            </div>
-
-                            <!-- Card: Entities List -->
+                            <!-- Card: Currency Rates (Now grouped here) -->
                             <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                                ${renderCardHeader(t('entities.title'), t('entities.subtitle'), 'Les entités permettent de filtrer votre patrimoine et votre trésorerie par "propriétaire". Idéal pour les couples ou les entrepreneurs.', 'data', 'fa-people-roof', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
-                                <div class="px-6 pb-6 pt-2 space-y-4">
-                                    <div id="entities-swipe-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        ${entityCards || `<div class="col-span-2 py-8 text-center text-slate-400 italic">Aucune entité configurée</div>`}
+                                ${renderCardHeader(t('settings.currency.title_rates'), t('settings.currency.subtitle_rates'), t('settings.currency.why_rates'), 'calc', 'fa-chart-line', 'bg-violet-50 dark:bg-violet-900/20 text-violet-600')}
+                                <div class="px-0 pb-6">
+                                    <div class="overflow-x-auto">
+                                        <table class="hidden md:table w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="bg-slate-50/50 dark:bg-slate-800/30">
+                                                    <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_master')}</th>
+                                                    <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_target')}</th>
+                                                    <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_value')}</th>
+                                                    <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_verify')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${ratesRows || `<tr><td colspan="4" class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</td></tr>`}
+                                            </tbody>
+                                        </table>
+                                        <div id="currency-rates-mobile" class="md:hidden px-4 pt-4">
+                                            ${ratesCardsMobile || `<div class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</div>`}
+                                        </div>
                                     </div>
+                                    <div class="p-6">
+                                        <div class="flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                            <select id="new-rate-code" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
+                                                ${Object.entries(currencyMap).filter(([c]) => c !== state.displayCurrency && !(state.exchangeRates || {})[c]).map(([c, i]) => `<option value="${c}">${i.symbol} ${c}</option>`).join('')}
+                                            </select>
+                                            <button onclick="window.app.addExchangeRate(document.getElementById('new-rate-code').value)" class="w-full bg-slate-800 dark:bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md active:scale-95">
+                                                <i class="fa-solid fa-plus mr-2"></i> ${t('settings.currency.add_rate')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                    </div>
+                </div>
 
-                                    <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                                        <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">${t('entities.add_title')}</h5>
-                                        <form id="add-entity-form" class="flex flex-col md:flex-row gap-3">
-                                            <input type="text" id="new-entity-name" placeholder="${t('entities.name_placeholder')}" required class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
-                                            <select id="new-entity-type" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
+                <!-- COLUMN 2: ENTITIES & SECURITY -->
+                <div class="space-y-12">
+                    <!-- 2. GROUP: ENTITIES -->
+                    <div id="group-entities" class="space-y-4">
+                        <div class="flex items-center gap-2 mb-2 ml-1">
+                            <div class="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('entities.title')}</h4>
+                        </div>
+
+                        <!-- Card: Entities List -->
+                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            ${renderCardHeader(t('entities.title'), t('entities.subtitle'), 'Les entités permettent de filtrer votre patrimoine et votre trésorerie par "propriétaire". Idéal pour les couples ou les entrepreneurs.', 'data', 'fa-people-roof', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
+                            <div class="px-6 pb-6 pt-2 space-y-4">
+                                <div id="entities-swipe-list" class="grid grid-cols-1 gap-2">
+                                    ${entityCards || `<div class="py-8 text-center text-slate-400 italic">Aucune entité configurée</div>`}
+                                </div>
+
+                                <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                    <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">${t('entities.add_title')}</h5>
+                                    <form id="add-entity-form" class="flex flex-col gap-3">
+                                        <input type="text" id="new-entity-name" placeholder="${t('entities.name_placeholder')}" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
+                                        <div class="flex gap-2">
+                                            <select id="new-entity-type" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
                                                 <option value="PRIVATE">${t('entities.type_private')}</option>
                                                 <option value="FAMILY">${t('entities.type_family')}</option>
                                                 <option value="SMALL_BUSINESS">${t('entities.type_business')}</option>
@@ -274,80 +314,14 @@ export default {
                                             <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95">
                                                 <i class="fa-solid fa-plus mr-2"></i> ${t('common.add')}
                                             </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 3. GROUP: STRATEGY -->
-                    <div id="group-strategy" class="space-y-4 pt-4">
-                        <div class="flex items-center gap-2 mb-2 ml-1">
-                            <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.strategy')}</h4>
-                        </div>
-
-                        <!-- Card: EF Multiplier (Mirror/Read-Only) -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden opacity-80">
-                            ${renderCardHeader(t('settings.strategy.title'), t('settings.strategy.subtitle'), t('settings.strategy.why'), 'calc', 'fa-bullseye', 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600')}
-                            <div class="px-6 pb-6 pt-2">
-                                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
-                                    <div>
-                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Objectif Actuel</p>
-                                        <p class="text-sm font-bold text-slate-700 dark:text-slate-300">${state.emergencyFundMultiplier || 3} mois de sécurité</p>
-                                    </div>
-                                    <button onclick="window.app.router.switchApp('compass'); setTimeout(() => window.app.jumpToSection('dash-kpis'), 100)" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">
-                                        Changer sur le Dashboard
-                                    </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. GROUP: CONNECTIVITY -->
-                    <div id="group-connectivity" class="space-y-4 pt-4">
-                        <div class="flex items-center gap-2 mb-2 ml-1">
-                            <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
-                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${t('settings.groups_settings.connectivity')}</h4>
-                        </div>
-
-                        <!-- Card: Currency Rates -->
-                        <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            ${renderCardHeader(t('settings.currency.title_rates'), t('settings.currency.subtitle_rates'), t('settings.currency.why_rates'), 'calc', 'fa-chart-line', 'bg-violet-50 dark:bg-violet-900/20 text-violet-600')}
-                            <div class="px-0 pb-6">
-                                <div class="overflow-x-auto">
-                                    <table class="hidden md:table w-full text-left border-collapse">
-                                        <thead>
-                                            <tr class="bg-slate-50/50 dark:bg-slate-800/30">
-                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_master')}</th>
-                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_target')}</th>
-                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_value')}</th>
-                                                <th class="py-3 px-4 text-[10px] font-black text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">${t('settings.currency.col_verify')}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${ratesRows || `<tr><td colspan="4" class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</td></tr>`}
-                                        </tbody>
-                                    </table>
-                                    <div id="currency-rates-mobile" class="md:hidden px-4 pt-4">
-                                        ${ratesCardsMobile || `<div class="py-8 text-center text-slate-400 italic">${t('wealth.no_assets')}</div>`}
-                                    </div>
-                                </div>
-                                <div class="p-6">
-                                    <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                                        <select id="new-rate-code" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
-                                            ${Object.entries(currencyMap).filter(([c]) => c !== state.displayCurrency && !(state.exchangeRates || {})[c]).map(([c, i]) => `<option value="${c}">${i.symbol} ${c}</option>`).join('')}
-                                        </select>
-                                        <button onclick="window.app.addExchangeRate(document.getElementById('new-rate-code').value)" class="bg-slate-800 dark:bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md active:scale-95">
-                                            <i class="fa-solid fa-plus mr-2"></i> ${t('settings.currency.add_rate')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. GROUP: SECURITY -->
+                    <!-- 3. GROUP: SECURITY -->
                     <div id="group-security" class="space-y-4 pt-4">
                         <div class="flex items-center gap-2 mb-2 ml-1">
                             <div class="w-1 h-4 bg-rose-500 rounded-full"></div>
@@ -361,11 +335,11 @@ export default {
                                 <div class="flex gap-4">
                                     <button id="btn-export-full-backup" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl text-center hover:bg-slate-50 transition-all group/btn">
                                         <i class="fa-solid fa-download text-indigo-500 text-2xl mb-2 group-hover/btn:scale-110 transition-transform"></i>
-                                        <p class="text-xs font-black uppercase text-slate-700 dark:text-slate-300">${t('settings.vault.backup')}</p>
+                                        <p class="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">${t('settings.vault.backup')}</p>
                                     </button>
                                     <button onclick="document.getElementById('import-zone-wrapper').classList.toggle('hidden')" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl text-center hover:bg-slate-50 transition-all group/btn">
                                         <i class="fa-solid fa-upload text-blue-500 text-2xl mb-2 group-hover/btn:scale-110 transition-transform"></i>
-                                        <p class="text-xs font-black uppercase text-slate-700 dark:text-slate-300">${t('settings.vault.restore')}</p>
+                                        <p class="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">${t('settings.vault.restore')}</p>
                                     </button>
                                 </div>
                                 <div id="import-zone-wrapper" class="hidden border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 bg-slate-50 dark:bg-slate-800/30 text-center">
@@ -383,7 +357,7 @@ export default {
                         <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden border-l-4 border-l-rose-500">
                             ${renderCardHeader(t('settings.maintenance.title'), t('settings.maintenance.subtitle'), t('settings.maintenance.why'), 'data', 'fa-screwdriver-wrench', 'bg-rose-50 dark:bg-rose-900/20 text-rose-600')}
                             <div class="px-6 pb-6 pt-2 space-y-6">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-4">
                                     <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <h5 class="text-sm font-black text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-tighter">${t('settings.maintenance.reset_starter')}</h5>
                                         <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">${t('settings.maintenance.reset_starter_help')}</p>
@@ -403,7 +377,6 @@ export default {
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -470,7 +443,7 @@ export default {
         };
 
         // Sidebar active state on scroll
-        const groups = ['group-display', 'group-entities', 'group-strategy', 'group-connectivity', 'group-security'];
+        const groups = ['group-display', 'group-entities', 'group-security'];
         const updateActiveLink = () => {
             let current = '';
             for (const id of groups) {

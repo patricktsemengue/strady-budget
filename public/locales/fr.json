@@ -22,9 +22,13 @@
       "name": "Le Coffre-Fort",
       "desc": "Visualisez votre patrimoine net. Suivez vos actifs, dettes et l'évolution de votre richesse."
     },
-    "compass": {
-      "name": "La Boussole",
-      "desc": "Analysez vos habitudes et optimisez votre stratégie financière avec la méthode 70/20/10."
+    "dashboard": {
+      "name": "Tableau de Bord",
+      "desc": "Analysez vos habitudes et optimisez votre stratégie financière."
+    },
+    "philosophy": {
+      "name": "Philosophie & Guide",
+      "desc": "Apprenez la méthode 70/20/10 et maîtrisez vos finances."
     }
   },
   "hub": {

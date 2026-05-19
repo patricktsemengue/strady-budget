@@ -216,6 +216,11 @@ export const handleSaveTransaction = async (e) => {
     }
 
     try {
+        if (!currentUserId) {
+            showNotification(t('common.error_not_logged_in'), 'error');
+            return;
+        }
+
         const onFocusMonthKey = getMonthKey(state.viewDate);
 
         if (id) {
@@ -226,7 +231,8 @@ export const handleSaveTransaction = async (e) => {
                 if (confirm(t('confirm.edit_recurring'))) {
                     // RECURRING UPDATE: delete-old and create-new
                     const newTemplateValues = { 
-                        date, label, amount, source, destination, category: Category,
+                        date, label, amount, source, destination, 
+                        category: Category, Category: Category,
                         recurring: true, endDate, periodicity, entityId
                     };
                     await updateRecurringSeriesInFirestore(currentUserId, tx.Model, newTemplateValues);
@@ -237,7 +243,11 @@ export const handleSaveTransaction = async (e) => {
             } else {
                 if (confirm(t('confirm.edit_tx'))) {
                     // SINGLE UPDATE: delete-old and create-new
-                    const newTxData = { label, amount, date, Category, source, destination, Model: null, entityId };
+                    const newTxData = { 
+                        label, amount, date, 
+                        category: Category, Category: Category, 
+                        source, destination, Model: null, entityId 
+                    };
                     await updateSingleTransactionInFirestore(currentUserId, id, newTxData);
                     showNotification(t('transactions.success_tx_updated'));
                 } else {
@@ -249,7 +259,8 @@ export const handleSaveTransaction = async (e) => {
             if (isRecurring) {
                 // RECURRING CREATION: Align with TODO.litcoffee
                 const templateData = {
-                    date, label, amount, source, destination, category: Category,
+                    date, label, amount, source, destination, 
+                    category: Category, Category: Category,
                     recurring: true, endDate, periodicity, entityId
                 };
                 const templateId = generateDeterministicTemplateId(templateData);
@@ -268,11 +279,17 @@ export const handleSaveTransaction = async (e) => {
                 showNotification(t('transactions.success_recurring_created'));
             } else {
                 // SINGLE CREATION: Align with TODO.litcoffee
-                const newTxData = { label, amount, date, Category, source, destination, Model: null, entityId };
+                const newTxData = { 
+                    label, amount, date, 
+                    category: Category, Category: Category, 
+                    source, destination, Model: null, entityId 
+                };
                 const newId = generateDeterministicTransactionId(newTxData);
 
                 // Check if transaction already exists
-                const existingTx = Object.values(state.records).flatMap(r => r.items).find(t => t.id === newId);
+                const allItems = Object.values(state.records).flatMap(r => r.items);
+                const existingTx = allItems.find(t => t.id === newId);
+                
                 if (existingTx) {
                     showNotification(t('transactions.error_duplicate_tx'), 'error');
                     return;
@@ -287,7 +304,7 @@ export const handleSaveTransaction = async (e) => {
         }
         closeTransactionModal();
     } catch (err) {
-        console.error(err);
+        console.error('Save failed:', err);
         showNotification(t('transactions.error_save'), 'error');
     }
 };
@@ -336,8 +353,11 @@ export const openMobileActions = (id) => {
     const title = document.getElementById('mobile-actions-title');
 
     const txInfo = getTxDisplayInfo(tx.source, tx.destination);
-    const category = state.categories.find(c => c.id === tx.Category);
-    const formattedAmount = formatCurrency(tx.amount);
+    const catId = tx.category || tx.Category;
+    const category = state.categories.find(c => c.id === catId);
+    const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+    const formattedAmount = formatCurrency(amount);
+    const label = tx.label || tx.Label;
 
     title.innerHTML = `
         <div class="flex items-center gap-4 text-left">
@@ -345,7 +365,7 @@ export const openMobileActions = (id) => {
                 <i class="fa-solid ${category?.icon || 'fa-tag'} text-xl"></i>
             </div>
             <div class="flex-1 truncate">
-                <p class="font-black text-slate-800 text-lg leading-tight truncate">${tx.label}</p>
+                <p class="font-black text-slate-800 text-lg leading-tight truncate">${label}</p>
                 <p class="text-[11px] font-bold ${txInfo.ui.color} uppercase tracking-wider">${formattedAmount} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
             </div>
         </div>

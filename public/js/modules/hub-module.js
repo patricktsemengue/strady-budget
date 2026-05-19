@@ -68,15 +68,27 @@ export default {
                     </div>
                 </button>
 
-                <!-- The Strategic Compass -->
-                <button onclick="window.app.router.switchApp('compass')" class="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95">
+                <!-- Dashboard -->
+                <button onclick="window.app.router.switchApp('dashboard')" class="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95">
                     <div class="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[2rem] md:rounded-[2.5rem] shadow-xl group-hover:shadow-emerald-500/20 flex items-center justify-center text-white text-4xl md:text-5xl transition-all relative overflow-hidden ring-4 ring-white dark:ring-slate-900 ring-offset-4 ring-offset-transparent">
                         <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <i class="fa-solid fa-compass drop-shadow-lg"></i>
+                        <i class="fa-solid fa-gauge-high drop-shadow-lg"></i>
                     </div>
                     <div class="text-center">
-                        <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.compass.name') || 'La Boussole'}</h2>
+                        <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.dashboard.name') || 'Tableau de Bord'}</h2>
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Stratégie</p>
+                    </div>
+                </button>
+
+                <!-- Philosophy & Guide -->
+                <button onclick="window.app.router.switchApp('philosophy')" class="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95">
+                    <div class="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-violet-500 to-violet-700 rounded-[2rem] md:rounded-[2.5rem] shadow-xl group-hover:shadow-violet-500/20 flex items-center justify-center text-white text-4xl md:text-5xl transition-all relative overflow-hidden ring-4 ring-white dark:ring-slate-900 ring-offset-4 ring-offset-transparent">
+                        <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <i class="fa-solid fa-book-open drop-shadow-lg"></i>
+                    </div>
+                    <div class="text-center">
+                        <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.philosophy.name') || 'Philosophie & Guide'}</h2>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Éducation</p>
                     </div>
                 </button>
             </div>
@@ -95,7 +107,7 @@ export default {
         const backupBtn = document.getElementById('btn-backup-json-hub-ghost');
         if (backupBtn) {
             backupBtn.onclick = () => {
-                if (window.app.exportDataToJSON) window.app.exportDataToJSON();
+                if (window.app.exportFullBackupCSV) window.app.exportFullBackupCSV();
             };
         }
     }

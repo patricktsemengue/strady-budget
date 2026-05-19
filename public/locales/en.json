@@ -22,9 +22,13 @@
       "name": "The Wealth Vault",
       "desc": "Visualize your net worth. Track your assets, debts, and the evolution of your wealth."
     },
-    "compass": {
-      "name": "The Strategic Compass",
-      "desc": "Analyze your habits and optimize your financial strategy with the 70/20/10 method."
+    "dashboard": {
+      "name": "Dashboard",
+      "desc": "Analyze your habits and optimize your financial strategy."
+    },
+    "philosophy": {
+      "name": "Philosophy & Guide",
+      "desc": "Learn the 70/20/10 method and financial strategies."
     }
   },
   "hub": {
