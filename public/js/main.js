@@ -490,8 +490,7 @@ const setupEventListeners = () => {
         if (element) element.addEventListener(event, handler);
     };
 
-    addSafeListener('btn-logout', 'click', handleLogout);
-    addSafeListener('btn-logout-mobile', 'click', handleLogout);
+    addSafeListener('btn-logout-global', 'click', handleLogout);
     addSafeListener('.mobile-menu-button', 'click', () => {
         const mobileMenu = document.querySelector('.mobile-menu');
         if (mobileMenu) mobileMenu.classList.toggle('hidden');
@@ -672,6 +671,7 @@ window.app = {
     updateMonthSelectorPosition: (pos) => import('./settings.js').then(m => m.updateMonthSelectorPosition(pos)),
     updateEFMultiplier: (multiplier) => import('./settings.js').then(m => m.updateEFMultiplier(multiplier)),
     exportFullBackupCSV: () => import('./data.js').then(m => m.exportFullBackupCSV()),
+    renderSankeyChart: (expanded) => import('./dashboard.js').then(m => m.renderSankeyChart(expanded)),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),
     openKPIInfo: (key) => import('./dashboard-new.js').then(m => m.openKPIInfo(key)),

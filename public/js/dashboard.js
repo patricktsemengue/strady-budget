@@ -195,6 +195,87 @@ export const renderTransactions = () => {
     }
 };
 
+export const renderSankeyChart = (isExpanded = false) => {
+    const containerId = isExpanded ? 'sankey-chart-expanded' : 'sankey-chart';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (typeof google === 'undefined' || !google.visualization || !google.visualization.Sankey) {
+        if (typeof google !== 'undefined' && google.charts) {
+            google.charts.load('current', { packages: ['sankey'] });
+            google.charts.setOnLoadCallback(() => renderSankeyChart(isExpanded));
+        }
+        return;
+    }
+
+    const monthKey = getMonthKey(state.viewDate);
+    const monthData = state.records[monthKey] || { items: [] };
+
+    const rows = [];
+    const flowMap = new Map();
+
+    const addFlow = (from, to, amount) => {
+        if (amount <= 0) return;
+        const key = `${from}|${to}`;
+        flowMap.set(key, (flowMap.get(key) || 0) + amount);
+    };
+
+    monthData.items.forEach(tx => {
+        const amount = Math.abs(tx.amount !== undefined ? tx.amount : tx.Amount);
+        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
+        const catId = tx.category || tx.Category;
+        const category = state.categories.find(c => c.id === catId) || { label: 'Autre' };
+        const catName = category.label || category.name;
+
+        if (txInfo.isIncome) {
+            addFlow('Revenus', txInfo.dst.name, amount);
+        } else if (txInfo.isExpense) {
+            addFlow(txInfo.src.name, catName, amount);
+        } else {
+            // Internal Transfer
+            addFlow(txInfo.src.name, txInfo.dst.name, amount);
+        }
+    });
+
+    flowMap.forEach((val, key) => {
+        const [from, to] = key.split('|');
+        if (from === to) return; // Skip self-loops
+        rows.push([from, to, val]);
+    });
+
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée de flux pour ce mois</div>';
+        return;
+    }
+
+    const data = new google.visualization.DataTable();
+    data.addColumn('string', 'From');
+    data.addColumn('string', 'To');
+    data.addColumn('number', 'Weight');
+    data.addRows(rows);
+
+    const colors = ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
+    const options = {
+        sankey: {
+            node: {
+                colors: colors,
+                label: { fontName: 'Inter', fontSize: 12, fontWeight: 'bold', color: '#1e293b' },
+                interactivity: true,
+                width: 15,
+                nodePadding: 30
+            },
+            link: {
+                colorMode: 'gradient',
+                colors: colors
+            }
+        },
+        backgroundColor: 'transparent'
+    };
+
+    const chart = new google.visualization.Sankey(container);
+    chart.draw(data, options);
+};
+
 export const toggleCategoryGroup = (catId) => {
     const expandedStates = JSON.parse(localStorage.getItem('strady_expanded_categories') || '{}');
     expandedStates[catId] = !expandedStates[catId];
