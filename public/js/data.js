@@ -162,7 +162,7 @@ export const exportFullBackupCSV = () => {
         });
     });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(["\ufeff", csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -179,7 +179,11 @@ export const importFullBackupCSV = (event) => {
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-        const text = e.target.result;
+        let text = e.target.result;
+        // Remove Byte Order Mark (BOM) if present
+        if (text.startsWith('\ufeff')) {
+            text = text.substring(1);
+        }
         const lines = text.split('\n');
         const header = lines[0] ? lines[0].trim().toLowerCase().replace(/"/g, '') : "";
         
