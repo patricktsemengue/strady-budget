@@ -101,23 +101,42 @@ export const handleFactoryReset = async (mode = 'starter') => {
 };
 
 export const exportFullBackupCSV = () => {
-    // Universal CSV Header
-    let csv = "Type,Date,Label,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive,Entity\n";
+    // Universal CSV Header (17 columns)
+    let csv = "Type,Date,Label,Quantity,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive,Entity\n";
     
     // 0. Entities
     (state.entities || []).forEach(ent => {
-        csv += `ENTITY,,"${ent.name}",,,,,,,,,,,,"${ent.type || 'PRIVATE'}",,\n`;
+        const row = Array(17).fill("");
+        row[0] = "ENTITY";
+        row[2] = `"${ent.name}"`;
+        row[14] = `"${ent.type || 'PRIVATE'}"`;
+        csv += row.join(',') + "\n";
     });
 
     // 1. Accounts
     (state.accounts || []).forEach(acc => {
         const entName = state.entities.find(e => e.id === acc.entityId)?.name || '';
-        csv += `ACCOUNT,${acc.createDate},"${acc.name}",${acc.initialBalance || 0},,,,,,${acc.isSaving ? 1 : 0},${acc.isInvestmentAccount ? 1 : 0},,,,"${entName}"\n`;
+        const row = Array(17).fill("");
+        row[0] = "ACCOUNT";
+        row[1] = acc.createDate;
+        row[2] = `"${acc.name}"`;
+        row[4] = acc.initialBalance || 0;
+        row[12] = acc.isSaving ? 1 : 0;
+        row[13] = acc.isInvestmentAccount ? 1 : 0;
+        row[16] = `"${entName}"`;
+        csv += row.join(',') + "\n";
     });
 
     // 2. Categories
     (state.categories || []).forEach(cat => {
-        csv += `CATEGORY,,"${cat.label}",,,,,"${cat.icon}","${cat.color}",,,,,"${cat.nature || ''}",${cat.isPassive ? 1 : 0},\n`;
+        const row = Array(17).fill("");
+        row[0] = "CATEGORY";
+        row[2] = `"${cat.label}"`;
+        row[8] = `"${cat.icon}"`;
+        row[9] = `"${cat.color}"`;
+        row[14] = `"${cat.nature || ''}"`;
+        row[15] = cat.isPassive ? 1 : 0;
+        csv += row.join(',') + "\n";
     });
 
     // 3. Recurring Templates
@@ -127,7 +146,18 @@ export const exportFullBackupCSV = () => {
         const catName = state.categories.find(c => c.id === tpl.category)?.label || '';
         const entName = state.entities.find(e => e.id === tpl.entityId)?.name || '';
         
-        csv += `RECURRING_TEMPLATE,${tpl.date},"${tpl.label}",${tpl.amount},"${sourceName}","${destName}","${catName}",,,${tpl.periodicity},${tpl.endDate || ''},,,,"${entName}"\n`;
+        const row = Array(17).fill("");
+        row[0] = "RECURRING_TEMPLATE";
+        row[1] = tpl.date;
+        row[2] = `"${tpl.label}"`;
+        row[4] = tpl.amount;
+        row[5] = `"${sourceName}"`;
+        row[6] = `"${destName}"`;
+        row[7] = `"${catName}"`;
+        row[10] = tpl.periodicity;
+        row[11] = tpl.endDate || '';
+        row[16] = `"${entName}"`;
+        csv += row.join(',') + "\n";
     });
 
     // 4. Standalone Transactions
@@ -138,27 +168,58 @@ export const exportFullBackupCSV = () => {
             const catName = state.categories.find(c => c.id === (tx.Category || tx.category))?.label || '';
             const entName = state.entities.find(e => e.id === tx.entityId)?.name || '';
             
-            csv += `TRANSACTION,${tx.date},"${tx.label}",${tx.amount},"${sourceName}","${destName}","${catName}",,,,,,,,"${entName}"\n`;
+            const row = Array(17).fill("");
+            row[0] = "TRANSACTION";
+            row[1] = tx.date;
+            row[2] = `"${tx.label}"`;
+            row[4] = tx.amount;
+            row[5] = `"${sourceName}"`;
+            row[6] = `"${destName}"`;
+            row[7] = `"${catName}"`;
+            row[16] = `"${entName}"`;
+            csv += row.join(',') + "\n";
         }
     });
 
     // 5. Assets & Values
     (state.assets || []).forEach(ast => {
         const entName = state.entities.find(e => e.id === ast.entityId)?.name || '';
-        csv += `ASSET,,"${ast.name}",,,,,,,,,,,,"${entName}"\n`;
+        const rowA = Array(17).fill("");
+        rowA[0] = "ASSET";
+        rowA[2] = `"${ast.name}"`;
+        rowA[16] = `"${entName}"`;
+        csv += rowA.join(',') + "\n";
+
         const values = (state.assetValues || []).filter(v => v.asset_id === ast.id);
         values.forEach(v => {
-            csv += `ASSET_VALUE,${v.date},"${v.quantity}",${v.value},,,${ast.name},,,,,,,,\n`;
+            const rowV = Array(17).fill("");
+            rowV[0] = "ASSET_VALUE";
+            rowV[1] = v.date;
+            rowV[2] = `"${ast.name}"`;
+            rowV[3] = `"${v.quantity}"`;
+            rowV[4] = v.value;
+            csv += rowV.join(',') + "\n";
         });
     });
 
     // 6. Liabilities & Values
     (state.liabilities || []).forEach(lia => {
         const entName = state.entities.find(e => e.id === lia.entityId)?.name || '';
-        csv += `LIABILITY,,"${lia.name}",,,,,,,,,,,,"${entName}"\n`;
+        const rowL = Array(17).fill("");
+        rowL[0] = "LIABILITY";
+        rowL[2] = `"${lia.name}"`;
+        rowL[16] = `"${entName}"`;
+        csv += rowL.join(',') + "\n";
+
         const values = (state.liabilityValues || []).filter(v => v.liability_id === lia.id);
         values.forEach(v => {
-            csv += `LIABILITY_VALUE,${v.date},,${v.value},,,${lia.name},,,,,,,,\n`;
+            const rowV = Array(17).fill("");
+            rowV[0] = "LIABILITY_VALUE";
+            rowV[1] = v.date;
+            rowV[2] = `"${lia.name}"`;
+            rowV[3] = "1";
+            rowV[4] = v.value;
+            csv += rowV.join(',') + "\n";
         });
     });
 
@@ -322,16 +383,18 @@ export const importFullBackupCSV = (event) => {
                     liabilityMap[lowerName] = id;
                 }
             } else if (type === 'ASSET_VALUE') {
-                const assetName = getValue("Category"); // We use Category col for parent name in export
+                const assetName = label; // Now using Label col
+                const quantity = parseFloat(getValue("Quantity")) || 1;
                 const assetId = assetMap[assetName.toLowerCase()];
                 if (assetId) {
-                    results.assetValues.push({ asset_id: assetId, value, date, quantity: parseFloat(label) || 1 });
+                    results.assetValues.push({ asset_id: assetId, value, date, quantity });
                 }
             } else if (type === 'LIABILITY_VALUE') {
-                const liaName = getValue("Category");
+                const liaName = label; // Now using Label col
+                const quantity = parseFloat(getValue("Quantity")) || 1;
                 const liaId = liabilityMap[liaName.toLowerCase()];
                 if (liaId) {
-                    results.liabilityValues.push({ liability_id: liaId, value, date, quantity: 1 });
+                    results.liabilityValues.push({ liability_id: liaId, value, date, quantity });
                 }
             } else if (type === 'TRANSACTION' || type === 'RECURRING_TEMPLATE') {
                 const sourceName = getValue("Source");
@@ -350,7 +413,8 @@ export const importFullBackupCSV = (event) => {
                         createDate: date || new Date().toISOString().split('T')[0], 
                         initialBalance: 0, 
                         isSaving: false,
-                        isInvestmentAccount: false 
+                        isInvestmentAccount: false,
+                        entityId: entId
                     };
                     results.accounts.push(newAcc);
                     accountMap[lower] = id;

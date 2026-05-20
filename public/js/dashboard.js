@@ -453,8 +453,8 @@ export const renderAnticipatedExpenses = () => {
     const monthKey = getMonthKey(state.viewDate);
     const monthData = state.records[monthKey] || { items: [] };
 
-    // Get all recurring templates
-    const recurring = state.recurringTemplates || [];
+    // Get all recurring templates filtered by entity
+    const recurring = (state.recurringTemplates || []).filter(tpl => state.selectedEntityId === 'all' || tpl.entityId === state.selectedEntityId);
     
     // Check which ones are NOT in the current month's transactions
     const missing = recurring.filter(template => {
@@ -523,7 +523,8 @@ export const renderAccountsList = () => {
     const container = document.getElementById('accounts-list');
     if (!container) return;
 
-    const sortedAccounts = [...state.accounts].sort((a, b) => a.name.localeCompare(b.name));
+    const filteredAccounts = state.accounts.filter(acc => state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId);
+    const sortedAccounts = [...filteredAccounts].sort((a, b) => a.name.localeCompare(b.name));
 
     if (sortedAccounts.length === 0) {
         container.innerHTML = `

@@ -185,6 +185,12 @@ export const handleAddEntity = async (e) => {
 
     if (!name) return;
 
+    const exists = state.entities.some(ent => ent.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+        showNotification(t('entities.error_duplicate'), "error");
+        return;
+    }
+
     try {
         await addEntityToFirestore(currentUserId, { name, type });
         showNotification("Entité ajoutée !");

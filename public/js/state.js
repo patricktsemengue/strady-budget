@@ -93,9 +93,7 @@ export const rebuildRecords = (transactions, monthsStatuses) => {
         if (isIncome) newRecords[monthKey].totals.income += tx.amount;
         if (isExpense) newRecords[monthKey].totals.expense += tx.amount;
 
-        if (monthKey === viewMonthKey || monthKey === nextMonthKey) {
-            newRecords[monthKey].items.push(tx);
-        }
+        newRecords[monthKey].items.push(tx);
     });
 
     Object.keys(monthsStatuses || {}).forEach(monthKey => {

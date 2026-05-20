@@ -431,6 +431,12 @@ export default {
             const name = document.getElementById('edit-ent-name').value.trim();
             const type = document.getElementById('edit-ent-type').value;
 
+            const exists = state.entities.some(ent => ent.id !== id && ent.name.toLowerCase() === name.toLowerCase());
+            if (exists) {
+                import('../ui.js').then(ui => ui.showNotification(t('entities.error_duplicate'), "error"));
+                return;
+            }
+
             try {
                 import('../firestore-service.js').then(async m => {
                     await m.updateEntityInFirestore(currentUserId, id, { name, type });

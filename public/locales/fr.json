@@ -94,7 +94,8 @@
     "success_added": "Entité ajoutée !",
     "success_deleted": "Entité supprimée.",
     "error_linked": "Impossible de supprimer une entité liée à des comptes ou transactions.",
-    "confirm_delete": "Supprimer cette entité ?"
+    "confirm_delete": "Supprimer cette entité ?",
+    "error_duplicate": "Une entité avec ce nom existe déjà."
   },
   "gps": {
     "title": "Trajectoire Liberté",

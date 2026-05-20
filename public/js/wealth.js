@@ -95,7 +95,7 @@ export const renderWealthList = () => {
     }).join('') || `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">${t('wealth.no_assets')}</div>`;
 
     // Render Liabilities
-    liabilityList.innerHTML = state.liabilities.map(liability => {
+    liabilityList.innerHTML = filteredLiabilities.map(liability => {
         const latest = getLatestValue(liability.id, false);
         const convertedValue = convertToAppCurrency(latest.value, liability.currency);
         totalLiabilities += convertedValue;

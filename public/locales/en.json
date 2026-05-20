@@ -94,8 +94,9 @@
     "success_added": "Entity added!",
     "success_deleted": "Entity deleted.",
     "error_linked": "Cannot delete an entity linked to accounts or transactions.",
-    "confirm_delete": "Delete this entity?"
-  },
+    "confirm_delete": "Delete this entity ?",
+    "error_duplicate": "An entity with this name already exists."
+    },
   "gps": {
     "title": "Freedom Trajectory",
     "unit_years": "YEARS",
