@@ -1,7 +1,7 @@
 import { getMonthKey, getTxDisplayInfo } from './utils.js';
 import { state } from './state.js';
 
-export const calculateMonthlyIncome = (date) => {
+const calculateMonthlyIncome = (date) => {
     const monthKey = getMonthKey(date);
     const monthItems = state.records[monthKey]?.items || [];
     
@@ -11,7 +11,7 @@ export const calculateMonthlyIncome = (date) => {
         .reduce((sum, item) => sum + item.amount, 0);
 };
 
-export const calculateBalances = (targetDate) => {
+const calculateBalances = (targetDate) => {
     const balances = {};
     const selectedYear = targetDate.getFullYear();
     const selectedMonth = targetDate.getMonth() + 1;
@@ -55,11 +55,11 @@ export const calculateBalances = (targetDate) => {
     return balances;
 };
 
-export const calculateActualBurnRate = (date = new Date()) => {
+const calculateActualBurnRate = (date = new Date()) => {
     let totalExpense = 0;
     let monthsCount = 0;
 
-    // STRATEGY: Always use the latest 3 real months relative to TODAY for a stable baseline
+    // STRATEGY: Always use the latest 3 real months relative to TODAY for a baseline
     const referenceDate = new Date();
     
     for (let i = 0; i < 3; i++) {
@@ -83,7 +83,7 @@ export const calculateActualBurnRate = (date = new Date()) => {
         }
     }
 
-    // Fallback: If no history, use the selected month's projection as a secondary reference
+    // Fallback: If no history, use the selected month's projection
     if (monthsCount === 0) {
         const currentMonthKey = getMonthKey(date);
         const monthItems = state.records[currentMonthKey]?.items || [];
@@ -99,7 +99,7 @@ export const calculateActualBurnRate = (date = new Date()) => {
     return totalExpense / monthsCount;
 };
 
-export const calculateAverageSavings = (date = new Date()) => {
+const calculateAverageSavings = (date = new Date()) => {
     let totalSavings = 0;
     let monthsCount = 0;
     const referenceDate = new Date();
@@ -145,18 +145,11 @@ export const calculateAverageSavings = (date = new Date()) => {
 
 /**
  * Calculates the estimated years until Financial Independence.
- * Formula: Uses NPER with compounding or linear if rate is 0.
- * @returns {Object} { years, targetCapital, currentCapital, monthlySavings }
  */
-export const calculateTimeToFreedom = (date) => {
+const calculateTimeToFreedom = (date) => {
     const monthlyExpenses = calculateActualBurnRate(date);
     const monthlySavings = calculateAverageSavings(date);
-    
-    // 1. The Target (4% Rule: Yearly Exp * 25)
     const targetCapital = monthlyExpenses * 12 * 25;
-
-    // 2. Current Invested Capital
-    // Filter accounts by entity and type (Savings/Investment)
     const currentCapital = state.accounts
         .filter(acc => {
             const isEntityMatch = state.selectedEntityId === 'all' || acc.entityId === state.selectedEntityId;
@@ -171,11 +164,9 @@ export const calculateTimeToFreedom = (date) => {
     if (currentCapital >= targetCapital) return { years: 0, targetCapital, currentCapital, monthlySavings };
     if (monthlySavings <= 0) return { years: 99, targetCapital, currentCapital, monthlySavings };
 
-    // 3. Projection (assuming conservative 5% annual return)
     const annualRate = 0.05;
-    const r = annualRate / 12; // monthly rate
+    const r = annualRate / 12;
 
-    // NPER Formula: n = log((Savings + Target * r) / (Savings + Current * r)) / log(1 + r)
     try {
         const n = Math.log((monthlySavings + targetCapital * r) / (monthlySavings + currentCapital * r)) / Math.log(1 + r);
         const years = isNaN(n) ? 99 : Math.max(0, n / 12);
@@ -183,4 +174,12 @@ export const calculateTimeToFreedom = (date) => {
     } catch (e) {
         return { years: 99, targetCapital, currentCapital, monthlySavings };
     }
+};
+
+export {
+    calculateMonthlyIncome,
+    calculateBalances,
+    calculateActualBurnRate,
+    calculateAverageSavings,
+    calculateTimeToFreedom
 };

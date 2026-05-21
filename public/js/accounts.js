@@ -14,10 +14,19 @@ export const openAddAccountDrawer = () => {
     document.getElementById('add-account-form').reset();
     
     const entitySelect = document.getElementById('acc-entity');
+    const entityContainer = entitySelect?.closest('.space-y-2');
+    
     if (entitySelect) {
         entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
-        if (state.selectedEntityId !== 'all') {
-            entitySelect.value = state.selectedEntityId;
+        
+        if (state.entities.length <= 1) {
+            if (entityContainer) entityContainer.classList.add('hidden');
+            if (state.entities[0]) entitySelect.value = state.entities[0].id;
+        } else {
+            if (entityContainer) entityContainer.classList.remove('hidden');
+            if (state.selectedEntityId !== 'all') {
+                entitySelect.value = state.selectedEntityId;
+            }
         }
     }
 
@@ -104,6 +113,7 @@ export const openEditAccount = (id) => {
     if (entitySelect) {
         entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
         entitySelect.value = acc.entityId || '';
+        entitySelect.disabled = true; // Safety rule: cannot transfer account between entities
     }
 
     document.getElementById('edit-acc-id').value = acc.id;
@@ -147,6 +157,12 @@ export const handleUpdateAccount = async (e) => {
 
     const oldAcc = state.accounts.find(a => a.id === id);
     if (!oldAcc) return;
+
+    // Safety rule: cannot transfer account between entities
+    if (entityId !== oldAcc.entityId) {
+        showNotification("Impossible de transférer un compte d'une entité à une autre.", 'error');
+        return;
+    }
 
     try {
         // We need the old "Initial Balance" specifically to calculate the delta

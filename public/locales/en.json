@@ -33,7 +33,11 @@
   },
   "hub": {
     "welcome": "Welcome to Strady",
-    "subtitle": "Choose your tool to start your financial management."
+    "subtitle": "Choose your tool to start your financial management.",
+    "tag_operations": "Operations",
+    "tag_wealth": "Wealth",
+    "tag_strategy": "Strategy",
+    "tag_education": "Education"
   },
   "common": {
     "loading": "Loading...",
@@ -79,6 +83,7 @@
     "understood": "Understood!",
     "select_month": "Select a Month",
     "all_family": "ALL FAMILY",
+    "active_view": "Active View",
     "private": "Private",
     "family": "Family / Joint",
     "business": "Small Business"

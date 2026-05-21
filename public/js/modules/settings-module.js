@@ -133,58 +133,62 @@ export default {
             { id: 'group-security', label: t('settings.groups_settings.security'), icon: 'fa-shield-halved' }
         ];
 
-        const entityCards = state.entities.map(ent => {
-            const countAccounts = state.accounts.filter(a => a.entityId === ent.id).length;
-            const countTransactions = (state.transactions || []).filter(t => t.entityId === ent.id).length;
-            const countAssets = state.assets.filter(a => a.entityId === ent.id).length;
-            const countLiabilities = state.liabilities.filter(l => l.entityId === ent.id).length;
-            
-            const isDeletable = countAccounts === 0 && countTransactions === 0 && countAssets === 0 && countLiabilities === 0;
-            const linkCount = countAccounts + countAssets + countLiabilities;
+        const isSolo = state.entities.length <= 1;
+        const mainEnt = state.entities[0] || { name: 'Privé', id: '', type: 'PRIVATE' };
 
-            return `
-                <div data-id="${ent.id}" class="swipe-item relative overflow-hidden rounded-xl group shadow-sm mb-1">
-                    <!-- Action Layers (Mobile Swipe Only) -->
-                    <div class="absolute inset-0 bg-rose-600 flex justify-end items-center px-6 text-white md:hidden">
-                        <button onclick="window.app.deleteEntity('${ent.id}')" class="flex flex-col items-center gap-1">
-                            <i class="fa-trash-can text-lg"></i>
-                            <span class="text-[8px] font-bold uppercase tracking-tighter">${t('common.delete')}</span>
+        const entitySectionHtml = isSolo ? `
+            <div class="space-y-4">
+                <div class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Votre Identité (pour les rapports)</label>
+                    <div class="flex items-center gap-3">
+                        <input type="text" value="${mainEnt.name}" 
+                            onchange="window.app.updateEntity('${mainEnt.id}', {name: this.value})"
+                            class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-bold text-slate-800 dark:text-white focus:ring-indigo-500">
+                        <button onclick="window.app.openAddEntity()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-sm active:scale-95">
+                            <i class="fa-solid fa-plus mr-1"></i> Ajouter un profil
                         </button>
                     </div>
-
-                    <!-- Content Layer -->
-                    <div class="swipe-content relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-between transition-all duration-200 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
-                                <i class="fa-solid ${ent.type === 'PRIVATE' ? 'fa-user' : (ent.type === 'FAMILY' ? 'fa-people-roof' : 'fa-briefcase')} text-sm"></i>
-                            </div>
-                            <div>
-                                <p class="font-bold text-slate-800 dark:text-slate-100">${ent.name}</p>
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${t(`entities.type_${ent.type.toLowerCase()}`)} • ${linkCount} ${t('nav.groups.operations').toLowerCase()}</p>
-                            </div>
-                        </div>
-
-                        <!-- Desktop Actions (Hidden on Mobile) -->
-                        <div class="hidden md:flex items-center gap-1">
-                            <button onclick="window.app.openEditEntity('${ent.id}')" class="p-2 text-slate-300 hover:text-indigo-600 transition-all" title="${t('common.edit')}">
-                                <i class="fa-pen text-xs"></i>
-                            </button>
-                            <button onclick="window.app.deleteEntity('${ent.id}')" 
-                                    class="p-2 text-slate-300 hover:text-rose-500 transition-all ${!isDeletable ? 'opacity-10 cursor-not-allowed' : ''}" 
-                                    ${!isDeletable ? `title="${t('entities.error_linked')}"` : `title="${t('common.delete')}"`}>
-                                <i class="fa-trash-can text-xs"></i>
-                            </button>
-                        </div>
-
-                        <!-- Mobile Indicator (Hidden on Desktop) -->
-                        <div class="md:hidden text-slate-200">
-                             <i class="fa-chevron-left text-[10px]"></i>
-                        </div>
-                    </div>
+                    <p class="text-[10px] text-slate-400 mt-3 italic">L'ajout d'un second profil (conjoint, société) activera le mode multi-entités.</p>
                 </div>
-            `;
-        }).join('');
+            </div>
+        ` : `
+            <div class="space-y-4">
+                <div id="entities-swipe-list" class="grid grid-cols-1 gap-2">
+                    ${state.entities.map(ent => {
+                        const countAccounts = state.accounts.filter(a => a.entityId === ent.id).length;
+                        const countTransactions = (state.transactions || []).filter(t => t.entityId === ent.id).length;
+                        const countAssets = state.assets.filter(a => a.entityId === ent.id).length;
+                        const countLiabilities = state.liabilities.filter(l => l.entityId === ent.id).length;
+                        const isDeletable = countAccounts === 0 && countTransactions === 0 && countAssets === 0 && countLiabilities === 0;
+                        const linkCount = countAccounts + countAssets + countLiabilities;
+
+                        return `
+                            <div data-id="${ent.id}" class="swipe-item relative overflow-hidden rounded-xl group shadow-sm">
+                                <div class="swipe-content relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+                                            <i class="fa-solid ${ent.type === 'PRIVATE' ? 'fa-user' : (ent.type === 'FAMILY' ? 'fa-people-roof' : 'fa-briefcase')} text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-800 dark:text-slate-100">${ent.name}</p>
+                                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${t(`entities.type_${ent.type.toLowerCase()}`)} • ${linkCount} éléments</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="window.app.openEditEntity('${ent.id}')" class="p-2 text-slate-300 hover:text-indigo-600 transition-all"><i class="fa-solid fa-pen text-xs"></i></button>
+                                        <button onclick="window.app.deleteEntity('${ent.id}')" class="p-2 text-slate-300 hover:text-rose-500 transition-all ${!isDeletable ? 'opacity-10 cursor-not-allowed' : ''}" ${!isDeletable ? 'disabled' : ''}><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <button onclick="window.app.openAddEntity()" class="w-full p-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span class="text-xs font-bold uppercase tracking-widest">Nouveau Profil</span>
+                </button>
+            </div>
+        `;
 
         return `
         <div id="view-settings" class="max-w-6xl mx-auto px-4 pb-20">
@@ -295,28 +299,9 @@ export default {
 
                         <!-- Card: Entities List -->
                         <div class="settings-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            ${renderCardHeader(t('entities.title'), t('entities.subtitle'), 'Les entités permettent de filtrer votre patrimoine et votre trésorerie par "propriétaire". Idéal pour les couples ou les entrepreneurs.', 'data', 'fa-people-roof', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
-                            <div class="px-6 pb-6 pt-2 space-y-4">
-                                <div id="entities-swipe-list" class="grid grid-cols-1 gap-2">
-                                    ${entityCards || `<div class="py-8 text-center text-slate-400 italic">Aucune entité configurée</div>`}
-                                </div>
-
-                                <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                                    <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">${t('entities.add_title')}</h5>
-                                    <form id="add-entity-form" class="flex flex-col gap-3">
-                                        <input type="text" id="new-entity-name" placeholder="${t('entities.name_placeholder')}" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
-                                        <div class="flex gap-2">
-                                            <select id="new-entity-type" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 text-sm font-bold">
-                                                <option value="PRIVATE">${t('entities.type_private')}</option>
-                                                <option value="FAMILY">${t('entities.type_family')}</option>
-                                                <option value="SMALL_BUSINESS">${t('entities.type_business')}</option>
-                                            </select>
-                                            <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95">
-                                                <i class="fa-solid fa-plus mr-2"></i> ${t('common.add')}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
+                            ${renderCardHeader(t('entities.title'), isSolo ? "Votre identité budgétaire principale." : t('entities.subtitle'), 'Les entités permettent de filtrer votre patrimoine et votre trésorerie par "propriétaire".', 'data', 'fa-people-roof', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
+                            <div class="px-6 pb-6 pt-2">
+                                ${entitySectionHtml}
                             </div>
                         </div>
                     </div>
@@ -502,11 +487,7 @@ export default {
                 import('../data.js').then(m => m.handleFactoryReset('scratch'));
             }
             if (e.target.id === 'btn-logout-settings') {
-                import('../auth.js').then(m => {
-                    if (confirm(t('confirm.logout'))) {
-                        m.logout();
-                    }
-                });
+                window.app.logout();
             }
         });
 

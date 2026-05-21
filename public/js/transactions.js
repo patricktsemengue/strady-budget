@@ -37,10 +37,19 @@ export const openTransactionModal = (id = null) => {
     const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : null;
 
     const entitySelect = document.getElementById('transaction-entity');
+    const entityContainer = entitySelect?.closest('.col-span-1');
+    
     if (entitySelect) {
         entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
-        if (state.selectedEntityId !== 'all') {
-            entitySelect.value = state.selectedEntityId;
+        
+        if (state.entities.length <= 1) {
+            if (entityContainer) entityContainer.classList.add('hidden');
+            if (state.entities[0]) entitySelect.value = state.entities[0].id;
+        } else {
+            if (entityContainer) entityContainer.classList.remove('hidden');
+            if (state.selectedEntityId !== 'all') {
+                entitySelect.value = state.selectedEntityId;
+            }
         }
     }
 

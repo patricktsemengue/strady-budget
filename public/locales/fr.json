@@ -33,7 +33,11 @@
   },
   "hub": {
     "welcome": "Bienvenue sur Strady",
-    "subtitle": "Choisissez votre outil pour commencer votre gestion financière."
+    "subtitle": "Choisissez votre outil pour commencer votre gestion financière.",
+    "tag_operations": "Opérations",
+    "tag_wealth": "Patrimoine",
+    "tag_strategy": "Stratégie",
+    "tag_education": "Éducation"
   },
   "common": {
     "loading": "Chargement...",
@@ -79,6 +83,7 @@
     "understood": "Compris !",
     "select_month": "Sélectionner un mois",
     "all_family": "TOUT LE MÉNAGE",
+    "active_view": "Vue Active",
     "private": "Privée",
     "family": "Famille / Joint",
     "business": "Petite Entreprise"

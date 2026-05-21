@@ -1,23 +1,24 @@
 ﻿Type,Date,Label,Quantity,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive,Entity
-ENTITY,,"Alice",,,,,,,,,,,,,"PRIVATE",,
-ENTITY,,"Bob",,,,,,,,,,,,,"PRIVATE",,
-ENTITY,,"Ménage",,,,,,,,,,,,,"FAMILY",,
-ACCOUNT,2026-05-01,"Compte Courant Alice",,0,,,,,,,,0,0,,,,"Alice"
-ACCOUNT,2026-05-01,"Compte Courant Bob",,0,,,,,,,,0,0,,,,"Bob"
-ACCOUNT,2026-05-01,"Portefeuille Actions",,0,,,,,,,,0,1,,,,"Ménage"
-ACCOUNT,2026-05-01,"Compte Principal (Ménage)",,0,,,,,,,,0,0,,,,"Ménage"
-ACCOUNT,2026-05-01,"Épargne de Sécurité",,0,,,,,,,,1,0,,,,"Ménage"
-CATEGORY,,"Dividendes & Intérêts",,,,,,,"fa-money-bill-trend-up","#34d399",,,,,"REVENU",1,
-CATEGORY,,"Énergie & Eau",,,,,,,"fa-bolt","#fbbf24",,,,,"FIXE",0,
-CATEGORY,,"Vie Courante (Courses)",,,,,,,"fa-shopping-basket","#f59e0b",,,,,"QUOTIDIEN",0,
-CATEGORY,,"Logement & Prêts",,,,,,,"fa-house-lock","#3b82f6",,,,,"FIXE",0,
-CATEGORY,,"Assurances",,,,,,,"fa-shield-halved","#64748b",,,,,"FIXE",0,
-CATEGORY,,"Loisirs & Sorties",,,,,,,"fa-gamepad","#8b5cf6",,,,,"LOISIR",0,
-CATEGORY,,"Revenu Locatif",,,,,,,"fa-building-circle-check","#059669",,,,,"REVENU",1,
-CATEGORY,,"Salaire (Entrées)",,,,,,,"fa-money-bill-wave","#10b981",,,,,"REVENU",0,
-CATEGORY,,"Épargne & Invest.",,,,,,,"fa-piggy-bank","#6366f1",,,,,"EPARGNE",0,
-CATEGORY,,"Enfant & Scolarité",,,,,,,"fa-graduation-cap","#ec4899",,,,,"QUOTIDIEN",0,
-CATEGORY,,"Transport",,,,,,,"fa-car","#ef4444",,,,,"QUOTIDIEN",0,
+ENTITY,,"Alice",,,,,,,,,,,,"PRIVATE",,
+ENTITY,,"Bob",,,,,,,,,,,,"PRIVATE",,
+ENTITY,,"Ménage",,,,,,,,,,,,"FAMILY",,
+ENTITY,,"CORNSEED",,,,,,,,,,,,"SMALL_BUSINESS",,
+ACCOUNT,2026-05-01,"Compte Courant Alice",,0,,,,,,,,0,0,,,"Alice"
+ACCOUNT,2026-05-01,"Compte Courant Bob",,0,,,,,,,,0,0,,,"Bob"
+ACCOUNT,2026-05-01,"Portefeuille Actions",,0,,,,,,,,0,1,,,"Ménage"
+ACCOUNT,2026-05-01,"Compte Principal (Ménage)",,0,,,,,,,,0,0,,,"Ménage"
+ACCOUNT,2026-05-01,"Épargne de Sécurité",,0,,,,,,,,1,0,,,"Ménage"
+CATEGORY,,"Dividendes & Intérêts",,,,,,"fa-money-bill-trend-up","#34d399",,,,,"REVENU",1,
+CATEGORY,,"Énergie & Eau",,,,,,"fa-bolt","#fbbf24",,,,,"FIXE",0,
+CATEGORY,,"Vie Courante (Courses)",,,,,,"fa-shopping-basket","#f59e0b",,,,,"QUOTIDIEN",0,
+CATEGORY,,"Logement & Prêts",,,,,,"fa-house-lock","#3b82f6",,,,,"FIXE",0,
+CATEGORY,,"Assurances",,,,,,"fa-shield-halved","#64748b",,,,,"FIXE",0,
+CATEGORY,,"Loisirs & Sorties",,,,,,"fa-gamepad","#8b5cf6",,,,,"LOISIR",0,
+CATEGORY,,"Revenu Locatif",,,,,,"fa-building-circle-check","#059669",,,,,"REVENU",1,
+CATEGORY,,"Salaire (Entrées)",,,,,,"fa-money-bill-wave","#10b981",,,,,"REVENU",0,
+CATEGORY,,"Épargne & Invest.",,,,,,"fa-piggy-bank","#6366f1",,,,,"EPARGNE",0,
+CATEGORY,,"Enfant & Scolarité",,,,,,"fa-graduation-cap","#ec4899",,,,,"QUOTIDIEN",0,
+CATEGORY,,"Transport",,,,,,"fa-car","#ef4444",,,,,"QUOTIDIEN",0,
 RECURRING_TEMPLATE,2026-05-15,"Électricité & Gaz",,280,"Compte Principal (Ménage)","external","Énergie & Eau",,,M,,,,,,"Ménage"
 RECURRING_TEMPLATE,2026-05-02,"Prêt Maison (RP)",,1250,"Compte Principal (Ménage)","external","Logement & Prêts",,,M,,,,,,"Ménage"
 RECURRING_TEMPLATE,2026-05-25,"Pack Assurances (Auto/Hab/Fam)",,145,"Compte Principal (Ménage)","external","Assurances",,,M,,,,,,"Ménage"
@@ -28,9 +29,9 @@ RECURRING_TEMPLATE,2026-05-05,"Frais Scolaires & Cantine",,120,"Compte Principal
 RECURRING_TEMPLATE,2026-05-02,"Virement Alice → Ménage",,1800,"Compte Courant Alice","Compte Principal (Ménage)","Épargne & Invest.",,,M,,,,,,"Ménage"
 RECURRING_TEMPLATE,2026-05-02,"Virement Bob → Ménage",,1800,"Compte Courant Bob","Compte Principal (Ménage)","Épargne & Invest.",,,M,,,,,,"Ménage"
 RECURRING_TEMPLATE,2026-05-20,"Provision Eau",,45,"Compte Principal (Ménage)","external","Énergie & Eau",,,M,,,,,,"Ménage"
-TRANSACTION,2026-05-17,"Plein Essence Bob",,75,"Compte Courant Bob","external","Transport",,,,,,,,,,"Bob"
-TRANSACTION,2026-05-18,"Yoga Alice",,15,"Compte Courant Alice","external","Loisirs & Sorties",,,,,,,,,,"Alice"
-TRANSACTION,2026-05-19,"Courses Delhaize",,145.2,"Compte Principal (Ménage)","external","Vie Courante (Courses)",,,,,,,,,,"Ménage"
+TRANSACTION,2026-05-17,"Plein Essence Bob",,75,"Compte Courant Bob","external","Transport",,,,,,,,,"Bob"
+TRANSACTION,2026-05-18,"Yoga Alice",,15,"Compte Courant Alice","external","Loisirs & Sorties",,,,,,,,,"Alice"
+TRANSACTION,2026-05-19,"Courses Delhaize",,145.2,"Compte Principal (Ménage)","external","Vie Courante (Courses)",,,,,,,,,"Ménage"
 ASSET,,"Maison (Résidence Principale)",,,,,,,,,,,,,,"Ménage"
 ASSET_VALUE,2026-05-20,"Maison (Résidence Principale)","1",300000,,,,,,,,,,,,
 LIABILITY,,"Hypothèque Maison (RP)",,,,,,,,,,,,,,"Ménage"

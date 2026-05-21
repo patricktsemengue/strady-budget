@@ -149,7 +149,7 @@ const init = async () => {
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js', { type: 'module' })
+                navigator.serviceWorker.register('./sw.js?v=1.0.6')
                     .then(reg => {
                         console.log('Service Worker registered');
                         if (auth.currentUser) {
@@ -405,7 +405,7 @@ const changeLanguage = async (lng) => {
 
 const changeEntity = (entityId) => {
     state.selectedEntityId = entityId;
-    
+
     // Update selectors if they exist
     const selectors = [
         document.getElementById('entity-switcher-desktop'),
@@ -415,6 +415,22 @@ const changeEntity = (entityId) => {
 
     selectors.forEach(s => s.value = entityId);
 
+    // Update Mobile Top-Bar Initial
+    const mobileInitial = document.getElementById('entity-mobile-initial');
+    if (mobileInitial) {
+        const ent = state.entities.find(e => e.id === entityId);
+        mobileInitial.textContent = entityId === 'all' ? 'T' : (ent?.name?.[0] || '?').toUpperCase();
+    }
+
+    // Auto-hide switchers if only one exists
+    const switcher = document.getElementById('entity-switcher-desktop');
+    const globalSwitcherContainer = document.getElementById('entity-switcher-global-container');
+    const mobileTrigger = document.getElementById('entity-switcher-mobile-trigger');
+
+    if (switcher) switcher.classList.toggle('hidden', state.entities.length <= 1);
+    if (globalSwitcherContainer) globalSwitcherContainer.classList.toggle('hidden-force', state.entities.length <= 1);
+    if (mobileTrigger) mobileTrigger.classList.toggle('hidden', state.entities.length <= 1);
+
     rebuildRecords(state.allTransactions || [], state.months);
     router.render();
 };
@@ -423,13 +439,21 @@ const updateEntitySelectors = () => {
     const desktopSelector = document.getElementById('entity-switcher-desktop');
     const mobileSelector = document.getElementById('entity-switcher-mobile');
     const globalSelector = document.getElementById('entity-switcher-global');
+    const globalSwitcherContainer = document.getElementById('entity-switcher-global-container');
     const transactionSelector = document.getElementById('transaction-entity');
     const wealthSelector = document.getElementById('wealth-entity-id');
 
-    const selectors = [desktopSelector, mobileSelector, globalSelector, transactionSelector, wealthSelector].filter(s => s !== null);
+    // Auto-hide switchers if only one entity exists
+    if (desktopSelector) desktopSelector.classList.toggle('hidden', state.entities.length <= 1);
+    if (mobileSelector) mobileSelector.classList.toggle('hidden', state.entities.length <= 1);
+    if (globalSwitcherContainer) globalSwitcherContainer.classList.toggle('hidden-force', state.entities.length <= 1);
     
-    selectors.forEach(selector => {
-        const currentValue = selector.value;
+    const mobileTrigger = document.getElementById('entity-switcher-mobile-trigger');
+    if (mobileTrigger) mobileTrigger.classList.toggle('hidden', state.entities.length <= 1);
+
+    const selectors = [desktopSelector, mobileSelector, globalSelector, transactionSelector, wealthSelector].filter(s => s !== null);
+
+    selectors.forEach(selector => {        const currentValue = selector.value;
         selector.innerHTML = '';
         
         // Global view option for switchers
@@ -455,13 +479,51 @@ const updateEntitySelectors = () => {
             selector.appendChild(option);
         });
 
-        // Restore value if it still exists
         if (currentValue && [...selector.options].some(o => o.value === currentValue)) {
             selector.value = currentValue;
-        } else if (selector === desktopSelector || selector === mobileSelector || selector === globalSelector) {
+        } else if (state.selectedEntityId && [...selector.options].some(o => o.value === state.selectedEntityId)) {
             selector.value = state.selectedEntityId;
         }
     });
+
+    // Also build the Mobile Bottom Sheet Options
+    const sheetList = document.getElementById('entity-sheet-list');
+    if (sheetList) {
+        let html = `
+            <button onclick="window.app.changeEntity('all'); window.app.closeEntitySheet();" class="w-full flex items-center justify-between p-4 rounded-2xl ${state.selectedEntityId === 'all' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-400' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'} transition-all group">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl ${state.selectedEntityId === 'all' ? 'bg-white/20' : 'bg-white shadow-sm'} flex items-center justify-center">
+                        <i class="fa-solid fa-users-viewfinder ${state.selectedEntityId === 'all' ? 'text-white' : 'text-slate-400'}"></i>
+                    </div>
+                    <span class="font-black text-[10px] uppercase tracking-widest">${t ? t('common.all_family') : 'Tout le Ménage'}</span>
+                </div>
+                ${state.selectedEntityId === 'all' ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+            </button>
+        `;
+        
+        state.entities.forEach(ent => {
+            const isActive = state.selectedEntityId === ent.id;
+            html += `
+                <button onclick="window.app.changeEntity('${ent.id}'); window.app.closeEntitySheet();" class="w-full flex items-center justify-between p-4 rounded-2xl ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-400' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'} transition-all group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl ${isActive ? 'bg-white/20' : 'bg-white shadow-sm'} flex items-center justify-center text-lg">
+                            <i class="fa-solid ${ent.type === 'PRIVATE' ? 'fa-user' : (ent.type === 'FAMILY' ? 'fa-people-roof' : 'fa-briefcase')} text-sm ${isActive ? 'text-white' : 'text-slate-400'}"></i>
+                        </div>
+                        <span class="font-black text-[10px] uppercase tracking-widest">${ent.name}</span>
+                    </div>
+                    ${isActive ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                </button>
+            `;
+        });
+        sheetList.innerHTML = html;
+    }
+
+    // Refresh display name on Top Bar Avatar
+    const mobileInitial = document.getElementById('entity-mobile-initial');
+    if (mobileInitial) {
+        const ent = state.entities.find(e => e.id === state.selectedEntityId);
+        mobileInitial.textContent = state.selectedEntityId === 'all' ? 'T' : (ent?.name?.[0] || '?').toUpperCase();
+    }
 };
 
 const updateThemeToggleIcons = (isDark) => {
@@ -477,14 +539,14 @@ const toggleTheme = () => {
     updateThemeToggleIcons(isDark);
 };
 
-const setupEventListeners = () => {
-    const handleLogout = async () => {
-        if (confirm(t('confirm.logout'))) {
-            try { await logout(); showNotification(t('common.success_logout')); }
-            catch (error) { showNotification(t('common.error_logout'), "error"); }
-        }
-    };
+async function handleLogout() {
+    if (confirm(t('confirm.logout'))) {
+        try { await logout(); showNotification(t('common.success_logout')); }
+        catch (error) { showNotification(t('common.error_logout'), "error"); }
+    }
+}
 
+const setupEventListeners = () => {
     const addSafeListener = (selector, event, handler, isQuerySelector = false) => {
         const element = isQuerySelector ? document.querySelector(selector) : document.getElementById(selector);
         if (element) element.addEventListener(event, handler);
@@ -652,6 +714,7 @@ window.app = {
     deleteExchangeRate: (code) => import('./settings.js').then(m => m.deleteExchangeRate(code)),
     openWealthEvolution: () => import('./dashboard-new.js').then(m => m.openWealthEvolution()),
     setView, setViewDate, editTransaction, deleteTransaction, openTransactionModal,
+    logout: handleLogout,
     openMobileActions, closeMobileActions, closeCategoryActions, closeAccountActions,
     renderAccountsList, openEditCategory, deleteCategory, openCategoryActions,
     openEditAccount, deleteAccount, deleteEntity: (id) => import('./settings.js').then(m => m.deleteEntity(id)), openAccountActions, openWealthDrawer, closeWealthDrawer,
@@ -660,6 +723,27 @@ window.app = {
     openAddAccountDrawer: () => import('./accounts.js').then(m => m.openAddAccountDrawer()),
     openAddCategoryDrawer: () => import('./categories.js').then(m => m.openAddCategoryDrawer()),
     openWealthDetails, closeWealthDetails, deleteWealthValue, deleteWealthEntity, deleteWealthEntityById,
+    openEntitySheet: () => {
+        const sheet = document.getElementById('entity-sheet-mobile');
+        if (sheet) {
+            updateEntitySelectors(); // Refresh list before showing
+            document.getElementById('drawer-overlay').classList.add('active');
+            sheet.classList.add('active');
+            
+            // Focus the active item after a short delay for animation
+            setTimeout(() => {
+                const activeBtn = sheet.querySelector('.bg-indigo-600');
+                if (activeBtn) activeBtn.focus();
+            }, 300);
+        }
+    },
+    closeEntitySheet: () => {
+        const sheet = document.getElementById('entity-sheet-mobile');
+        if (sheet) {
+            document.getElementById('drawer-overlay').classList.remove('active');
+            sheet.classList.remove('active');
+        }
+    },
     dismissHelp: (id) => router.dismissHelp(id),
     showHelp: (id) => router.showHelp(id),
     setNatureFilter: (nature) => import('./dashboard.js').then(m => m.setNatureFilter(nature)),
@@ -670,6 +754,18 @@ window.app = {
     setSettingPreset: (type) => import('./settings.js').then(m => m.setSettingPreset(type)),
     updateMonthSelectorPosition: (pos) => import('./settings.js').then(m => m.updateMonthSelectorPosition(pos)),
     updateEFMultiplier: (multiplier) => import('./settings.js').then(m => m.updateEFMultiplier(multiplier)),
+    updateEntity: (id, data) => import('./settings.js').then(m => m.updateEntity(id, data)),
+    openAddEntity: () => {
+        const drawer = document.getElementById('entity-add-drawer');
+        if (drawer) {
+             document.getElementById('drawer-overlay').classList.add('active');
+             drawer.classList.add('active');
+        } else {
+             setView('settings');
+             // Small delay to let view switch then open? 
+             // Actually, setView is enough, the user can use the plus button in settings.
+        }
+    },
     exportFullBackupCSV: () => import('./data.js').then(m => m.exportFullBackupCSV()),
     renderSankeyChart: (expanded) => import('./dashboard.js').then(m => m.renderSankeyChart(expanded)),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),

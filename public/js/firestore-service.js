@@ -68,6 +68,12 @@ export const subscribeToAppData = (userId, onDataUpdate) => {
 
     const entityUnsub = onSnapshot(collection(db, `users/${userId}/entities`), (snapshot) => {
         localState.entities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Auto-provision default entity if none exist
+        if (localState.entities.length === 0 && initialLoadsPending === 0) {
+            addEntityToFirestore(userId, { name: 'Privé', type: 'PRIVATE' });
+        }
+        
         if (initialLoadsPending > 0) onInitialLoadComplete(); else triggerUpdate();
     });
 
@@ -287,6 +293,7 @@ export const updateAccountInFirestore = async (userId, account, oldInitialBalanc
             createDate: createDate || oldData.createDate,
             isSaving: !!account.isSaving,
             isInvestmentAccount: !!account.isInvestmentAccount,
+            entityId: account.entityId || oldData.entityId || null,
             updated_at: serverTimestamp() 
         };
 

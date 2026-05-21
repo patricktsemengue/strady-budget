@@ -14,6 +14,9 @@ export default {
                 <button id="btn-backup-json-hub-ghost" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" title="Sauvegarde">
                     <i class="fa-solid fa-cloud-arrow-down"></i>
                 </button>
+                <button id="btn-logout-hub" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all" title="${t('settings.maintenance.logout') || 'Déconnexion'}">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
             </div>
 
             <div class="text-center mb-16">
@@ -52,7 +55,7 @@ export default {
                     </div>
                     <div class="text-center">
                         <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.ledger.name') || 'Le Grand Livre'}</h2>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Opérations</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">${t('hub.tag_operations') || 'Opérations'}</p>
                     </div>
                 </button>
 
@@ -64,7 +67,7 @@ export default {
                     </div>
                     <div class="text-center">
                         <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.wealth.name') || 'Le Coffre-Fort'}</h2>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Patrimoine</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">${t('hub.tag_wealth') || 'Patrimoine'}</p>
                     </div>
                 </button>
 
@@ -76,7 +79,7 @@ export default {
                     </div>
                     <div class="text-center">
                         <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.dashboard.name') || 'Tableau de Bord'}</h2>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Stratégie</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">${t('hub.tag_strategy') || 'Stratégie'}</p>
                     </div>
                 </button>
 
@@ -88,7 +91,7 @@ export default {
                     </div>
                     <div class="text-center">
                         <h2 class="text-sm md:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">${t('apps.philosophy.name') || 'Philosophie & Guide'}</h2>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Éducation</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">${t('hub.tag_education') || 'Éducation'}</p>
                     </div>
                 </button>
             </div>
@@ -109,6 +112,12 @@ export default {
             backupBtn.onclick = () => {
                 if (window.app.exportFullBackupCSV) window.app.exportFullBackupCSV();
             };
+        }
+
+        // Attach Logout Listener
+        const logoutBtn = document.getElementById('btn-logout-hub');
+        if (logoutBtn) {
+            logoutBtn.onclick = () => window.app.logout();
         }
     }
 };

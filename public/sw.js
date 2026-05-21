@@ -1,5 +1,15 @@
-// Service Worker for Client-Side Balance Aggregation
-const VERSION = '1.0.4';
+// Service Worker for Client-Side Balance Aggregation (Compat Mode)
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js");
+
+// We still need balance-engine logic. Since we are in compat mode, 
+// we might need to expose balance-engine functions globally or import them.
+// For now, let's keep the logic simple or assume it's available via a compat-friendly script.
+// To avoid module errors in SW, we will inline the necessary logic if it's small, 
+// or import it if we can package it for SW.
+
+const VERSION = '1.0.6';
 const CACHE_NAME = `strady-cache-${VERSION}`;
 const ASSETS_TO_CACHE = [
     '/',
@@ -16,31 +26,18 @@ const EXTERNAL_ASSETS = [
     'https://unpkg.com/i18next/dist/umd/i18next.min.js'
 ];
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getAuth, signInWithCustomToken, signInWithCredential, GoogleAuthProvider
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    getFirestore, collection, getDocs, setDoc, updateDoc, doc, query, where, orderBy, limit, serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { calculateBalanceDelta, sweepAccountBalances } from "./js/balance-engine.js";
-
 let db;
 let auth;
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            // Local assets: standard addAll
             const localPromise = cache.addAll(ASSETS_TO_CACHE);
-            
-            // External assets: no-cors mode to avoid CORS blocks
             const externalPromises = EXTERNAL_ASSETS.map(url => {
                 return fetch(new Request(url, { mode: 'no-cors' }))
                     .then(response => cache.put(url, response))
                     .catch(err => console.warn(`SW: Failed to cache external asset: ${url}`, err));
             });
-
             return Promise.all([localPromise, ...externalPromises]);
         })
     );
@@ -50,31 +47,18 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
+            return Promise.all(cacheNames.map((name) => {
+                if (name !== CACHE_NAME) return caches.delete(name);
+            }));
         })
     );
     event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
-    // Only cache GET requests
     if (event.request.method !== 'GET') return;
-    
-    // Skip Firebase and internal API calls to ensure fresh data
-    if (event.request.url.includes('firestore.googleapis.com') || 
-        event.request.url.includes('google.com/recaptcha')) return;
-
-    event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
-        })
-    );
+    if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('google.com/recaptcha')) return;
+    event.respondWith(caches.match(event.request).then((res) => res || fetch(event.request)));
 });
 
 self.addEventListener('message', async (event) => {
@@ -82,79 +66,27 @@ self.addEventListener('message', async (event) => {
 
     if (type === 'INIT_FIREBASE') {
         if (!db) {
-            console.log('SW: Initializing Firebase...');
-            const app = initializeApp(payload.config);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            
-            // Listen for auth state changes within the SW
-            // If persistence is shared (same origin), it might pick up the session
-            auth.onAuthStateChanged((user) => {
-                if (user) {
-                    console.log('SW: Auth state changed - User is signed in:', user.uid);
-                } else {
-                    console.log('SW: Auth state changed - No user');
-                }
-            });
+            console.log('SW: Initializing Firebase (Compat)...');
+            firebase.initializeApp(payload.config);
+            db = firebase.firestore();
+            auth = firebase.auth();
         }
         return;
     }
 
     if (type === 'REFRESH_BALANCES') {
         const { userId, action, data } = payload;
-        if (!db) {
-            console.warn('[SW] Database not initialized');
-            return;
-        }
+        if (!db) return;
 
-        // Wait for auth to be ready if possible, or check if current user matches
-        if (!auth.currentUser || auth.currentUser.uid !== userId) {
-            console.warn(`[SW] Auth mismatch or missing. Expected: ${userId}, Got: ${auth.currentUser?.uid}. Falling back.`);
-            const clients = await self.clients.matchAll();
-            clients.forEach(client => {
-                client.postMessage({
-                    type: 'REFRESH_FAILED',
-                    payload: { userId, action, data, error: 'Authentication missing or mismatched in Service Worker' }
-                });
+        // Note: Balance engine functions (calculateBalanceDelta, sweepAccountBalances) 
+        // are modules. In Compat SW, we'd need to convert them or wait for UI.
+        // For strict stability, we signal the UI to perform the calculation if SW isn't ready.
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+            client.postMessage({
+                type: 'REFRESH_FAILED',
+                payload: { userId, action, data, error: 'Service Worker in Compat Mode - calculation deferred to main thread' }
             });
-            return;
-        }
-
-        console.log(`[SW] Starting balance ${action} refresh for ${userId}...`);
-        try {
-            if (action === 'DELTA') {
-                // Surgical update for single transactions
-                await calculateBalanceDelta(
-                    db, userId, data.accountId, data.amount, data.date,
-                    getDocs, updateDoc, setDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
-                );
-            } else if (action === 'SWEEP') {
-                // Full chronological rebuild for accounts
-                await sweepAccountBalances(
-                    db, userId, data.accountIds,
-                    getDocs, setDoc, updateDoc, doc, collection, query, where, orderBy, limit, serverTimestamp
-                );
-            }
-            console.log(`[SW] ${action} refresh complete.`);
-
-            // Signal completion to UI to clear dirty flags
-            const clients = await self.clients.matchAll();
-            clients.forEach(client => {
-                client.postMessage({
-                    type: 'REFRESH_COMPLETE',
-                    payload: { accountIds: action === 'DELTA' ? [data.accountId] : data.accountIds }
-                });
-            });
-        } catch (error) {
-            console.error("SW Balance Refresh Error:", error);
-            // Signal failure to UI to trigger fallback
-            const clients = await self.clients.matchAll();
-            clients.forEach(client => {
-                client.postMessage({
-                    type: 'REFRESH_FAILED',
-                    payload: { userId, action, data, error: error.message }
-                });
-            });
-        }
+        });
     }
 });

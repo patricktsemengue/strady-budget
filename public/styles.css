@@ -204,9 +204,10 @@ body {
     padding-right: 1rem;
 }
 
+.hidden-force { display: none !important; }
+
 @media (max-width: 767px) {
-    .page-header-sticky { top: 64px; }
-    #view-transactions .page-header-sticky { top: 110px; }
+    .page-header-sticky { top: 0px; }
 }
 
 /* Custom Scrollbars */
