@@ -313,9 +313,13 @@ class AppRouter {
     updateGlobalShell() {
         const header = document.querySelector('header');
         const puck = document.getElementById('mobile-nav-puck');
+        const monthSelector = document.getElementById('global-month-selector');
         const appTitle = document.getElementById('current-app-title');
         const breadcrumbContainer = document.getElementById('current-app-breadcrumb');
         const breadcrumbSeparator = document.getElementById('breadcrumb-separator');
+
+        const allowedViews = ['transactions', 'accounts', 'wealth', 'dashboard-new', 'yearly-pulse'];
+        const isAllowedView = this.currentModule && allowedViews.includes(this.currentModule.id);
 
         if (this.currentAppId === 'hub') {
             if (breadcrumbContainer) breadcrumbContainer.classList.add('hidden');
@@ -329,6 +333,7 @@ class AppRouter {
                 puck.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
                 puck.classList.remove('animate-puck-entry');
             }
+            if (monthSelector) monthSelector.classList.add('hidden');
         } else {
             if (breadcrumbContainer) breadcrumbContainer.classList.remove('hidden');
             if (breadcrumbSeparator) breadcrumbSeparator.classList.remove('hidden', 'md:flex');
@@ -337,8 +342,25 @@ class AppRouter {
             if (header) {
                 header.classList.remove('opacity-0', 'pointer-events-none');
             }
+
+            // Mobile Nav Puck: Only mobile view, only specific pages
             if (puck) {
-                puck.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+                if (window.innerWidth < 768 && isAllowedView) {
+                    puck.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+                } else {
+                    puck.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+                }
+            }
+
+            // Global Month Selector: Only desktop view, only specific pages
+            if (monthSelector) {
+                if (window.innerWidth >= 768 && isAllowedView) {
+                    monthSelector.classList.remove('hidden');
+                    monthSelector.classList.add('md:flex');
+                } else {
+                    monthSelector.classList.add('hidden');
+                    monthSelector.classList.remove('md:flex');
+                }
             }
 
             const appNames = {

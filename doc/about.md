@@ -8,8 +8,13 @@ The system revolves around the following data entities, all of which are scoped 
 
 - **USER**: The authenticated user via Firebase Authentication.
   - `isImporting`: boolean (true during CSV import to pause background refreshes)
+- **ENTITY**: A logical grouping for accounts and wealth (e.g., "Personal", "Family", "Business").
+  - `id`: string (unique)
+  - `name`: string
+  - `type`: string (PRIVATE, FAMILY, SMALL_BUSINESS)
 - **ACCOUNT**: A financial account belonging to the user (e.g., checking, savings).
   - `id`: string (unique, derived from name: `acc_name`)
+  - `entityId`: string (FK to `ENTITY.id`)
   - `name`: string (unique)
   - `createDate`: string (YYYY-MM-DD)
   - `isSaving`: boolean
@@ -22,16 +27,21 @@ The system revolves around the following data entities, all of which are scoped 
   - `icon`: string (FontAwesome class, e.g., `fa-car`)
   - `color`: string (hex code)
   - `index-order`: integer (for sorting)
+  - `isPassive`: boolean (for FFI calculation)
 - **TRANSACTION**: A single, non-recurring financial event.
   - `id`: string (unique-MM-DD)
+  - `entityId`: string (FK to `ENTITY.id`)
+  - `date`: string
   - `label`: string
   - `amount`: float
   - `source`: string (either an `ACCOUNT.id` or an empty string `""` for external income)
   - `destination`: string (either an `ACCOUNT.id` or an empty string `""` for external expenses)
   - `Category`: string (`CATEGORY.id`)
   - `Model`: string (`RECURRING_TEMPLATE.id`), `null` for single transactions.
+  - `isInternalTransfer`: boolean (calculated: source != external AND destination != external)
 - **RECURRING_TEMPLATE**: A template for generating recurring transactions.
   - `id`: string (unique, prefixed with `rec_`)
+  - `entityId`: string (FK to `ENTITY.id`)
   - `date`: string (YYYY-MM-DD, the anchor/start date)
   - `label`: string
   - `amount`: float
@@ -51,6 +61,7 @@ The system revolves around the following data entities, all of which are scoped 
 
 - **ASSET**: A non-liquid asset (Real Estate, shares, etc.).
   - `id`: string (unique)
+  - `entityId`: string (FK to `ENTITY.id`)
   - `name`: string (unique)
 - **ASSET_VALUE**: A value snapshot for an asset.
   - `id`: string (unique)
@@ -60,6 +71,7 @@ The system revolves around the following data entities, all of which are scoped 
   - `quantity`: float
 - **LIABILITY**: A debt or loan.
   - `id`: string (unique)
+  - `entityId`: string (FK to `ENTITY.id`)
   - `name`: string (unique)
 - **LIABILITY_VALUE**: A balance snapshot for a liability.
   - `id`: string (unique)
@@ -216,31 +228,44 @@ The application uses a **Modular Plug-and-Play Architecture**. Each feature is a
 
 ## 3. Key Indicator Calculations
 
-### Calculation Model
-The system uses **Batch Generation** for recurring transactions and **Pre-calculated Balances** for performance.
+### 3.0 Contextual Filtering (Family vs. Entity)
+The dashboard and transaction views support two primary viewing modes which affect how financial metrics are aggregated:
+- **Family (All Entities)**: A consolidated view of the household. In this mode, **Internal Transfers** (money moving between tracked accounts) are excluded from Inflow and Outflow totals to prevent artificial inflation of the budget. Only external flows are counted.
+- **Specific Entity**: Filters data by a single logical entity. In this mode, only transactions and accounts linked to the selected `entityId` are considered.
 
-### 3.1 Monthly Income
+### 3.1 Monthly Income (Inflows)
 Sum of all `TRANSACTION` documents for the month where `source` is empty or "external".
+- **Rule**: If viewing "Family", transactions with `isInternalTransfer: true` are ignored.
 
-### 3.2 Account Balance
+### 3.2 Monthly Spending (Outflows)
+Sum of all `TRANSACTION` documents for the month where `destination` is empty or "external".
+- **Rule**: If viewing "Family", transactions with `isInternalTransfer: true` are ignored.
+
+### 3.3 Monthly Net Result
+Calculation: `Monthly Income - Monthly Spending`.
+This represents the monthly surplus or deficit.
+
+### 3.4 Account Balance
 The account balance for a selected month is retrieved from the `ACCOUNT_BALANCE` collection for the corresponding `account_id` and `date`.
 For each account, the system picks the **last balance record** of the selected month (ranked by date ascending).
 If no record exists for the month, it falls back to the latest balance record **before** the month.
+- **Rule**: When viewing an Entity, only accounts belonging to that entity are summed.
 
-### 3.3 Emergency Fund
+### 3.5 Emergency Fund
 Sum of balances for all accounts marked `isSaving: true`.
 
-### 3.4 Monthly Spending
-Sum of all `TRANSACTION` documents for the month where `destination` is empty or "external".
-
-### 3.5 Financial Independence Index (FFI)
+### 3.6 Financial Independence Index (FFI)
 Calculation: `(Total Passive Income / Total Fixed Expenses) * 100`.
 - **Passive Income**: Sum of transactions categorized in a `REVENU` category where `isPassive` is true.
 - **Fixed Expenses**: Sum of transactions categorized in a `FIXE` category.
 - **Goal**: 100% (Assets cover all vital needs).
 
-### 3.6 Revenue DNA
+### 3.7 Revenue DNA
 A visualization showing the proportion of **Active Income** (Labor-based) vs. **Passive Income** (Asset-based).
+
+### 3.8 Net Worth
+Calculation: `Total Assets - Total Liabilities`.
+Uses the latest available snapshot for each asset and liability linked to the selected context (Entity or Family).
 
 ## 4. Mobile Performance Optimization
 

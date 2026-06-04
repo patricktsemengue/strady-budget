@@ -7,39 +7,42 @@ export const getFunctionalBoundaryDateStr = () => {
 
 /**
  * Calculates the surgical impact of a single amount change on an account's timeline.
+ * Ensures the change is propagated to all future records and the functional boundary.
  */
 export async function calculateBalanceDelta(db, userId, accountId, amount, balanceDate, getDocs, updateDoc, setDoc, doc, collection, query, where, orderBy, limit, serverTimestamp) {
     if (!accountId || accountId === "external" || accountId === "") return;
 
     const balancesColl = collection(db, `users/${userId}/account_balances`);
-    const q = query(balancesColl, where("account_id", "==", accountId), where("date", ">=", balanceDate));
+    const boundaryDate = getFunctionalBoundaryDateStr();
     
+    // 1. Find all records affected by this change (from tx date to boundary)
+    const q = query(balancesColl, where("account_id", "==", accountId), where("date", ">=", balanceDate));
     const snapshot = await getDocs(q);
+    
     let exactMatch = false;
-
-    // Update all existing future records
+    let boundaryMatch = false;
     const updates = [];
+
+    // Update all existing records in the future
     snapshot.forEach(balDoc => {
         const data = balDoc.data();
         if (data.date === balanceDate) exactMatch = true;
+        if (data.date === boundaryDate) boundaryMatch = true;
+
         updates.push(updateDoc(balDoc.ref, {
             balance: data.balance + amount,
             updated_at: serverTimestamp()
         }));
     });
 
+    // 2. If no record exists for the transaction date, create it
     if (!exactMatch) {
-        // Create the record for the specific transaction date if it doesn't exist
         const prevQ = query(balancesColl, where("account_id", "==", accountId), where("date", "<", balanceDate), orderBy("date", "desc"), limit(1));
         const prevSnap = await getDocs(prevQ);
         
         let baseBalance = 0;
         if (!prevSnap.empty) {
             baseBalance = prevSnap.docs[0].data().balance;
-        } else {
-            const accSnap = await getDocs(doc(db, `users/${userId}/accounts`, accountId));
-            // Note: Since initialBalance is dropped, we rely on the creation record in account_balances.
-            // If not found, it starts at 0.
         }
 
         const balDocId = `${accountId}_${balanceDate}`;
@@ -51,6 +54,28 @@ export async function calculateBalanceDelta(db, userId, accountId, amount, balan
             balance: baseBalance + amount,
             updated_at: serverTimestamp()
         }));
+    }
+
+    // 3. Ensure the functional boundary record exists
+    if (!boundaryMatch && balanceDate < boundaryDate) {
+        const lastQ = query(balancesColl, where("account_id", "==", accountId), where("date", "<=", boundaryDate), orderBy("date", "desc"), limit(1));
+        const lastSnap = await getDocs(lastQ);
+        
+        // Use the newly calculated balance from the transaction or the latest known record
+        let finalBalance = 0;
+        if (!lastSnap.empty) {
+            finalBalance = lastSnap.docs[0].data().balance + (lastSnap.docs[0].data().date < balanceDate ? amount : 0);
+        }
+
+        const boundaryDocId = `${accountId}_${boundaryDate}`;
+        const boundaryMonth = getMonthFromDate(boundaryDate);
+        updates.push(setDoc(doc(db, `users/${userId}/account_balances`, boundaryDocId), {
+            account_id: accountId,
+            date: boundaryDate,
+            month: boundaryMonth,
+            balance: finalBalance,
+            updated_at: serverTimestamp()
+        }, { merge: true }));
     }
 
     await Promise.all(updates);

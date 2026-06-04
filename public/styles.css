@@ -495,3 +495,121 @@ header.fixed {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #334155;
 }
+
+/* Mobile Actions Modal */
+#mobile-actions-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+}
+
+.hide-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.hide-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* --- Yearly Pulse Mobile Optimization --- */
+.yearly-pulse-container {
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+    .yearly-pulse-container {
+        scroll-padding-left: 95px; /* Match sidebar width */
+        scroll-behavior: smooth;
+    }
+
+    .yearly-pulse-table {
+        min-width: unset !important;
+        width: max-content !important;
+        table-layout: fixed;
+    }
+
+    .yearly-pulse-sidebar {
+        width: 95px !important;
+        min-width: 95px !important;
+        max-width: 95px !important;
+        z-index: 10 !important; /* Content (0) < Sticky Sidebar (10) */
+        padding: 0.5rem 0.25rem !important;
+    }
+
+    /* Sticky Month Bar Header Cells */
+    .yearly-pulse-table thead th {
+        position: sticky;
+        z-index: 20; /* Sticky Header (20) */
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Support for two-row header stickiness */
+    .yearly-pulse-table thead tr:nth-child(1) th {
+        top: 0;
+        z-index: 25;
+    }
+    .yearly-pulse-table thead tr:nth-child(2) th {
+        top: 32px; /* Height of the first row */
+        z-index: 20;
+    }
+
+    .dark .yearly-pulse-table thead th {
+        background-color: rgba(15, 23, 42, 0.8) !important;
+    }
+
+    /* Top-Left Corner (Double Sticky) */
+    .yearly-pulse-table thead tr:nth-child(1) th.yearly-pulse-sidebar {
+        z-index: 40 !important;
+        left: 0;
+        top: 0;
+    }
+    .yearly-pulse-table thead tr:nth-child(2) th.yearly-pulse-sidebar {
+        z-index: 40 !important;
+        left: 0;
+        top: 32px;
+    }
+
+    .yearly-pulse-month-col {
+        width: calc(100vw - 95px) !important;
+        min-width: calc(100vw - 95px) !important;
+        max-width: calc(100vw - 95px) !important;
+        scroll-snap-align: start;
+    }
+
+    /* Adjusting padding/text for mobile tight space */
+    .yearly-pulse-sidebar div span {
+        font-size: 11px !important;
+        text-align: center;
+        white-space: normal !important;
+        line-height: 1.1;
+    }
+    .yearly-pulse-sidebar div .w-8 {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
+    }
+}
+
+.month-indicator-dot {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.month-indicator-dot.active {
+    background-color: #8b5cf6 !important; /* violet-500 */
+    width: 1rem !important;
+    border-radius: 9999px;
+}
+
+#mobile-actions-content button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+    #mobile-actions-content {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+}
+

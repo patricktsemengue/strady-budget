@@ -122,6 +122,12 @@ export const debounce = (fn, ms) => {
     };
 };
 
+export const calculateIsInternalTransfer = (source, destination) => {
+    const isSrcExt = !source || source === 'external' || source === '';
+    const isDstExt = !destination || destination === 'external' || destination === '';
+    return !isSrcExt && !isDstExt;
+};
+
 export const getTxDisplayInfo = (source, destination) => {
     const isSrcExt = source === '' || source === 'external';
     const isDstExt = destination === '' || destination === 'external';
@@ -131,4 +137,58 @@ export const getTxDisplayInfo = (source, destination) => {
     if (isSrcExt && !isDstExt) return { src, dst, isIncome: true, isExpense: false, ui: { icon: 'fa-arrow-down', color: 'text-green-500' } };
     if (!isSrcExt && isDstExt) return { src, dst, isIncome: false, isExpense: true, ui: { icon: 'fa-arrow-up', color: 'text-red-500' } };
     return { src, dst, isIncome: false, isExpense: false, ui: { icon: 'fa-exchange-alt', color: 'text-blue-500' } };
+};
+
+/**
+ * Generates a small SVG Sparkline for a category's 6-month trend.
+ */
+export const generateSparklineSVG = (data, colorName = 'slate') => {
+    const colorMap = {
+        indigo: '#6366f1',
+        rose: '#f43f5e',
+        emerald: '#10b981',
+        amber: '#f59e0b',
+        slate: '#64748b',
+        blue: '#3b82f6',
+        orange: '#f97316',
+        teal: '#14b8a6',
+        cyan: '#06b6d4',
+        pink: '#ec4899',
+        purple: '#8b5cf6',
+        violet: '#7c3aed',
+        fuchsia: '#d946ef',
+        lime: '#84cc16',
+        yellow: '#eab308',
+        sky: '#0ea5e9'
+    };
+    const colorHex = colorMap[colorName] || colorMap.slate;
+
+    if (!data || data.length === 0) return '';
+    
+    const width = 60;
+    const height = 20;
+    const padding = 2;
+    const maxVal = Math.max(...data, 1);
+    const minVal = Math.min(...data, 0);
+    const range = maxVal - minVal;
+
+    const points = data.map((val, i) => {
+        const x = (i / (data.length - 1)) * (width - 2 * padding) + padding;
+        const y = height - ((val - minVal) / range) * (height - 2 * padding) - padding;
+        return `${x},${y}`;
+    }).join(' ');
+
+    return `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="overflow-visible" style="display: inline-block; vertical-align: middle;">
+            <polyline
+                fill="none"
+                stroke="${colorHex}"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                points="${points}"
+                class="opacity-40"
+            />
+        </svg>
+    `;
 };

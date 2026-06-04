@@ -146,7 +146,6 @@ export const exportFullBackupCSV = () => {
         const sourceName = tpl.source === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.source)?.name || 'external');
         const destName = tpl.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tpl.destination)?.name || 'external');
         const catName = state.categories.find(c => c.id === tpl.category)?.label || '';
-        const entName = state.entities.find(e => e.id === tpl.entityId)?.name || '';
         
         const row = Array(17).fill("");
         row[col("Type")] = "RECURRING_TEMPLATE";
@@ -161,7 +160,7 @@ export const exportFullBackupCSV = () => {
         row[col("Color")] = null; 
         row[col("Periodicity")] = tpl.periodicity;
         row[col("EndDate")] = tpl.endDate || '';
-        row[col("Entity")] = `"${entName}"`;
+        row[col("Entity")] = ""; // Removed for templates
         csv += row.join(',') + "\n";
     });
 
@@ -171,7 +170,6 @@ export const exportFullBackupCSV = () => {
             const sourceName = tx.source === 'external' ? 'external' : (state.accounts.find(a => a.id === tx.source)?.name || 'external');
             const destName = tx.destination === 'external' ? 'external' : (state.accounts.find(a => a.id === tx.destination)?.name || 'external');
             const catName = state.categories.find(c => c.id === (tx.Category || tx.category))?.label || '';
-            const entName = state.entities.find(e => e.id === tx.entityId)?.name || '';
             
             const row = Array(17).fill("");
             row[col("Type")] = "TRANSACTION";
@@ -181,7 +179,7 @@ export const exportFullBackupCSV = () => {
             row[col("Source")] = `"${sourceName}"`;
             row[col("Destination")] = `"${destName}"`;
             row[col("Category")] = `"${catName}"`;
-            row[col("Entity")] = `"${entName}"`;
+            row[col("Entity")] = ""; // Removed for transactions
             csv += row.join(',') + "\n";
         }
     });
@@ -239,6 +237,46 @@ export const exportFullBackupCSV = () => {
     document.body.removeChild(link);
 };
 
+/**
+ * Helper to parse a single CSV line with respect to quoted commas.
+ */
+const parseCSVLine = (line, colIdx) => {
+    const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => 
+        p.replace(/"/g, '').replace(/'/g, '').trim()
+    );
+    return (colName) => parts[colIdx[colName.toLowerCase()]] || "";
+};
+
+/**
+ * Resolves an entity ID by name, creating it if it doesn't exist.
+ */
+const resolveEntityId = async (name, results, entityMap) => {
+    const finalName = name || 'Privé';
+    const lower = finalName.toLowerCase();
+    if (entityMap[lower]) return entityMap[lower];
+    
+    const id = `ent_${await generateDeterministicUUID(finalName)}`;
+    const newEnt = { id, name: finalName, type: 'PRIVATE' };
+    results.entities.push(newEnt);
+    entityMap[lower] = id;
+    return id;
+};
+
+/**
+ * Resolves a category ID by name, creating it if it doesn't exist.
+ */
+const resolveCategoryId = async (name, results, categoryMap) => {
+    const finalName = name || 'Autre';
+    const lower = finalName.toLowerCase();
+    if (categoryMap[lower]) return categoryMap[lower];
+    
+    const id = `cat_${await generateDeterministicUUID(finalName)}`;
+    const newCat = { id, label: finalName, icon: 'fa-tag', color: '#94a3b8', nature: 'QUOTIDIEN' };
+    results.categories.push(newCat);
+    categoryMap[lower] = id;
+    return id;
+};
+
 export const importFullBackupCSV = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -246,44 +284,35 @@ export const importFullBackupCSV = (event) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
         let text = e.target.result;
-        // Remove Byte Order Mark (BOM) if present
-        if (text.startsWith('\ufeff')) {
-            text = text.substring(1);
-        }
-        const lines = text.split('\n');
-        const headerRaw = lines[0] ? lines[0].trim().toLowerCase().replace(/"/g, '') : "";
+        if (text.startsWith('\ufeff')) text = text.substring(1);
         
+        const lines = text.split('\n').filter(l => l.trim() !== "");
+        if (lines.length < 2) return;
+
+        const headerRaw = lines[0].trim().toLowerCase().replace(/"/g, '');
         const colIdx = {};
         headerRaw.split(',').forEach((col, idx) => colIdx[col.trim()] = idx);
 
-        // Mandatory Pillar Check
-        const mandatoryPillars = ['type', 'label'];
-        const missingPillars = mandatoryPillars.filter(p => colIdx[p] === undefined);
-        if (missingPillars.length > 0) {
-            showNotification(`Structure CSV invalide. Colonnes manquantes : ${missingPillars.join(', ')}`, 'error');
+        if (colIdx['type'] === undefined || colIdx['label'] === undefined) {
+            showNotification(`Structure CSV invalide.`, 'error');
             return;
         }
 
-        const dataLines = lines.slice(1);
-        
-        // Results objects
         const results = {
-            accounts: [],
-            categories: [],
-            transactions: [],
-            templates: [],
-            assets: [],
-            assetValues: [],
-            liabilities: [],
-            liabilityValues: [],
-            entities: [],
+            accounts: [], categories: [], transactions: [], templates: [],
+            assets: [], assetValues: [], liabilities: [], liabilityValues: [], entities: [],
             duplicates: { accounts: 0, categories: 0, transactions: 0, templates: 0, assets: 0, liabilities: 0, entities: 0 },
+            ignored: { transactions: 0, templates: 0, details: [] },
             errors: []
         };
 
         // Maps for resolution
         const accountMap = {}; 
-        state.accounts.forEach(acc => accountMap[acc.name.toLowerCase()] = acc.id);
+        const accountEntityMap = {};
+        state.accounts.forEach(acc => {
+            accountMap[acc.name.toLowerCase()] = acc.id;
+            accountEntityMap[acc.id] = acc.entityId;
+        });
         
         const categoryMap = {};
         state.categories.forEach(cat => categoryMap[cat.label.toLowerCase()] = cat.id);
@@ -300,177 +329,128 @@ export const importFullBackupCSV = (event) => {
         const existingTxIds = new Set(state.transactions.map(t => t.id));
         const existingTplIds = new Set(state.recurringTemplates.map(t => t.id));
 
-        const getOrCreateEntity = async (name) => {
-            const finalName = name || 'Privé';
-            const lower = finalName.toLowerCase();
-            if (entityMap[lower]) return entityMap[lower];
-            
-            const id = `ent_${await generateDeterministicUUID(finalName)}`;
-            const newEnt = { id, name: finalName, type: 'PRIVATE' };
-            results.entities.push(newEnt);
-            entityMap[lower] = id;
-            return id;
-        };
+        const dataLines = lines.slice(1);
 
-        for (let i = 0; i < dataLines.length; i++) {
-            const line = dataLines[i];
-            if (!line || line.trim() === "") continue;
-
-            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/"/g, '').replace(/'/g, '').trim());
-            const getValue = (colName) => parts[colIdx[colName.toLowerCase()]] || "";
-
+        // --- Pass 1: Structural Entities (Entities, Categories, Accounts, Assets, Liabilities) ---
+        for (const line of dataLines) {
+            const getValue = parseCSVLine(line, colIdx);
             const type = getValue("Type").toUpperCase();
             const label = getValue("Label");
-            const date = getValue("Date");
-            const rawValue = getValue("Value");
-            const value = isNaN(parseFloat(rawValue)) ? 0 : parseFloat(rawValue);
-            const entityNameFromCsv = getValue("Entity");
-
-            // Row Validation
-            if (!type || !label) {
-                results.errors.push(`Ligne ${i + 2}: Type ou Libellé manquant.`);
-                continue;
-            }
+            if (!type || !label) continue;
 
             if (type === 'ENTITY') {
-                const nature = getValue("Nature");
-                if (!nature) {
-                    results.errors.push(`Ligne ${i + 2}: ENTITY "${label}" ignorée - Nature manquante.`);
-                    continue;
-                }
                 const lowerName = label.toLowerCase();
-                const deterministicId = `ent_${await generateDeterministicUUID(label)}`;
-                if (entityMap[lowerName]) {
-                    results.duplicates.entities++;
+                if (!entityMap[lowerName]) {
+                    const id = `ent_${await generateDeterministicUUID(label)}`;
+                    results.entities.push({ id, name: label, type: getValue("Nature") || 'PRIVATE' });
+                    entityMap[lowerName] = id;
+                }
+            } else if (type === 'CATEGORY') {
+                const lowerLabel = label.toLowerCase();
+                if (categoryMap[lowerLabel]) {
+                    results.duplicates.categories++;
                 } else {
-                    const ent = { id: deterministicId, name: label, type: nature };
-                    results.entities.push(ent);
-                    entityMap[lowerName] = deterministicId;
+                    const id = `cat_${await generateDeterministicUUID(label)}`;
+                    results.categories.push({
+                        id, label,
+                        nature: getValue("Nature") || 'QUOTIDIEN',
+                        icon: getValue("Icon") || 'fa-tag',
+                        color: getValue("Color") || '#94a3b8',
+                        isPassive: getValue("IsPassive") === '1'
+                    });
+                    categoryMap[lowerLabel] = id;
                 }
             } else if (type === 'ACCOUNT') {
-                if (!date) {
-                    results.errors.push(`Ligne ${i + 2}: ACCOUNT "${label}" ignoré - Date manquante.`);
-                    continue;
-                }
                 const lowerName = label.toLowerCase();
-                const deterministicId = `acc_${await generateDeterministicUUID(label)}`;
                 if (accountMap[lowerName]) {
                     results.duplicates.accounts++;
                 } else {
-                    const entId = await getOrCreateEntity(entityNameFromCsv);
-                    const acc = {
-                        id: deterministicId,
-                        name: label,
-                        createDate: date,
-                        initialBalance: value,
+                    const entId = await resolveEntityId(getValue("Entity"), results, entityMap);
+                    const id = `acc_${await generateDeterministicUUID(label)}`;
+                    const accData = {
+                        id, name: label,
+                        createDate: getValue("Date") || new Date().toISOString().split('T')[0],
+                        initialBalance: parseFloat(getValue("Value")) || 0,
                         isSaving: getValue("IsSaving") === '1',
                         isInvestmentAccount: getValue("IsInvestment") === '1' || getValue("isInvestmentAccount") === '1',
                         entityId: entId
                     };
-                    results.accounts.push(acc);
-                    accountMap[lowerName] = deterministicId;
-                }
-            } else if (type === 'CATEGORY') {
-                const nature = getValue("Nature");
-                if (!nature) {
-                    results.errors.push(`Ligne ${i + 2}: CATEGORY "${label}" ignorée - Nature manquante.`);
-                    continue;
-                }
-                const lowerLabel = label.toLowerCase();
-                const deterministicId = `cat_${await generateDeterministicUUID(label)}`;
-                if (categoryMap[lowerLabel]) {
-                    results.duplicates.categories++;
-                } else {
-                    const cat = {
-                        id: deterministicId,
-                        label: label,
-                        nature: nature,
-                        icon: getValue("Icon") || 'fa-tag',
-                        color: getValue("Color") || '#94a3b8',
-                        isPassive: getValue("IsPassive") === '1'
-                    };
-                    results.categories.push(cat);
-                    categoryMap[lowerLabel] = deterministicId;
+                    results.accounts.push(accData);
+                    accountMap[lowerName] = id;
+                    accountEntityMap[id] = entId;
                 }
             } else if (type === 'ASSET' || type === 'LIABILITY') {
-                const entId = await getOrCreateEntity(entityNameFromCsv);
                 const lowerName = label.toLowerCase();
-                const id = await generateDeterministicUUID(label);
-                
-                if (type === 'ASSET') {
-                    if (assetMap[lowerName]) results.duplicates.assets++;
-                    else {
-                        results.assets.push({ id, name: label, entityId: entId });
-                        assetMap[lowerName] = id;
-                    }
-                } else {
-                    if (liabilityMap[lowerName]) results.duplicates.liabilities++;
-                    else {
-                        results.liabilities.push({ id, name: label, entityId: entId });
-                        liabilityMap[lowerName] = id;
-                    }
+                const isAsset = type === 'ASSET';
+                const targetMap = isAsset ? assetMap : liabilityMap;
+                const targetResults = isAsset ? results.assets : results.liabilities;
+
+                if (!targetMap[lowerName]) {
+                    const id = await generateDeterministicUUID(label);
+                    const entId = await resolveEntityId(getValue("Entity"), results, entityMap);
+                    targetResults.push({ id, name: label, entityId: entId });
+                    targetMap[lowerName] = id;
                 }
-            } else if (type === 'ASSET_VALUE' || type === 'LIABILITY_VALUE') {
-                if (!date || isNaN(parseFloat(rawValue))) {
-                    results.errors.push(`Ligne ${i + 2}: ${type} pour "${label}" ignoré - Date ou Valeur manquante.`);
-                    continue;
-                }
-                const quantity = parseFloat(getValue("Quantity")) || 1;
-                if (type === 'ASSET_VALUE') {
-                    const assetId = assetMap[label.toLowerCase()];
-                    if (assetId) results.assetValues.push({ asset_id: assetId, value, date, quantity });
-                } else {
-                    const liaId = liabilityMap[label.toLowerCase()];
-                    if (liaId) results.liabilityValues.push({ liability_id: liaId, value, date, quantity });
-                }
-            } else if (type === 'TRANSACTION' || type === 'RECURRING_TEMPLATE') {
+            }
+        }
+
+        // --- Pass 2: Linked Data (Transactions, Templates, Values) ---
+        for (let i = 0; i < dataLines.length; i++) {
+            const getValue = parseCSVLine(dataLines[i], colIdx);
+            const type = getValue("Type").toUpperCase();
+            const label = getValue("Label");
+            if (!type || !label) continue;
+
+            if (type === 'TRANSACTION' || type === 'RECURRING_TEMPLATE') {
                 const sourceName = getValue("Source");
                 const destName = getValue("Destination");
-                const categoryName = getValue("Category");
-                const periodicity = getValue("Periodicity");
+                const isSrcExt = !sourceName || sourceName.toLowerCase() === 'external';
+                const isDstExt = !destName || destName.toLowerCase() === 'external';
 
-                if (!date || (!sourceName && !destName)) {
-                    results.errors.push(`Ligne ${i + 2}: ${type} "${label}" ignoré - Date, Source ou Destination manquante.`);
-                    continue;
-                }
-                if (type === 'RECURRING_TEMPLATE' && !periodicity) {
-                    results.errors.push(`Ligne ${i + 2}: TEMPLATE "${label}" ignoré - Périodicité manquante.`);
+                if (isSrcExt && isDstExt) {
+                    results.ignored.details.push(`Ligne ${i + 2}: Ignoré - Source et Destination sont "external".`);
+                    type === 'TRANSACTION' ? results.ignored.transactions++ : results.ignored.templates++;
                     continue;
                 }
 
-                const getOrCreateAccImport = async (name, entId) => {
-                    if (!name || name.toLowerCase() === 'external') return 'external';
-                    const lower = name.toLowerCase();
-                    if (accountMap[lower]) return accountMap[lower];
-                    const id = `acc_${await generateDeterministicUUID(name)}`;
-                    results.accounts.push({ id, name, createDate: date, initialBalance: 0, isSaving: false, isInvestmentAccount: false, entityId: entId });
-                    accountMap[lower] = id;
-                    return id;
+                const sourceId = isSrcExt ? 'external' : accountMap[sourceName.toLowerCase()];
+                const destId = isDstExt ? 'external' : accountMap[destName.toLowerCase()];
+
+                if ((!isSrcExt && !sourceId) || (!isDstExt && !destId)) {
+                    results.ignored.details.push(`Ligne ${i + 2}: Ignoré - Compte inconnu.`);
+                    type === 'TRANSACTION' ? results.ignored.transactions++ : results.ignored.templates++;
+                    continue;
+                }
+
+                const catId = await resolveCategoryId(getValue("Category"), results, categoryMap);
+                const entId = accountEntityMap[sourceId] || accountEntityMap[destId] || null;
+                const common = { 
+                    label, date: getValue("Date"), amount: parseFloat(getValue("Value")) || 0,
+                    source: sourceId, destination: destId, entityId: entId 
                 };
 
-                const entId = await getOrCreateEntity(entityNameFromCsv);
-                const sourceId = await getOrCreateAccImport(sourceName, entId);
-                const destId = await getOrCreateAccImport(destName, entId);
-                const catId = await (async (name) => {
-                    const finalName = name || 'Autre';
-                    const lower = finalName.toLowerCase();
-                    if (categoryMap[lower]) return categoryMap[lower];
-                    const id = `cat_${await generateDeterministicUUID(finalName)}`;
-                    results.categories.push({ id, label: finalName, icon: 'fa-tag', color: '#94a3b8', nature: 'QUOTIDIEN' });
-                    categoryMap[lower] = id;
-                    return id;
-                })(categoryName);
-
                 if (type === 'TRANSACTION') {
-                    const txData = { date, label, amount: value, source: sourceId, destination: destId, Category: catId, Model: null, entityId: entId };
+                    const txData = { ...common, Category: catId, Model: null };
                     const id = generateDeterministicTransactionId(txData);
                     if (existingTxIds.has(id)) results.duplicates.transactions++;
                     else results.transactions.push({ id, ...txData });
                 } else {
-                    const tplData = { date, label, amount: value, source: sourceId, destination: destId, category: catId, periodicity: periodicity || 'M', endDate: getValue("EndDate") || null, entityId: entId };
+                    const tplData = { ...common, category: catId, periodicity: getValue("Periodicity") || 'M', endDate: getValue("EndDate") || null };
                     const id = generateDeterministicTemplateId(tplData);
                     if (existingTplIds.has(id)) results.duplicates.templates++;
                     else results.templates.push({ id, ...tplData });
+                }
+            } else if (type === 'ASSET_VALUE' || type === 'LIABILITY_VALUE') {
+                const isAssetVal = type === 'ASSET_VALUE';
+                const parentId = (isAssetVal ? assetMap : liabilityMap)[label.toLowerCase()];
+                if (parentId) {
+                    const valData = {
+                        date: getValue("Date"), 
+                        value: parseFloat(getValue("Value")) || 0,
+                        quantity: parseFloat(getValue("Quantity")) || 1
+                    };
+                    isAssetVal ? results.assetValues.push({ asset_id: parentId, ...valData }) 
+                               : results.liabilityValues.push({ liability_id: parentId, ...valData });
                 }
             }
         }
@@ -482,6 +462,7 @@ export const importFullBackupCSV = (event) => {
 const showImportSummaryModal = (results) => {
     const totalNew = results.accounts.length + results.categories.length + results.transactions.length + results.templates.length + results.assets.length + results.liabilities.length + results.entities.length;
     const totalDups = results.duplicates.accounts + results.duplicates.categories + results.duplicates.transactions + results.duplicates.templates + results.duplicates.assets + results.duplicates.liabilities + results.duplicates.entities;
+    const totalIgnored = results.ignored.transactions + results.ignored.templates;
 
     const modalHtml = `
         <div id="import-summary-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -508,10 +489,21 @@ const showImportSummaryModal = (results) => {
                         </div>
                     </div>
 
+                    ${totalIgnored > 0 ? `
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fa-solid fa-eye-slash"></i> Flux ignorés (${totalIgnored})
+                            </h4>
+                            <div class="max-h-32 overflow-y-auto text-[10px] text-slate-500 font-mono divide-y divide-slate-100">
+                                ${results.ignored.details.map(d => `<div class="py-1">${d}</div>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     ${results.errors.length > 0 ? `
                         <div class="p-4 bg-red-50 border border-red-100 rounded-xl space-y-2">
                             <h4 class="text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-2">
-                                <i class="fa-solid fa-triangle-exclamation"></i> Données ignorées (${results.errors.length})
+                                <i class="fa-solid fa-triangle-exclamation"></i> Données corrompues (${results.errors.length})
                             </h4>
                             <div class="max-h-32 overflow-y-auto text-[10px] text-red-500 font-mono divide-y divide-red-100">
                                 ${results.errors.map(err => `<div class="py-1">${err}</div>`).join('')}
@@ -574,11 +566,22 @@ const showImportSummaryModal = (results) => {
 
     document.getElementById('btn-cancel-import').onclick = closeModal;
     document.getElementById('btn-confirm-import').onclick = async () => {
+        console.log("[Import] User confirmed import. Starting process...");
         closeModal();
         try {
             setLoadingState(true, 'Importation...', 'Traitement de votre sauvegarde complète en cours.');
             await setUserImportingState(currentUserId, true);
             
+            console.log("[Import] Payload summary:", {
+                accounts: results.accounts.length,
+                transactions: results.transactions.length,
+                templates: results.templates.length,
+                categories: results.categories.length,
+                assets: results.assets.length,
+                liabilities: results.liabilities.length,
+                entities: results.entities.length
+            });
+
             await importDataToFirestore(
                 currentUserId, 
                 results.accounts, 
@@ -592,14 +595,15 @@ const showImportSummaryModal = (results) => {
                 results.entities
             );
             
+            console.log("[Import] Firestore import completed successfully.");
             showNotification(`Importation réussie : ${totalNew} nouveaux éléments ajoutés.`);
         } catch (err) {
-            console.error(err);
+            console.error("[Import] CRITICAL FAILURE during import:", err);
             showNotification("Erreur lors de l'importation.", 'error');
         } finally {
             await setUserImportingState(currentUserId, false);
             setLoadingState(false);
-            // Reload to ensure all states are correctly synced
+            console.log("[Import] Process finished. Reloading window...");
             window.location.reload();
         }
     };

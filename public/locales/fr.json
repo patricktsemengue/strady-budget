@@ -6,6 +6,7 @@
     "transactions": "Flux & Prévisions",
     "accounts": "Ma Trésorerie",
     "categories": "Analyses (Postes)",
+    "yearly_pulse": "Perspective Annuelle",
     "settings": "Réglages",
     "groups": {
       "strategy": "VISION STRATÉGIQUE",
@@ -58,6 +59,7 @@
     "type": "Type",
     "label": "Libellé",
     "label_placeholder": "Entrez un nom...",
+    "category": "Catégorie",
     "asset": "Actif",
     "liability": "Passif",
     "actions": "Actions",
@@ -68,6 +70,7 @@
     "edit_account": "Modifier le compte",
     "delete_account": "Supprimer le compte",
     "edit_transaction": "Modifier la transaction",
+    "view_transaction": "Voir la transaction",
     "delete_transaction": "Supprimer la transaction",
     "recurring_edit_title": "Mise à jour d'un flux récurrent",
     "recurring_edit_msg": "Souhaitez-vous appliquer cette modification à toutes les occurrences de ce flux récurrent ou seulement à celle-ci ?",
@@ -88,7 +91,11 @@
     "family": "Famille / Joint",
     "business": "Petite Entreprise"
   },
-  "entities": {
+    "yearly_pulse": {
+      "hint": "Faites défiler horizontalement pour voir toute l’année.",
+      "jump_to_today": "Aujourd'hui"
+    },
+    "entities": {
     "title": "Gestion des Entités",
     "subtitle": "Séparez vos finances privées, communes ou professionnelles.",
     "add_title": "Ajouter une entité",
@@ -298,11 +305,12 @@
     "outflows": "Sorties",
     "monthly_net": "Net du Mois",
     "modal_add_title": "Ajouter une transaction",
-    "modal_edit_title": "Éditer la transaction",
+    "modal_view_title": "Détails du flux",
     "external_income": "Externe (Revenu)",
     "external_expense": "Externe (Dépense)",
     "error_empty_fields": "Veuillez remplir tous les champs obligatoires.",
     "error_both_external": "La source et la destination ne peuvent pas être vides simultanément.",
+    "error_same_source_dest": "Les comptes source et destination doivent être différents.",
     "error_before_creation": "La transaction ne peut pas être créée avant la date de création du compte.",
     "error_duplicate_recurring": "Cette série récurrente existe déjà.",
     "error_duplicate_tx": "Cette transaction existe déjà.",
@@ -591,6 +599,16 @@
       "action2_desc": "Cr\u00e9ez une sauvegarde de s\u00e9curit\u00e9 ou transf\u00e9rez vos donn\u00e9es vers un autre appareil.",
       "action3_label": "Changer la Langue",
       "action3_desc": "Basculez entre le fran\u00e7ais et l'anglais pour l'ensemble de l'interface."
+    },
+    "yearly_pulse": {
+      "title": "Perspective Annuelle",
+      "purpose": "Obtenez une vue d'ensemble sur 36 mois de vos denses par cat\u00e9gorie. Identifiez les tendances long terme et anticipez les pics \u00e0 venir.",
+      "action1_label": "Horizon 3 ans",
+      "action1_desc": "Visualisez 6 mois pass\u00e9s, le mois en cours et 29 mois futurs c\u00f4te \u00e0 c\u00f4te.",
+      "action2_label": "Tendances Saisonni\u00e8res",
+      "action2_desc": "Rep\u00e9rez les cat\u00e9gories qui fluctuent au cours de l'ann\u00e9e (Chauffage, Vacances, Imp\u00f4ts).",
+      "action3_label": "Postes Fixes",
+      "action3_desc": "Les noms des cat\u00e9gories restent visibles pendant que vous parcourez les mois."
     }
   },
   "confirm": {

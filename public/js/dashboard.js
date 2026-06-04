@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { currentUserId } from './storage.js';
-import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo } from './utils.js';
+import { formatCurrency, formatDateStr, getMonthKey, getTxDisplayInfo, generateSparklineSVG } from './utils.js';
 import { calculateBalances, calculateMonthlyIncome, calculateActualBurnRate } from './calculations.js';
 import { showNotification } from './ui.js';
 import { db } from './firestore-service.js';
@@ -31,14 +31,18 @@ export const renderTransactions = () => {
 
     // Calculate Totals for Stats Cards
     const inflows = sortedTx.reduce((sum, tx) => {
+        const isIncome = !tx.source || tx.source === 'external';
+        if (!isIncome) return sum;
+        if (state.selectedEntityId === 'all' && tx.isInternalTransfer) return sum;
         const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
-        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
-        return txInfo.isIncome ? sum + amount : sum;
+        return sum + amount;
     }, 0);
     const outflows = sortedTx.reduce((sum, tx) => {
+        const isExpense = !tx.destination || tx.destination === 'external';
+        if (!isExpense) return sum;
+        if (state.selectedEntityId === 'all' && tx.isInternalTransfer) return sum;
         const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
-        const txInfo = getTxDisplayInfo(tx.source, tx.destination);
-        return txInfo.isExpense ? sum + Math.abs(amount) : sum;
+        return sum + Math.abs(amount);
     }, 0);
     const net = inflows - outflows;
 
@@ -91,6 +95,26 @@ export const renderTransactions = () => {
         return acc;
     }, {});
 
+    // Prepare 12-month sparkline data (6 past, current, 5 future)
+    const pulseMonths = [];
+    for (let i = -6; i <= 5; i++) {
+        const d = new Date(Date.UTC(state.viewDate.getUTCFullYear(), state.viewDate.getUTCMonth() + i, 1));
+        pulseMonths.push(getMonthKey(d));
+    }
+
+    const getCategoryTrend = (catId) => {
+        return pulseMonths.map(mKey => {
+            const mData = state.records[mKey] || { items: [] };
+            return mData.items
+                .filter(tx => (tx.category || tx.Category || 'uncategorized') === catId)
+                .reduce((sum, tx) => {
+                    const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+                    const isExpense = !tx.destination || tx.destination === 'external';
+                    return sum + (isExpense ? Math.abs(amount) : 0);
+                }, 0);
+        });
+    };
+
     // Sort categories by volume
     const sortedCats = Object.entries(grouped).sort((a, b) => {
         const sumA = a[1].reduce((s, tx) => s + Math.abs(tx.amount || tx.Amount || 0), 0);
@@ -101,39 +125,65 @@ export const renderTransactions = () => {
     // Render Desktop Table
     if (desktopContainer) {
         let dHtml = '';
-        sortedTx.forEach(tx => {
-            const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
-            const date = tx.date || tx.Date;
-            const label = tx.label || tx.Label;
-            const catId = tx.category || tx.Category;
+        sortedCats.forEach(([catId, txs]) => {
             const category = state.categories.find(c => c.id === catId) || { label: 'Autre', icon: 'tag', color: 'slate' };
-            const { ui } = getTxDisplayInfo(tx.source, tx.destination);
+            const isExpanded = expandedStates[catId] !== false;
+            const total = txs.reduce((s, tx) => s + (tx.amount || tx.Amount || 0), 0);
+            const trendData = getCategoryTrend(catId);
+            const sparkline = generateSparklineSVG(trendData, category.color);
 
+            // Category Header Row
             dHtml += `
-                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                    <td class="py-4 px-6 text-xs font-medium text-slate-500">${formatDateStr(date)}</td>
-                    <td class="py-4 px-6">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                                <i class="fa-solid ${ui.icon}"></i>
+                <tr onclick="window.app.toggleCategoryGroup('${catId}')" class="bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors group">
+                    <td colspan="3" class="py-3 px-6">
+                        <div class="flex items-center gap-4">
+                            <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px] text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                            <div class="w-8 h-8 rounded-lg bg-${category.color}-50 text-${category.color}-600 flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-${category.icon}"></i>
                             </div>
-                            <span class="font-bold text-slate-700">${label}</span>
+                            <span class="font-black text-slate-800 uppercase tracking-widest text-[10px]">${category.label || category.name}</span>
+                            <div class="ml-2">${sparkline}</div>
                         </div>
                     </td>
-                    <td class="py-4 px-6">
-                        <span class="px-2 py-1 rounded-md bg-${category.color}-50 text-${category.color}-600 text-[10px] font-bold uppercase">${category.label || category.name}</span>
+                    <td class="py-3 px-6 text-right font-black text-sm ${total >= 0 ? 'text-emerald-600' : 'text-slate-900'}">
+                        ${formatCurrency(total)}
                     </td>
-                    <td class="py-4 px-6 text-right font-black text-sm ${amount >= 0 ? 'text-emerald-600' : 'text-slate-900'}">
-                        ${formatCurrency(amount)}
-                    </td>
-                    <td class="py-4 px-6 text-right">
-                        <div class="flex justify-end gap-2">
-                            <button onclick="window.app.editTransaction('${tx.id}')" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg"><i class="fa-solid fa-pen text-xs"></i></button>
-                            <button onclick="window.app.deleteTransaction('${tx.id}')" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash-can text-xs"></i></button>
-                        </div>
-                    </td>
+                    <td class="py-3 px-6"></td>
                 </tr>
             `;
+
+            if (isExpanded) {
+                txs.forEach(tx => {
+                    const amount = tx.amount !== undefined ? tx.amount : tx.Amount;
+                    const date = tx.date || tx.Date;
+                    const label = tx.label || tx.Label;
+                    const { ui } = getTxDisplayInfo(tx.source, tx.destination);
+
+                    dHtml += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                            <td class="py-3 px-6 text-[10px] font-bold text-slate-400 pl-16">${formatDateStr(date)}</td>
+                            <td class="py-3 px-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded-md bg-slate-50 text-slate-400 flex items-center justify-center text-[10px]">
+                                        <i class="fa-solid ${ui.icon}"></i>
+                                    </div>
+                                    <span class="font-bold text-slate-700 text-xs">${label}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-6"></td>
+                            <td class="py-3 px-6 text-right font-bold text-xs ${amount >= 0 ? 'text-emerald-600' : 'text-slate-500'}">
+                                ${formatCurrency(amount)}
+                            </td>
+                            <td class="py-3 px-6 text-right">
+                                <div class="flex justify-end gap-1">
+                                    <button onclick="window.app.editTransaction('${tx.id}')" class="p-1.5 text-slate-300 hover:text-indigo-600 rounded-lg"><i class="fa-solid fa-eye text-[10px]"></i></button>
+                                    <button onclick="window.app.deleteTransaction('${tx.id}')" class="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
         });
         desktopContainer.innerHTML = dHtml;
     }
@@ -145,6 +195,8 @@ export const renderTransactions = () => {
             const category = state.categories.find(c => c.id === catId) || { label: 'Autre', icon: 'tag', color: 'slate' };
             const isExpanded = expandedStates[catId] !== false;
             const total = txs.reduce((s, tx) => s + (tx.amount || tx.Amount || 0), 0);
+            const trendData = getCategoryTrend(catId);
+            const sparkline = generateSparklineSVG(trendData, category.color);
 
             mHtml += `
                 <div class="mb-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
@@ -154,7 +206,10 @@ export const renderTransactions = () => {
                                 <i class="fa-solid fa-${category.icon}"></i>
                             </div>
                             <div class="text-left">
-                                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px]">${category.label || category.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px]">${category.label || category.name}</h3>
+                                    ${sparkline}
+                                </div>
                                 <p class="text-[9px] font-bold text-slate-400 uppercase">${txs.length} flux</p>
                             </div>
                         </div>
@@ -170,7 +225,7 @@ export const renderTransactions = () => {
                             const label = tx.label || tx.Label;
                             const { ui } = getTxDisplayInfo(tx.source, tx.destination);
                             return `
-                                <div class="px-6 py-4 flex items-center justify-between border-b last:border-b-0 border-slate-50 group">
+                                <div onclick="window.app.openMobileActions('${tx.id}')" class="px-6 py-4 flex items-center justify-between border-b last:border-b-0 border-slate-50 active:bg-slate-50 transition-colors">
                                     <div class="flex items-center gap-4">
                                         <div class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center text-xs">
                                             <i class="fa-solid ${ui.icon}"></i>
@@ -182,7 +237,7 @@ export const renderTransactions = () => {
                                     </div>
                                     <div class="flex items-center gap-4">
                                         <span class="font-bold text-xs ${amount >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${formatCurrency(amount)}</span>
-                                        <button onclick="window.app.editTransaction('${tx.id}')" class="p-2 text-slate-400"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                        <button class="p-2 text-slate-400"><i class="fa-solid fa-ellipsis-vertical text-[10px]"></i></button>
                                     </div>
                                 </div>
                             `;

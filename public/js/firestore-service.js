@@ -17,7 +17,14 @@ import {
     limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth } from "./auth.js";
-import { generateId, getMonthKey, generateDeterministicTransactionId, generateDeterministicTemplateId, get36MonthBoundary } from "./utils.js";
+import { 
+    generateId, 
+    getMonthKey, 
+    generateDeterministicTransactionId, 
+    generateDeterministicTemplateId, 
+    get36MonthBoundary,
+    calculateIsInternalTransfer
+} from "./utils.js";
 import { getFunctionalBoundaryDate } from './state.js';
 
 export const db = getFirestore();
@@ -245,16 +252,16 @@ export const addAccountToFirestore = async (userId, account) => {
     const docRef = doc(db, `users/${userId}/accounts`, account.id);
     const createDate = account.createDate || account.initialBalanceDate;
     
-    const accountData = { 
+    const accountData = {
         id: account.id,
         name: account.name,
+        entityId: account.entityId || null,
         createDate: createDate,
         isSaving: !!account.isSaving,
         isInvestmentAccount: !!account.isInvestmentAccount,
         balanceDirty: false,
-        updated_at: serverTimestamp() 
-    };
-    
+        updated_at: serverTimestamp()
+    };    
     await setDoc(docRef, accountData);
 
     const balDocId = `${account.id}_${createDate}`;
@@ -363,8 +370,9 @@ export const updateCategoryOrderInFirestore = async (userId, updates) => {
 
 
 export const addTransactionToFirestore = async (userId, tx) => {
+    const isInternalTransfer = tx.isInternalTransfer ?? !!(tx.source && tx.source !== 'external' && tx.destination && tx.destination !== 'external');
     const docRef = doc(db, `users/${userId}/transactions`, tx.id);
-    await setDoc(docRef, { ...tx, updated_at: serverTimestamp() });
+    await setDoc(docRef, { ...tx, isInternalTransfer, updated_at: serverTimestamp() });
     
     if (tx.source && tx.source !== 'external') {
         await markSingleAccountBalanceDelta(userId, tx.source, -tx.amount, tx.date);
@@ -433,6 +441,7 @@ const calculateAllOccurrences = (template) => {
 
 const batchGenerateAndSaveTransactions = (batch, userId, template) => {
     const dates = calculateAllOccurrences(template);
+    const isInternalTransfer = template.isInternalTransfer ?? calculateIsInternalTransfer(template.source, template.destination);
 
     for (const date of dates) {
         const txData = {
@@ -444,6 +453,9 @@ const batchGenerateAndSaveTransactions = (batch, userId, template) => {
             source: template.source,
             destination: template.destination,
             Model: template.id,
+            entityId: template.entityId || null,
+            counterPartTxId: template.counterPartTxId || null,
+            isInternalTransfer
         };
         const txId = generateDeterministicTransactionId(txData);
         const txRef = doc(db, `users/${userId}/transactions`, txId);
@@ -472,9 +484,12 @@ export const addRecurringTemplate = async (userId, template) => {
         generationTemplate.endDate = template.endDate > generationBoundaryStr ? generationBoundaryStr : template.endDate;
     }
     
+    const isInternalTransfer = template.isInternalTransfer ?? calculateIsInternalTransfer(template.source, template.destination);
+    
     const templateRef = doc(db, `users/${userId}/recurringTemplates`, template.id);
     batch.set(templateRef, { 
         ...template, 
+        isInternalTransfer,
         updated_at: serverTimestamp() 
     });
 
@@ -500,12 +515,32 @@ export const updateSingleTransactionInFirestore = async (userId, oldTxId, newTxD
 
     const newTxId = generateDeterministicTransactionId(newTxData);
     const newTxRef = doc(db, `users/${userId}/transactions`, newTxId);
+    const isInternalTransfer = calculateIsInternalTransfer(newTxData.source, newTxData.destination);
     await setDoc(newTxRef, {
         id: newTxId,
         ...newTxData,
+        isInternalTransfer,
         updated_at: serverTimestamp()
     });
     
+    // SYNC COUNTERPART IF EXISTS
+    if (newTxData.counterPartTxId) {
+        const cpTxRef = doc(db, `users/${userId}/transactions`, newTxData.counterPartTxId);
+        const cpSnap = await getDoc(cpTxRef);
+        if (cpSnap.exists()) {
+            const cpTx = cpSnap.data();
+            await setDoc(cpTxRef, {
+                ...cpTx,
+                label: newTxData.label,
+                amount: newTxData.amount,
+                date: newTxData.date,
+                Category: newTxData.Category,
+                counterPartTxId: newTxId, // Update link to the new deterministic ID
+                updated_at: serverTimestamp()
+            });
+        }
+    }
+
     if (newTxData.source && newTxData.source !== 'external') {
         await markSingleAccountBalanceDelta(userId, newTxData.source, -newTxData.amount, newTxData.date);
     }
@@ -536,9 +571,12 @@ export const updateRecurringSeriesInFirestore = async (userId, oldTemplateId, ne
         batch.delete(doc.ref);
     });
 
+    const isInternalTransfer = newTemplateValues.isInternalTransfer ?? calculateIsInternalTransfer(newTemplateValues.source, newTemplateValues.destination);
+
     const newTemplate = { 
         ...newTemplateValues,
         id: newTemplateId,
+        isInternalTransfer
     };
     
     const boundaryDateStr = getFunctionalBoundaryDate();
@@ -642,10 +680,12 @@ export const resetDataInFirestore = async (userId, deleteAccounts, deleteTransac
 };
 
 export const importDataToFirestore = async (userId, accounts, transactions, templates, categories, assets, assetValues, liabilities, liabilityValues, entities) => {
+    console.log("[FirestoreService] Starting importDataToFirestore for user:", userId);
     const CHUNK_SIZE = 500;
     const allOperations = [];
 
-    if (entities) {
+    if (entities && entities.length > 0) {
+        console.log(`[FirestoreService] Queuing ${entities.length} entities...`);
         entities.forEach(ent => {
             allOperations.push({
                 type: 'set',
@@ -655,7 +695,8 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (accounts) {
+    if (accounts && accounts.length > 0) {
+        console.log(`[FirestoreService] Queuing ${accounts.length} accounts and balances...`);
         accounts.forEach(acc => {
             const createDate = acc.createDate || acc.initialBalanceDate;
             allOperations.push({
@@ -687,7 +728,8 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (categories) {
+    if (categories && categories.length > 0) {
+        console.log(`[FirestoreService] Queuing ${categories.length} categories...`);
         categories.forEach(cat => {
             allOperations.push({
                 type: 'set',
@@ -697,17 +739,23 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (transactions) {
+    if (transactions && transactions.length > 0) {
+        console.log(`[FirestoreService] Queuing ${transactions.length} standalone transactions...`);
         transactions.forEach(tx => {
             allOperations.push({
                 type: 'set',
                 ref: doc(db, `users/${userId}/transactions`, tx.id),
-                data: { ...tx, updated_at: serverTimestamp() }
+                data: { 
+                    ...tx, 
+                    isInternalTransfer: tx.isInternalTransfer !== undefined ? tx.isInternalTransfer : calculateIsInternalTransfer(tx.source, tx.destination),
+                    updated_at: serverTimestamp() 
+                }
             });
         });
     }
 
-    if (templates) {
+    if (templates && templates.length > 0) {
+        console.log(`[FirestoreService] Queuing ${templates.length} templates and generating child transactions...`);
         const functionalBoundaryStr = getFunctionalBoundaryDate();
         templates.forEach(rec => {
             allOperations.push({
@@ -716,12 +764,10 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
                 data: { ...rec, updated_at: serverTimestamp() }
             });
 
-            // Generate child transactions for the imported template
             const generationTemplate = { ...rec };
             const capBoundaryStr = get36MonthBoundary(rec.date);
             const generationBoundaryStr = capBoundaryStr < functionalBoundaryStr ? capBoundaryStr : functionalBoundaryStr;
 
-            // Ensure we don't generate past the boundary
             if (!generationTemplate.endDate || generationTemplate.endDate > generationBoundaryStr) {
                 generationTemplate.endDate = generationBoundaryStr;
             }
@@ -737,6 +783,9 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
                     source: rec.source,
                     destination: rec.destination,
                     Model: rec.id,
+                    entityId: rec.entityId || null,
+                    counterPartTxId: rec.counterPartTxId || null,
+                    isInternalTransfer: calculateIsInternalTransfer(rec.source, rec.destination)
                 };
                 const txId = generateDeterministicTransactionId(txData);
                 allOperations.push({
@@ -752,7 +801,8 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (assets) {
+    if (assets && assets.length > 0) {
+        console.log(`[FirestoreService] Queuing ${assets.length} assets...`);
         assets.forEach(ast => {
             allOperations.push({
                 type: 'set',
@@ -762,7 +812,8 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (assetValues) {
+    if (assetValues && assetValues.length > 0) {
+        console.log(`[FirestoreService] Queuing ${assetValues.length} asset snapshots...`);
         assetValues.forEach(val => {
             const id = generateId();
             allOperations.push({
@@ -773,7 +824,8 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (liabilities) {
+    if (liabilities && liabilities.length > 0) {
+        console.log(`[FirestoreService] Queuing ${liabilities.length} liabilities...`);
         liabilities.forEach(lia => {
             allOperations.push({
                 type: 'set',
@@ -783,7 +835,8 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
-    if (liabilityValues) {
+    if (liabilityValues && liabilityValues.length > 0) {
+        console.log(`[FirestoreService] Queuing ${liabilityValues.length} liability snapshots...`);
         liabilityValues.forEach(val => {
             const id = generateId();
             allOperations.push({
@@ -794,8 +847,11 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
         });
     }
 
+    console.log(`[FirestoreService] Total operations to perform: ${allOperations.length}`);
+    
     // Process in batches of 500
     for (let i = 0; i < allOperations.length; i += CHUNK_SIZE) {
+        console.log(`[FirestoreService] Committing batch ${Math.floor(i / CHUNK_SIZE) + 1}...`);
         const batch = writeBatch(db);
         const chunk = allOperations.slice(i, i + CHUNK_SIZE);
         chunk.forEach(op => {
@@ -804,8 +860,10 @@ export const importDataToFirestore = async (userId, accounts, transactions, temp
             else if (op.type === 'delete') batch.delete(op.ref);
         });
         await batch.commit();
+        console.log(`[FirestoreService] Batch ${Math.floor(i / CHUNK_SIZE) + 1} committed.`);
     }
 
+    console.log("[FirestoreService] All batches committed. Triggering balance sweep...");
     await markAccountsBalanceDirty(userId); 
 };
 
@@ -969,7 +1027,8 @@ export const provisionStarterData = async (userId) => {
                     source: tpl.source,
                     destination: tpl.destination,
                     Model: tpl.id,
-                    entityId: tpl.entityId || null
+                    entityId: tpl.entityId || null,
+                    isInternalTransfer: calculateIsInternalTransfer(tpl.source, tpl.destination)
                 };
                 const txId = generateDeterministicTransactionId(txData);
                 const txRef = doc(db, `users/${userId}/transactions`, txId);
@@ -995,7 +1054,8 @@ export const provisionStarterData = async (userId) => {
                 Category: tx.category,
                 source: tx.source,
                 destination: tx.destination,
-                entityId: tx.entityId || null
+                entityId: tx.entityId || null,
+                isInternalTransfer: calculateIsInternalTransfer(tx.source, tx.destination)
             };
             const txId = generateDeterministicTransactionId(txData);
             const txRef = doc(db, `users/${userId}/transactions`, txId);

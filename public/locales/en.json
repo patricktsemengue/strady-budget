@@ -6,6 +6,7 @@
     "transactions": "Cash-Flow & Forecast",
     "accounts": "My Treasury",
     "categories": "Analysis Categories",
+    "yearly_pulse": "Yearly Pulse",
     "settings": "Settings",
     "groups": {
       "strategy": "STRATEGIC VISION",
@@ -58,6 +59,7 @@
     "type": "Type",
     "label": "Label",
     "label_placeholder": "Enter a name...",
+    "category": "Category",
     "asset": "Asset",
     "liability": "Liability",
     "actions": "Actions",
@@ -68,6 +70,7 @@
     "edit_account": "Edit Account",
     "delete_account": "Delete Account",
     "edit_transaction": "Edit Transaction",
+    "view_transaction": "View Transaction",
     "delete_transaction": "Delete Transaction",
     "recurring_edit_title": "Recurring Flow Update",
     "recurring_edit_msg": "Do you want to apply this change to all occurrences of this recurring flow or only to this one?",
@@ -88,7 +91,11 @@
     "family": "Family / Joint",
     "business": "Small Business"
   },
-  "entities": {
+    "yearly_pulse": {
+      "hint": "Scroll horizontally to see the full year.",
+      "jump_to_today": "Today"
+    },
+    "entities": {
     "title": "Entity Management",
     "subtitle": "Separate your private, shared or professional finances.",
     "add_title": "Add an entity",
@@ -299,11 +306,12 @@
     "outflows": "Outflows",
     "monthly_net": "Monthly Net",
     "modal_add_title": "Add a transaction",
-    "modal_edit_title": "Edit the transaction",
+    "modal_view_title": "Transaction Details",
     "external_income": "External (Income)",
     "external_expense": "External (Expense)",
     "error_empty_fields": "Please fill in all required fields.",
     "error_both_external": "Source and destination cannot both be empty.",
+    "error_same_source_dest": "Source and destination accounts must be different.",
     "error_before_creation": "Transaction cannot be created before account creation date.",
     "error_duplicate_recurring": "This recurring series already exists.",
     "error_duplicate_tx": "This transaction already exists.",
@@ -593,6 +601,16 @@
       "action2_desc": "Create a security backup or transfer your data to another device.",
       "action3_label": "Change Language",
       "action3_desc": "Switch between French and English for the entire interface."
+    },
+    "yearly_pulse": {
+      "title": "Yearly Pulse",
+      "purpose": "Get a 36-month bird's eye view of your spending by category. Identify long-term trends and prepare for upcoming peaks.",
+      "action1_label": "3-Year Horizon",
+      "action1_desc": "See 6 past months, the current month, and 29 future months side-by-side.",
+      "action2_label": "Seasonal Trends",
+      "action2_desc": "Spot categories that fluctuate throughout the year (Heating, Holidays, Taxes).",
+      "action3_label": "Sticky Categories",
+      "action3_desc": "Category names stay visible while you scroll through the months."
     }
   },
   "confirm": {

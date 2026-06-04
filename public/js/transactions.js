@@ -1,5 +1,13 @@
 import { state } from './state.js';
-import { generateId, getMonthKey, getTxDisplayInfo, generateDeterministicTransactionId, generateDeterministicTemplateId, formatCurrency } from './utils.js';
+import { 
+    generateId, 
+    getMonthKey, 
+    getTxDisplayInfo, 
+    generateDeterministicTransactionId, 
+    generateDeterministicTemplateId, 
+    formatCurrency,
+    calculateIsInternalTransfer
+} from './utils.js';
 import { currentUserId } from './storage.js';
 import { t } from './i18n.js';
 import { 
@@ -35,34 +43,77 @@ export const openTransactionModal = (id = null) => {
     if (isRecurringCheckbox) isRecurringCheckbox.checked = false;
 
     const tx = id ? state.records[getMonthKey(state.viewDate)]?.items.find(t => t.id === id) : null;
+    const recurringToggleContainer = document.getElementById('recurring-toggle-container');
+    const saveButton = form.querySelector('button[type="submit"]');
 
-    const entitySelect = document.getElementById('transaction-entity');
-    const entityContainer = entitySelect?.closest('.col-span-1');
-    
-    if (entitySelect) {
-        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
+    // Helper to set read-only state
+    const setReadOnly = (readonly) => {
+        const inputs = form.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            if (input.id === 'transaction-edit-id') return;
+            input.disabled = readonly;
+            if (readonly) {
+                input.classList.add('bg-slate-50', 'cursor-not-allowed', 'opacity-70');
+            } else {
+                input.classList.remove('bg-slate-50', 'cursor-not-allowed', 'opacity-70');
+            }
+        });
         
-        if (state.entities.length <= 1) {
-            if (entityContainer) entityContainer.classList.add('hidden');
-            if (state.entities[0]) entitySelect.value = state.entities[0].id;
-        } else {
-            if (entityContainer) entityContainer.classList.remove('hidden');
-            if (state.selectedEntityId !== 'all') {
-                entitySelect.value = state.selectedEntityId;
+        const cancelButton = document.getElementById('btn-cancel-transaction');
+        if (cancelButton) {
+            cancelButton.classList.toggle('hidden', readonly);
+        }
+
+        if (saveButton) {
+            if (readonly) {
+                // VIEW MODE: Neutral "Close" action
+                saveButton.textContent = t('common.close') || 'Fermer';
+                saveButton.setAttribute('data-i18n', 'common.close');
+                saveButton.type = 'button';
+                saveButton.onclick = closeTransactionModal;
+                // Style as secondary/neutral
+                saveButton.classList.remove('bg-slate-800', 'text-white');
+                saveButton.classList.add('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+            } else {
+                // NEW MODE: Primary "Save" action
+                saveButton.textContent = t('common.save') || 'Enregistrer';
+                saveButton.setAttribute('data-i18n', 'common.save');
+                saveButton.type = 'submit';
+                saveButton.onclick = null;
+                // Style as primary
+                saveButton.classList.add('bg-slate-800', 'text-white');
+                saveButton.classList.remove('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
             }
         }
-    }
+    };
 
-    if (id) { // EDIT MODE
+    if (id) { // VIEW MODE (formerly Edit)
         const modalTitle = document.getElementById('transaction-modal-title');
-        if (modalTitle) modalTitle.textContent = t('transactions.modal_edit_title');
+        if (modalTitle) modalTitle.textContent = t('transactions.modal_view_title') || 'Détails du flux';
         const editIdInput = document.getElementById('transaction-edit-id');
         if (editIdInput) editIdInput.value = id;
+
+        setReadOnly(true);
+
+        // Hide/Show recurring toggle based on transaction nature (single vs recurring series member)
+        if (tx) {
+            if (tx.Model) {
+                if (recurringToggleContainer) recurringToggleContainer.classList.remove('hidden');
+            } else {
+                if (recurringToggleContainer) recurringToggleContainer.classList.add('hidden');
+                if (recurringFields) recurringFields.classList.add('hidden');
+            }
+        }
     } else { // NEW MODE
         const modalTitle = document.getElementById('transaction-modal-title');
         if (modalTitle) modalTitle.textContent = t('transactions.modal_add_title');
         const editIdInput = document.getElementById('transaction-edit-id');
         if (editIdInput) editIdInput.value = '';
+
+        setReadOnly(false);
+
+        // NEW MODE: Always show and enable the toggle
+        if (recurringToggleContainer) recurringToggleContainer.classList.remove('hidden');
 
         // Pre-fill for interactive setup
         if (state.onboarding?.active && state.onboarding?.type === 'interactive_setup' && state.onboarding?.currentStep === 2) {
@@ -82,7 +133,7 @@ export const openTransactionModal = (id = null) => {
         }
     }
 
-    if (tx) { // Pre-fill for EDIT
+    if (tx) { // Pre-fill for VIEW
         const labelInput = document.getElementById('transaction-label');
         if (labelInput) labelInput.value = tx.label || '';
         const amountInput = document.getElementById('transaction-amount');
@@ -100,8 +151,6 @@ export const openTransactionModal = (id = null) => {
         destSelect.value = tx.destination || tx.destinationId || '';
 
         const isRecurring = !!tx.Model;
-        const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
-        const recurringFields = document.getElementById('recurring-fields');
         
         if (isRecurring) {
             if (isRecurringCheckbox) isRecurringCheckbox.checked = true;
@@ -169,7 +218,6 @@ export const openTransactionModal = (id = null) => {
         };
     }
 
-    const saveButton = form.querySelector('button[type="submit"]');
     if (saveButton) saveButton.disabled = false;
 
     if (modal) modal.classList.remove('hidden');
@@ -189,8 +237,16 @@ export const handleSaveTransaction = async (e) => {
     const Category = document.getElementById('transaction-category').value;
     const source = document.getElementById('transaction-source').value;
     const destination = document.getElementById('transaction-destination').value;
-    const entityId = document.getElementById('transaction-entity').value;
     
+    // Restriction: transaction cannot be before account creation date (TODO.md)
+    const sourceAcc = state.accounts.find(a => a.id === source);
+    const destAcc = state.accounts.find(a => a.id === destination);
+
+    // Derive entityId from account ownership
+    const isIncome = !source || source === 'external' || source === '';
+    const entityId = isIncome ? (destAcc?.entityId || null) : (sourceAcc?.entityId || null);
+    const isInternalTransfer = calculateIsInternalTransfer(source, destination);
+
     const isRecurringCheckbox = document.getElementById('transaction-is-recurring');
     const isRecurring = isRecurringCheckbox ? isRecurringCheckbox.checked : false;
     
@@ -206,14 +262,15 @@ export const handleSaveTransaction = async (e) => {
         return;
     }
 
-    if (source === "" && destination === "") {
+    if ((!source || source === "" || source === "external") && (!destination || destination === "" || destination === "external")) {
         showNotification(t('transactions.error_both_external'), 'error');
         return;
     }
 
-    // Restriction: transaction cannot be before account creation date (TODO.md)
-    const sourceAcc = state.accounts.find(a => a.id === source);
-    const destAcc = state.accounts.find(a => a.id === destination);
+    if (source !== "" && source !== "external" && source === destination) {
+        showNotification(t('transactions.error_same_source_dest') || 'Les comptes source et destination doivent être différents.', 'error');
+        return;
+    }
 
     if (sourceAcc && date < (sourceAcc.createDate || sourceAcc.initialBalanceDate)) {
         showNotification(`${t('transactions.error_before_creation')} (${sourceAcc.createDate || sourceAcc.initialBalanceDate}).`, 'error');
@@ -242,7 +299,9 @@ export const handleSaveTransaction = async (e) => {
                     const newTemplateValues = { 
                         date, label, amount, source, destination, 
                         category: Category, Category: Category,
-                        recurring: true, endDate, periodicity, entityId
+                        recurring: true, endDate, periodicity, entityId,
+                        isInternalTransfer,
+                        counterPartTxId: tx?.counterPartTxId || null
                     };
                     await updateRecurringSeriesInFirestore(currentUserId, tx.Model, newTemplateValues);
                     showNotification(t('transactions.success_recurring_updated'));
@@ -255,7 +314,9 @@ export const handleSaveTransaction = async (e) => {
                     const newTxData = { 
                         label, amount, date, 
                         category: Category, Category: Category, 
-                        source, destination, Model: null, entityId 
+                        source, destination, Model: null, entityId,
+                        counterPartTxId: tx?.counterPartTxId || null,
+                        isInternalTransfer
                     };
                     await updateSingleTransactionInFirestore(currentUserId, id, newTxData);
                     showNotification(t('transactions.success_tx_updated'));
@@ -270,7 +331,9 @@ export const handleSaveTransaction = async (e) => {
                 const templateData = {
                     date, label, amount, source, destination, 
                     category: Category, Category: Category,
-                    recurring: true, endDate, periodicity, entityId
+                    recurring: true, endDate, periodicity, entityId,
+                    isInternalTransfer,
+                    counterPartTxId: null // Transaction modal doesn't support cross-entity splits yet
                 };
                 const templateId = generateDeterministicTemplateId(templateData);
 
@@ -291,7 +354,9 @@ export const handleSaveTransaction = async (e) => {
                 const newTxData = { 
                     label, amount, date, 
                     category: Category, Category: Category, 
-                    source, destination, Model: null, entityId 
+                    source, destination, Model: null, entityId,
+                    isInternalTransfer,
+                    counterPartTxId: null
                 };
                 const newId = generateDeterministicTransactionId(newTxData);
 
@@ -338,9 +403,17 @@ export const deleteTransaction = async (id) => {
             }
         }
     } else {
-        if (confirm(t('confirm.delete_tx'))) {
+        const hasCounterPart = !!tx.counterPartTxId;
+        const confirmMsg = hasCounterPart 
+            ? "Cette transaction a une contrepartie (virement entre entités). Les deux seront supprimées. Confirmer ?"
+            : t('confirm.delete_tx');
+
+        if (confirm(confirmMsg)) {
             try {
                 await deleteTransactionFromFirestore(currentUserId, id);
+                if (hasCounterPart) {
+                    await deleteTransactionFromFirestore(currentUserId, tx.counterPartTxId);
+                }
                 showNotification(t('transactions.success_tx_deleted'));
             } catch (err) {
                 showNotification(t('transactions.error_delete'), 'error');
@@ -369,13 +442,13 @@ export const openMobileActions = (id) => {
     const label = tx.label || tx.Label;
 
     title.innerHTML = `
-        <div class="flex items-center gap-4 text-left">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white shrink-0" style="background-color: ${category?.color || '#94a3b8'}">
-                <i class="fa-solid ${category?.icon || 'fa-tag'} text-xl"></i>
+        <div class="flex items-center gap-3 text-left">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style="background-color: ${category?.color || '#94a3b8'}">
+                <i class="fa-solid ${category?.icon || 'fa-tag'} text-lg"></i>
             </div>
-            <div class="flex-1 truncate">
-                <p class="font-black text-slate-800 text-lg leading-tight truncate">${label}</p>
-                <p class="text-[11px] font-bold ${txInfo.ui.color} uppercase tracking-wider">${formattedAmount} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
+            <div class="flex-1 min-w-0">
+                <p class="font-black text-slate-800 text-base leading-tight truncate">${label}</p>
+                <p class="text-[10px] font-bold ${txInfo.ui.color} uppercase tracking-wider">${formattedAmount} • ${txInfo.src.name} → ${txInfo.dst.name}</p>
             </div>
         </div>
     `;
@@ -391,7 +464,8 @@ export const openMobileActions = (id) => {
     const setupAction = (btnId, actionFn) => {
         const btn = document.getElementById(btnId);
         if (btn) {
-            btn.onclick = () => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
                 closeMobileActions();
                 actionFn(currentMobileActionId);
             };
@@ -399,6 +473,17 @@ export const openMobileActions = (id) => {
     };
 
     setupAction('mobile-action-edit', editTransaction);
+    const editBtn = document.getElementById('mobile-action-edit');
+    if (editBtn) {
+        const span = editBtn.querySelector('span');
+        if (span) span.textContent = t('common.view_transaction') || 'Voir la transaction';
+        const iconDiv = editBtn.querySelector('.bg-blue-50');
+        if (iconDiv) {
+            iconDiv.classList.remove('bg-blue-50', 'text-blue-600');
+            iconDiv.classList.add('bg-indigo-50', 'text-indigo-600');
+            iconDiv.innerHTML = '<i class="fa-solid fa-eye"></i>';
+        }
+    }
     setupAction('mobile-action-delete', deleteTransaction);
 
     // Close on overlay click

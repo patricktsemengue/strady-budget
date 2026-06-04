@@ -5,9 +5,14 @@ const calculateMonthlyIncome = (date) => {
     const monthKey = getMonthKey(date);
     const monthItems = state.records[monthKey]?.items || [];
     
-    // Sum existing transactions (both single and generated recurring)
     return monthItems
-        .filter(item => getTxDisplayInfo(item.source, item.destination).isIncome)
+        .filter(item => {
+            const isIncome = !item.source || item.source === 'external';
+            if (!isIncome) return false;
+            // Rule: Ignore internal movements when viewing the entire household
+            if (state.selectedEntityId === 'all' && item.isInternalTransfer) return false;
+            return true;
+        })
         .reduce((sum, item) => sum + item.amount, 0);
 };
 
@@ -58,8 +63,6 @@ const calculateBalances = (targetDate) => {
 const calculateActualBurnRate = (date = new Date()) => {
     let totalExpense = 0;
     let monthsCount = 0;
-
-    // STRATEGY: Always use the latest 3 real months relative to TODAY for a baseline
     const referenceDate = new Date();
     
     for (let i = 0; i < 3; i++) {
@@ -69,11 +72,11 @@ const calculateActualBurnRate = (date = new Date()) => {
         
         if (monthData && monthData.items.length > 0) {
             const items = state.selectedEntityId === 'all' 
-                ? monthData.items 
+                ? monthData.items.filter(it => !it.isInternalTransfer) 
                 : monthData.items.filter(it => it.entityId === state.selectedEntityId);
 
             const monthExpense = items
-                .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+                .filter(item => !item.destination || item.destination === 'external')
                 .reduce((sum, item) => sum + item.amount, 0);
             
             if (monthExpense > 0) {
@@ -83,16 +86,15 @@ const calculateActualBurnRate = (date = new Date()) => {
         }
     }
 
-    // Fallback: If no history, use the selected month's projection
     if (monthsCount === 0) {
         const currentMonthKey = getMonthKey(date);
         const monthItems = state.records[currentMonthKey]?.items || [];
         const items = state.selectedEntityId === 'all' 
-            ? monthItems 
+            ? monthItems.filter(it => !it.isInternalTransfer) 
             : monthItems.filter(it => it.entityId === state.selectedEntityId);
 
         return items
-            .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+            .filter(item => !item.destination || item.destination === 'external')
             .reduce((sum, item) => sum + item.amount, 0);
     }
 
@@ -111,14 +113,15 @@ const calculateAverageSavings = (date = new Date()) => {
         
         if (monthData && monthData.items.length > 0) {
             const items = state.selectedEntityId === 'all' 
-                ? monthData.items 
+                ? monthData.items.filter(it => !it.isInternalTransfer) 
                 : (monthData.items || []).filter(it => it.entityId === state.selectedEntityId);
 
             let mIn = 0, mOut = 0;
             items.forEach(item => {
-                const info = getTxDisplayInfo(item.source, item.destination);
-                if (info.isIncome) mIn += item.amount;
-                else if (info.isExpense) mOut += item.amount;
+                const isIncome = !item.source || item.source === 'external';
+                const isExpense = !item.destination || item.destination === 'external';
+                if (isIncome) mIn += item.amount;
+                if (isExpense) mOut += item.amount;
             });
 
             totalSavings += (mIn - mOut);
@@ -126,16 +129,18 @@ const calculateAverageSavings = (date = new Date()) => {
         }
     }
 
-    // Fallback to selected month if no history
     if (monthsCount === 0) {
         const monthKey = getMonthKey(date);
         const items = state.records[monthKey]?.items || [];
-        const filtered = state.selectedEntityId === 'all' ? items : items.filter(it => it.entityId === state.selectedEntityId);
+        const filtered = state.selectedEntityId === 'all' 
+            ? items.filter(it => !it.isInternalTransfer) 
+            : items.filter(it => it.entityId === state.selectedEntityId);
         let mIn = 0, mOut = 0;
         filtered.forEach(item => {
-            const info = getTxDisplayInfo(item.source, item.destination);
-            if (info.isIncome) mIn += item.amount;
-            else if (info.isExpense) mOut += item.amount;
+            const isIncome = !item.source || item.source === 'external';
+            const isExpense = !item.destination || item.destination === 'external';
+            if (isIncome) mIn += item.amount;
+            else if (isExpense) mOut += item.amount;
         });
         return mIn - mOut;
     }

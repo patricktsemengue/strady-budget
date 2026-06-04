@@ -1,13 +1,22 @@
 ﻿Type,Date,Label,Quantity,Value,Source,Destination,Category,Icon,Color,Periodicity,EndDate,IsSaving,IsInvestment,Nature,IsPassive,Entity
-ENTITY,,"Alice",,,,,,,,,,,,"PRIVATE",,
-ENTITY,,"Bob",,,,,,,,,,,,"PRIVATE",,
-ENTITY,,"Ménage",,,,,,,,,,,,"FAMILY",,
+ENTITY,,"Fri",,,,,,,,,,,,"PRIVATE",,
+ENTITY,,"Mao",,,,,,,,,,,,"PRIVATE",,
 ENTITY,,"CORNSEED",,,,,,,,,,,,"SMALL_BUSINESS",,
-ACCOUNT,2026-05-01,"Compte Courant Alice",,0,,,,,,,,0,0,,,"Alice"
-ACCOUNT,2026-05-01,"Compte Courant Bob",,0,,,,,,,,0,0,,,"Bob"
-ACCOUNT,2026-05-01,"Portefeuille Actions",,0,,,,,,,,0,1,,,"Ménage"
-ACCOUNT,2026-05-01,"Compte Principal (Ménage)",,0,,,,,,,,0,0,,,"Ménage"
-ACCOUNT,2026-05-01,"Épargne de Sécurité",,0,,,,,,,,1,0,,,"Ménage"
+ENTITY,,"Ménage",,,,,,,,,,,,"FAMILY",,
+ACCOUNT,2026-12-31,"CBC_MAO",,0,,,,,,,,,0,,,"Mao"        
+ACCOUNT,2026-12-31,"BEL_FRI",,0,,,,,,,,,0,,,"Mao"
+ACCOUNT,2026-12-31,"BEL_1_10EME_MAO",,1860,,,,,,,,1,0,,,"Ménage"
+ACCOUNT,2026-12-31,"BEL_1_10EME_FRI",,19637,,,,,,,,1,0,,,"Ménage"
+ACCOUNT,2026-12-31,"BEL_AOS",,8700,,,,,,,,1,0,,,"Ménage"
+ACCOUNT,2026-12-31,"BEL_ENIH",,7674,,,,,,,,1,0,,,"Ménage"
+ACCOUNT,2026-12-31,"BEL_AEL",,6207,,,,,,,,1,0,,,"Ménage"
+ACCOUNT,2026-12-31,"ETF_SAXO_ENFANTS",,0,,,,,,,,0,1,,,"Ménage"
+ACCOUNT,2026-12-31,"BEL_RESERVE_SANTE_CRECHE",,2596,,,,,,,,0,0,,,"Ménage"
+ACCOUNT,2026-12-31,"BEL_DEPENSE_NON_COURANTE",,7351,,,,,,,,0,0,,,"Ménage"
+ACCOUNT,2026-12-31,"CBC_CORNSEED",,105099,,,,,,,,0,0,,,"CORNSEED"
+ACCOUNT,2026-12-31,"SAXO_CORNSEED",,0,,,,,,,,0,1,,,"CORNSEED"
+ACCOUNT,2026-12-31,"SAXO_MAO",,0,,,,,,,,0,1,,,"Mao"
+ACCOUNT,2026-12-31,"DEGIRO_MAO",,0,,,,,,,,0,1,,,"Mao"
 CATEGORY,,"Dividendes & Intérêts",,,,,,"fa-money-bill-trend-up","#34d399",,,,,"REVENU",1,
 CATEGORY,,"Énergie & Eau",,,,,,"fa-bolt","#fbbf24",,,,,"FIXE",0,
 CATEGORY,,"Vie Courante (Courses)",,,,,,"fa-shopping-basket","#f59e0b",,,,,"QUOTIDIEN",0,

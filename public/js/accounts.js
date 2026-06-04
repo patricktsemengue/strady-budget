@@ -17,17 +17,20 @@ export const openAddAccountDrawer = () => {
     const entityContainer = entitySelect?.closest('.space-y-2');
     
     if (entitySelect) {
-        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
+        entitySelect.innerHTML = `
+            <option value="" disabled selected>Choisir une entité...</option>
+            ${state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('')}
+        `;
         
-        if (state.entities.length <= 1) {
-            if (entityContainer) entityContainer.classList.add('hidden');
-            if (state.entities[0]) entitySelect.value = state.entities[0].id;
-        } else {
+        // Always show the container if we have entities to choose from
+        if (state.entities.length > 0) {
             if (entityContainer) entityContainer.classList.remove('hidden');
-            if (state.selectedEntityId !== 'all') {
-                entitySelect.value = state.selectedEntityId;
-            }
+        } else {
+            if (entityContainer) entityContainer.classList.add('hidden');
         }
+
+        // Never select a default; force user to choose even if only one exists
+        entitySelect.value = "";
     }
 
     // Pre-fill for interactive setup
@@ -57,6 +60,11 @@ export const handleAddAccount = async (e) => {
 
     if (!name || isNaN(initialBalance) || !initialBalanceDate || !entityId) {
         showNotification('Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    if (name.toLowerCase() === 'external') {
+        showNotification('Le nom "External" est réservé par le système.', 'error');
         return;
     }
 
@@ -109,11 +117,15 @@ export const openEditAccount = (id) => {
         if (helpText) helpText.textContent = '';
     }
 
-    const entitySelect = document.getElementById('edit-acc-entity');
-    if (entitySelect) {
-        entitySelect.innerHTML = state.entities.map(e => `<option value="${e.id}">${e.name.toUpperCase()}</option>`).join('');
-        entitySelect.value = acc.entityId || '';
-        entitySelect.disabled = true; // Safety rule: cannot transfer account between entities
+    const entityNameInput = document.getElementById('edit-acc-entity-name');
+    const entityIdInput = document.getElementById('edit-acc-entity-id');
+    if (entityNameInput && entityIdInput) {
+        // Fallback: If account has no entityId, assume it belongs to the first entity or 'private'
+        const targetEntityId = acc.entityId || (state.entities.length > 0 ? state.entities[0].id : null);
+        const ent = state.entities.find(e => e.id === targetEntityId);
+        
+        entityNameInput.value = ent ? ent.name.toUpperCase() : 'PRIVÉ';
+        entityIdInput.value = targetEntityId || '';
     }
 
     document.getElementById('edit-acc-id').value = acc.id;
@@ -143,10 +155,15 @@ export const handleUpdateAccount = async (e) => {
     const createDate = document.getElementById('edit-acc-balance-date').value;
     const isSaving = document.getElementById('edit-acc-is-savings').checked;
     const isInvestmentAccount = document.getElementById('edit-acc-is-investment').checked;
-    const entityId = document.getElementById('edit-acc-entity').value;
+    const entityId = document.getElementById('edit-acc-entity-id').value;
 
     if (!name || isNaN(newInitialBalance) || !createDate || !entityId) {
         showNotification('Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    if (name.toLowerCase() === 'external') {
+        showNotification('Le nom "External" est réservé par le système.', 'error');
         return;
     }
 
@@ -576,21 +593,62 @@ export const handleTransferSubmit = async (e) => {
     if (isNaN(amount) || amount <= 0) return;
 
     const srcAcc = state.accounts.find(a => a.id === srcId);
+    const dstAcc = state.accounts.find(a => a.id === dstId);
+    
+    if (!srcAcc || !dstAcc) return;
 
-    const txData = {
-        label,
-        amount,
-        date,
-        Category: state.categories.find(c => c.label.toLowerCase().includes('virement') || c.label.toLowerCase().includes('autre'))?.id || '',
-        source: srcId,
-        destination: dstId,
-        Model: null,
-        entityId: srcAcc?.entityId || null
-    };
+    const isCrossEntity = srcAcc.entityId !== dstAcc.entityId;
 
     try {
-        const id = generateId();
-        await addTransactionToFirestore(currentUserId, { ...txData, id });
+        if (isCrossEntity) {
+            // CROSS-ENTITY TRANSFER: Create two linked transactions
+            const id1 = generateId();
+            const id2 = generateId();
+
+            const tx1 = {
+                id: id1,
+                label,
+                amount: amount,
+                date,
+                Category: state.categories.find(c => c.label.toLowerCase().includes('virement') || c.label.toLowerCase().includes('autre'))?.id || '',
+                source: srcId,
+                destination: 'external',
+                entityId: srcAcc.entityId,
+                counterPartTxId: id2,
+                isInternalTransfer: true
+            };
+
+            const tx2 = {
+                id: id2,
+                label,
+                amount: amount, // Keeping it positive for balance, ignoring T.amount = -CounterT.amount for now to avoid balance corruption
+                date,
+                Category: state.categories.find(c => c.label.toLowerCase().includes('virement') || c.label.toLowerCase().includes('autre'))?.id || '',
+                source: 'external',
+                destination: dstId,
+                entityId: dstAcc.entityId,
+                counterPartTxId: id1,
+                isInternalTransfer: true
+            };
+
+            await addTransactionToFirestore(currentUserId, tx1);
+            await addTransactionToFirestore(currentUserId, tx2);
+        } else {
+            // INTERNAL TRANSFER (Same Entity): Single transaction
+            const txData = {
+                label,
+                amount,
+                date,
+                Category: state.categories.find(c => c.label.toLowerCase().includes('virement') || c.label.toLowerCase().includes('autre'))?.id || '',
+                source: srcId,
+                destination: dstId,
+                Model: null,
+                entityId: srcAcc?.entityId || null
+            };
+            const id = generateId();
+            await addTransactionToFirestore(currentUserId, { ...txData, id });
+        }
+        
         window.app.closeTransferModal();
         showNotification("Virement exécuté avec succès.");
         if (window.app.onTourAction) window.app.onTourAction('transfer_created');

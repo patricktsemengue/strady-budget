@@ -48,11 +48,11 @@ export default {
                             <i class="fa-solid fa-circle-question text-lg"></i>
                         </button>
                     </div>
-                    <div class="hidden md:flex items-center gap-2">
-                        <button id="btn-expand-all" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Tout développer">
+                    <div class="flex items-center gap-1 md:gap-2">
+                        <button id="btn-expand-all" class="hidden md:block p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Tout développer">
                             <i class="fa-solid fa-layer-group"></i>
                         </button>
-                        <button id="btn-collapse-all" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Tout réduire">
+                        <button id="btn-collapse-all" class="hidden md:block p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Tout réduire">
                             <i class="fa-solid fa-compress"></i>
                         </button>
                         <button id="btn-show-sankey" class="p-2 text-slate-500 hover:text-indigo-600 transition-colors" title="Diagramme Sankey">

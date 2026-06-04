@@ -90,8 +90,10 @@ export const rebuildRecords = (transactions, monthsStatuses) => {
         const isIncome = !tx.source || tx.source === 'external';
         const isExpense = !tx.destination || tx.destination === 'external';
 
-        if (isIncome) newRecords[monthKey].totals.income += tx.amount;
-        if (isExpense) newRecords[monthKey].totals.expense += tx.amount;
+        const shouldCount = state.selectedEntityId !== 'all' || !tx.isInternalTransfer;
+
+        if (isIncome && shouldCount) newRecords[monthKey].totals.income += tx.amount;
+        if (isExpense && shouldCount) newRecords[monthKey].totals.expense += tx.amount;
 
         newRecords[monthKey].items.push(tx);
     });

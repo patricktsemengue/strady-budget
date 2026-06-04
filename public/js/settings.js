@@ -4,6 +4,7 @@ import { state, getFunctionalBoundaryDate, updateState } from './state.js';
 import { 
     updateSettingsInFirestore,
     addEntityToFirestore,
+    updateEntityInFirestore,
     deleteEntityFromFirestore
 } from './firestore-service.js';
 import { currentUserId } from './storage.js';
@@ -178,6 +179,17 @@ export const applyMonthSelectorPosition = (position) => {
 };
 
 // ENTITY MANAGEMENT
+export const updateEntity = async (id, data) => {
+    try {
+        await updateEntityInFirestore(currentUserId, id, data);
+        showNotification(t('common.success'));
+        router.render();
+    } catch (err) {
+        console.error(err);
+        showNotification(t('common.error'), 'error');
+    }
+};
+
 export const handleAddEntity = async (e) => {
     e.preventDefault();
     const name = document.getElementById('new-entity-name').value.trim();
@@ -196,6 +208,7 @@ export const handleAddEntity = async (e) => {
         showNotification("Entité ajoutée !");
         if (window.app.onTourAction) window.app.onTourAction('entity_created');
         e.target.reset();
+        if (window.app.closeAddEntity) window.app.closeAddEntity();
         router.render();
     } catch (err) {
         console.error(err);

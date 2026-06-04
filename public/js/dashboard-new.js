@@ -10,55 +10,75 @@ const getMonthlyMetrics = (date) => {
     const monthKey = getMonthKey(date);
     const monthData = state.records[monthKey] || { items: [], status: 'open' };
     
-    const monthIncome = calculateMonthlyIncome(date);
-    const monthExpense = monthData.items
-        .filter(item => getTxDisplayInfo(item.source, item.destination).isExpense)
+    // items by entity if needed
+    const items = state.selectedEntityId === 'all' 
+        ? monthData.items 
+        : monthData.items.filter(it => it.entityId === state.selectedEntityId);
+    
+    const monthIncome = items
+        .filter(item => {
+            const isIncome = !item.source || item.source === 'external';
+            if (!isIncome) return false;
+            if (state.selectedEntityId === 'all' && item.isInternalTransfer) return false;
+            return true;
+        })
+        .reduce((sum, item) => sum + item.amount, 0);
+
+    const monthExpense = items
+        .filter(item => {
+            const isExpense = !item.destination || item.destination === 'external';
+            if (!isExpense) return false;
+            if (state.selectedEntityId === 'all' && item.isInternalTransfer) return false;
+            return true;
+        })
         .reduce((sum, item) => sum + item.amount, 0);
 
     // Split Fixed vs Variable
-    const fixedExpense = monthData.items
+    const fixedExpense = items
         .filter(item => {
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
-            if (!txInfo.isExpense) return false;
+            const isExpense = !item.destination || item.destination === 'external';
+            if (!isExpense) return false;
             const cat = state.categories.find(c => c.id === item.Category);
             return cat?.nature === 'FIXE';
         })
         .reduce((sum, item) => sum + item.amount, 0);
 
     // 70/20/10 Breakdown
-    const needs = monthData.items
+    const needs = items
         .filter(item => {
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
-            if (!txInfo.isExpense) return false;
+            const isExpense = !item.destination || item.destination === 'external';
+            if (!isExpense) return false;
             const cat = state.categories.find(c => c.id === item.Category);
             return cat?.nature === 'FIXE' || cat?.nature === 'QUOTIDIEN';
         })
         .reduce((sum, item) => sum + item.amount, 0);
 
-    const leisure = monthData.items
+    const leisure = items
         .filter(item => {
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
-            if (!txInfo.isExpense) return false;
+            const isExpense = !item.destination || item.destination === 'external';
+            if (!isExpense) return false;
             const cat = state.categories.find(c => c.id === item.Category);
             return cat?.nature === 'LOISIR';
         })
         .reduce((sum, item) => sum + item.amount, 0);
 
-    const savings = monthData.items
+    const savings = items
         .filter(item => {
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
+            const isIncome = !item.source || item.source === 'external';
+            const isExpense = !item.destination || item.destination === 'external';
             const cat = state.categories.find(c => c.id === item.Category);
-            return (cat?.nature === 'EPARGNE' && txInfo.isExpense) || (!txInfo.isIncome && !txInfo.isExpense && !!state.accounts.find(a => a.id === item.destination && a.isSaving));
+            // Count EPARGNE expenses OR transfers to savings accounts
+            return (cat?.nature === 'EPARGNE' && isExpense) || (!isIncome && !isExpense && !!state.accounts.find(a => a.id === item.destination && a.isSaving));
         })
         .reduce((sum, item) => sum + item.amount, 0);
 
     const savingsRate = monthIncome > 0 ? ((monthIncome - monthExpense) / monthIncome) * 100 : 0;
     
     // Active vs Passive segmentation
-    const passiveIncome = monthData.items
+    const passiveIncome = items
         .filter(item => {
-            const txInfo = getTxDisplayInfo(item.source, item.destination);
-            if (!txInfo.isIncome) return false;
+            const isIncome = !item.source || item.source === 'external';
+            if (!isIncome) return false;
             const cat = state.categories.find(c => c.id === item.Category);
             return !!cat?.isPassive;
         })
@@ -281,11 +301,15 @@ export const renderStrategicDashboard = () => {
     const freedomPct = Math.min(100, (freedomData.currentCapital / freedomData.targetCapital) * 100);
 
     // Safe-to-spend logic
-    const recurringExpense = (state.records[getMonthKey(d0)]?.items || [])
+    const dashboardItems = state.selectedEntityId === 'all' 
+        ? (state.records[getMonthKey(d0)]?.items || []).filter(it => !it.isInternalTransfer)
+        : (state.records[getMonthKey(d0)]?.items || []);
+
+    const recurringExpense = dashboardItems
         .filter(item => !!item.Model && getTxDisplayInfo(item.source, item.destination).isExpense)
         .reduce((sum, item) => sum + item.amount, 0);
     
-    const actualVariableExpense = (state.records[getMonthKey(d0)]?.items || [])
+    const actualVariableExpense = dashboardItems
         .filter(item => !item.Model && getTxDisplayInfo(item.source, item.destination).isExpense)
         .reduce((sum, item) => sum + item.amount, 0);
 

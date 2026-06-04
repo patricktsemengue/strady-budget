@@ -90,6 +90,7 @@ erDiagram
         string destination FK "Account.id or 'external'"
         string Category FK "Category.id (Note Case)"
         string Model FK "RecurringTemplate.id (Note Case)"
+        boolean isInternalTransfer
         timestamp updated_at
     }
 
@@ -103,6 +104,7 @@ erDiagram
         string destination FK "Account.id or 'external'"
         string category FK "Category.id"
         boolean recurring
+        boolean isInternalTransfer
         string endDate "nullable"
         string periodicity "M, Y, Q"
         timestamp updated_at

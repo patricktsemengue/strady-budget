@@ -18,6 +18,7 @@ import educationModule from './modules/education-module.js';
 import categoriesModule from './modules/categories-module.js';
 import settingsModule from './modules/settings-module.js';
 import hubModule from './modules/hub-module.js';
+import yearlyPulseModule from './modules/yearly-pulse-module.js';
 import { tourModule } from './modules/tour-module.js';
 
 import { 
@@ -204,13 +205,13 @@ const init = async () => {
         router.register(accountsModule);
         router.register(categoriesModule);
         router.register(settingsModule);
+        router.register(yearlyPulseModule);
         router.register(tourModule);
 
         // Initial Route
         const initialView = window.location.hash.substring(1) || 'hub';
         const targetModule = router.modules[initialView];
         if (targetModule) {
-            router.currentAppId = targetModule.appId;
             router.setView(initialView);
         } else {
             router.switchApp('hub');
@@ -645,18 +646,6 @@ const setupEventListeners = () => {
         window.app.openMatrixCalendar();
     });
 
-    addSafeListener('matrix-prev-year', 'click', () => {
-        const grid = document.getElementById('matrix-calendar-grid');
-        const year = parseInt(grid.dataset.viewYear) - 1;
-        window.app.openMatrixCalendar(year);
-    });
-
-    addSafeListener('matrix-next-year', 'click', () => {
-        const grid = document.getElementById('matrix-calendar-grid');
-        const year = parseInt(grid.dataset.viewYear) + 1;
-        window.app.openMatrixCalendar(year);
-    });
-
     addSafeListener('add-category-form', 'submit', handleAddCategory);
     addSafeListener('btn-close-add-cat-drawer', 'click', closeAddCategoryDrawer);
     addSafeListener('btn-cancel-add-cat', 'click', closeAddCategoryDrawer);
@@ -672,7 +661,7 @@ const setupEventListeners = () => {
     addSafeListener('btn-close-edit-ent-drawer', 'click', () => window.app.closeEditEntity());
     addSafeListener('btn-cancel-edit-ent', 'click', () => window.app.closeEditEntity());
     addSafeListener('drawer-overlay', 'click', () => {
-        closeAccountDrawer(); closeAddAccountDrawer(); closeCategoryDrawer(); closeAddCategoryDrawer(); closeWealthDrawer(); window.app.closeEditEntity();
+        closeAccountDrawer(); closeAddAccountDrawer(); closeCategoryDrawer(); closeAddCategoryDrawer(); closeWealthDrawer(); window.app.closeEditEntity(); window.app.closeAddEntity();
     });
     addSafeListener('transaction-form', 'submit', handleSaveTransaction);
     addSafeListener('btn-cancel-transaction', 'click', closeTransactionModal);
@@ -762,11 +751,17 @@ window.app = {
              drawer.classList.add('active');
         } else {
              setView('settings');
-             // Small delay to let view switch then open? 
+             // Small delay to let view switch then open?
              // Actually, setView is enough, the user can use the plus button in settings.
         }
     },
-    exportFullBackupCSV: () => import('./data.js').then(m => m.exportFullBackupCSV()),
+    closeAddEntity: () => {
+        const drawer = document.getElementById('entity-add-drawer');
+        if (drawer) {
+             document.getElementById('drawer-overlay').classList.remove('active');
+             drawer.classList.remove('active');
+        }
+    },    exportFullBackupCSV: () => import('./data.js').then(m => m.exportFullBackupCSV()),
     renderSankeyChart: (expanded) => import('./dashboard.js').then(m => m.renderSankeyChart(expanded)),
     toggleCategoryGroup: (catId) => import('./dashboard.js').then(m => m.toggleCategoryGroup(catId)),
     toggleAllCategoryGroups: (expand) => import('./dashboard.js').then(m => m.toggleAllCategoryGroups(expand)),
